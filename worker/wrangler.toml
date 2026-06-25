@@ -2,12 +2,38 @@ name = "travel-planner-worker"
 main = "src/index.ts"
 compatibility_date = "2026-06-25"
 
-# Secrets (set with `wrangler secret put`, or locally via worker/.dev.vars):
+# Secrets (NOT stored here — they are encrypted Worker secrets, set per environment):
 #   LIVEBLOCKS_SECRET_KEY  — Liveblocks project secret key (never shipped to the client)
-#   OWNER_SECRET           — gates POST /api/rooms (only the owner can create rooms)
+#   OWNER_SECRET           — gates POST /api/rooms and the agent API (/api/trip/:room)
 #
-# Optional plain var:
-#   ALLOWED_ORIGIN — CORS allow-list origin; when unset the Worker reflects the
-#                    request Origin. Pin this to your Pages URL in production.
+# Set them locally for `wrangler dev` via worker/.dev.vars (gitignored), and for a
+# deployed Worker with:
+#   wrangler secret put LIVEBLOCKS_SECRET_KEY --config worker/wrangler.toml --env production
+#   wrangler secret put OWNER_SECRET          --config worker/wrangler.toml --env production
 #
-# Production env/route bindings are added in Task 12 (deployment).
+# Plain var:
+#   ALLOWED_ORIGIN — CORS allow-list origin. When unset the Worker reflects the
+#                    request Origin (fine for local dev). Pin it to your Pages URL
+#                    in production (set under [env.production.vars] below).
+
+# The default (top-level) deploy targets <name>.<subdomain>.workers.dev and is used
+# for quick test deploys: `npm run deploy:worker` (no --env).
+workers_dev = true
+
+# ── Production ──────────────────────────────────────────────────────────────
+# Deploy with `npm run deploy:worker:prod` (= `wrangler deploy --env production`).
+# This publishes a separate Worker named `travel-planner-worker-production`.
+[env.production]
+workers_dev = true
+
+[env.production.vars]
+# Lock CORS to the deployed SPA origin so only the Cloudflare Pages app can call
+# the Worker. Change this to your actual Pages URL (or custom domain).
+ALLOWED_ORIGIN = "https://travel-planner.pages.dev"
+
+# To serve the Worker from your own domain instead of *.workers.dev, attach a
+# route (requires the zone to live on your Cloudflare account) and set
+# `workers_dev = false` above:
+# [[env.production.routes]]
+# pattern = "api.example.com/*"
+# zone_name = "example.com"
