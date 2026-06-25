@@ -10,6 +10,8 @@ function makeApi(overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
     roomExists: async () => true,
     createRoom: async (id) => ({ id }),
     mintAccessToken: async (room) => `tok-${room}`,
+    getYUpdate: async () => new Uint8Array(),
+    sendYUpdate: async () => {},
     ...overrides,
   }
 }
@@ -51,6 +53,30 @@ describe('handleRequest (router + CORS)', () => {
     })
     const res = await handleRequest(req, env, makeApi())
     expect(res.status).toBe(401)
+  })
+
+  it('routes GET /api/trip/:room to the trip handler (owner-gated)', async () => {
+    const req = new Request('https://worker.test/api/trip/room1', {
+      method: 'GET',
+      headers: { 'x-owner-secret': 'owner-pw', origin: 'https://app.example' },
+    })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(200)
+    expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
+    const body = (await res.json()) as { trip: { title: string } }
+    expect(body.trip.title).toBe('')
+  })
+
+  it('rejects GET /api/trip/:room without the owner secret', async () => {
+    const req = new Request('https://worker.test/api/trip/room1', { method: 'GET' })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 405 for an unsupported method on /api/trip/:room', async () => {
+    const req = new Request('https://worker.test/api/trip/room1', { method: 'DELETE' })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(405)
   })
 
   it('returns 404 for an unknown route', async () => {

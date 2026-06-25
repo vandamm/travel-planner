@@ -23,6 +23,16 @@ export interface LiveblocksApi {
   createRoom(roomId: string): Promise<{ id: string }>
   /** Mint a room-scoped access token granting full (write) access. */
   mintAccessToken(roomId: string, userId: string): Promise<string>
+  /**
+   * Fetch the room's Yjs document encoded as a single binary update, ready for
+   * `Y.applyUpdate`. Returns an empty array when the room has no Yjs data yet.
+   */
+  getYUpdate(roomId: string): Promise<Uint8Array>
+  /**
+   * Send a binary Yjs update to the room's document. Liveblocks merges it and
+   * fans it out, so connected clients converge on the change in real time.
+   */
+  sendYUpdate(roomId: string, update: Uint8Array): Promise<void>
 }
 
 const LIVEBLOCKS_API = 'https://api.liveblocks.io/v2'
@@ -67,6 +77,28 @@ export function createLiveblocksApi(env: Env): LiveblocksApi {
       if (!res.ok) throw new Error(`Liveblocks token mint failed: ${res.status}`)
       const data = (await res.json()) as { token: string }
       return data.token
+    },
+
+    async getYUpdate(roomId) {
+      const res = await fetch(
+        `${LIVEBLOCKS_API}/rooms/${encodeURIComponent(roomId)}/ydoc-binary`,
+        { headers: { authorization: authHeader } },
+      )
+      // A room can exist without any Yjs data yet (e.g. created but never edited).
+      if (res.status === 404) return new Uint8Array()
+      if (!res.ok) throw new Error(`Liveblocks ydoc fetch failed: ${res.status}`)
+      return new Uint8Array(await res.arrayBuffer())
+    },
+
+    async sendYUpdate(roomId, update) {
+      const res = await fetch(`${LIVEBLOCKS_API}/rooms/${encodeURIComponent(roomId)}/ydoc`, {
+        method: 'PUT',
+        headers: { authorization: authHeader, 'content-type': 'application/octet-stream' },
+        // Copy into a fresh, exactly-sized ArrayBuffer: a plain ArrayBuffer is an
+        // unambiguous `BodyInit`, unlike the generic `Uint8Array<ArrayBufferLike>`.
+        body: new Uint8Array(update).buffer,
+      })
+      if (!res.ok) throw new Error(`Liveblocks ydoc update failed: ${res.status}`)
     },
   }
 }

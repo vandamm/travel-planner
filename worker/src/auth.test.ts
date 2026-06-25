@@ -8,6 +8,8 @@ function makeApi(overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
     roomExists: async () => true,
     createRoom: async (id) => ({ id }),
     mintAccessToken: async () => 'token-123',
+    getYUpdate: async () => new Uint8Array(),
+    sendYUpdate: async () => {},
     ...overrides,
   }
 }

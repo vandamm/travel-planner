@@ -1,15 +1,18 @@
 // Cloudflare Worker entry point: request router + CORS.
 //
 // Routes:
-//   OPTIONS *           → CORS preflight
-//   POST /api/auth      → mint a room-scoped token for an existing room
-//   POST /api/rooms     → create a room (owner-gated)
+//   OPTIONS *               → CORS preflight
+//   POST /api/auth          → mint a room-scoped token for an existing room
+//   POST /api/rooms         → create a room (owner-gated)
+//   GET  /api/trip/:room    → read the room's trip as JSON (owner-gated)
+//   POST /api/trip/:room    → write trip JSON into the room (owner-gated)
 //
 // The handlers depend on the `LiveblocksApi` abstraction; production builds the
 // REST-backed implementation, while tests call `handleRequest` with a fake.
 
 import { handleAuth } from './auth'
 import { handleCreateRoom } from './rooms'
+import { handleGetTrip, handlePostTrip } from './trip'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -61,6 +64,17 @@ export async function handleRequest(
       request.method === 'POST'
         ? await handleCreateRoom(request, env, api)
         : json({ error: 'method not allowed' }, 405)
+  } else if (pathname.startsWith('/api/trip/')) {
+    const roomId = decodeURIComponent(pathname.slice('/api/trip/'.length))
+    if (!roomId) {
+      res = json({ error: 'missing room id' }, 400)
+    } else if (request.method === 'GET') {
+      res = await handleGetTrip(request, env, api, roomId)
+    } else if (request.method === 'POST') {
+      res = await handlePostTrip(request, env, api, roomId)
+    } else {
+      res = json({ error: 'method not allowed' }, 405)
+    }
   } else {
     res = json({ error: 'not found' }, 404)
   }
