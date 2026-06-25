@@ -1,0 +1,13 @@
+name = "travel-planner-worker"
+main = "src/index.ts"
+compatibility_date = "2026-06-25"
+
+# Secrets (set with `wrangler secret put`, or locally via worker/.dev.vars):
+#   LIVEBLOCKS_SECRET_KEY  — Liveblocks project secret key (never shipped to the client)
+#   OWNER_SECRET           — gates POST /api/rooms (only the owner can create rooms)
+#
+# Optional plain var:
+#   ALLOWED_ORIGIN — CORS allow-list origin; when unset the Worker reflects the
+#                    request Origin. Pin this to your Pages URL in production.
+#
+# Production env/route bindings are added in Task 12 (deployment).

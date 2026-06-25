@@ -1,0 +1,12 @@
+# Local Worker secrets for `wrangler dev`. Copy to `worker/.dev.vars` (gitignored)
+# and fill in real values. Do NOT commit the real .dev.vars file.
+
+# Liveblocks project secret key (Dashboard → project → API keys). Never shipped to the client.
+LIVEBLOCKS_SECRET_KEY=sk_dev_replace_me
+
+# Secret that gates new-room creation (POST /api/rooms). Choose any strong string.
+OWNER_SECRET=replace_me_with_a_long_random_string
+
+# Optional: lock CORS to your Pages origin in production (e.g. https://travel-planner.pages.dev).
+# Leave unset locally to reflect the request Origin.
+# ALLOWED_ORIGIN=

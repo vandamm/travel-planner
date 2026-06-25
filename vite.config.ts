@@ -11,7 +11,8 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     css: true,
     // Unit tests live next to source; Playwright e2e specs live in ./e2e and are excluded.
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Worker handler tests live under worker/src and opt into the node environment per-file.
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'worker/src/**/*.{test,spec}.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html'],
