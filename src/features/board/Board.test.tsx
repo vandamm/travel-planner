@@ -57,6 +57,30 @@ describe('Board', () => {
     })
   })
 
+  it('renders an accommodation bar in the lane spanning its nights', () => {
+    renderBoard(<Board />)
+    act(() => {
+      setTrip(doc, { startDate: '2027-05-01', numDays: 3 })
+      addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+      addAccommodation(doc, {
+        label: 'Hotel Roma',
+        cityId: 'rome',
+        startNight: '2027-05-01',
+        endNight: '2027-05-02',
+      })
+    })
+    const bar = screen.getByTestId('accommodation-bar')
+    expect(bar).toHaveTextContent('Hotel Roma')
+    expect(screen.getByTestId('accommodation-cell')).toHaveStyle({ gridColumn: '1 / span 2' })
+  })
+
+  it('opens the accommodation editor from the Add stay button', () => {
+    renderBoard(<Board />)
+    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 2 }))
+    act(() => screen.getByRole('button', { name: 'Add stay' }).click())
+    expect(screen.getByRole('dialog', { name: 'Accommodation editor' })).toBeInTheDocument()
+  })
+
   it('reverses every card in every day when the direction is toggled', () => {
     renderBoard(<Board />)
     act(() => {
