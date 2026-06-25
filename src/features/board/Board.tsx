@@ -22,7 +22,9 @@ import { AccommodationLane } from '../accommodation/AccommodationLane'
 import { CardEditor } from '../cards/CardEditor'
 import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
+import { MobileDayView } from './MobileDayView'
 import { useTimeDirection } from './useTimeDirection'
+import { useViewport } from './useViewport'
 
 /** Which card the editor is open on: a new card on a day, or an existing card. */
 type EditorState = { mode: 'create'; dayKey: string } | { mode: 'edit'; card: Card }
@@ -34,6 +36,7 @@ export function Board() {
   const { doc } = useRoom()
   useDocVersion(doc)
   const { direction, toggle } = useTimeDirection()
+  const viewport = useViewport()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [accEditor, setAccEditor] = useState<AccEditorState | null>(null)
 
@@ -83,6 +86,21 @@ export function Board() {
         <p data-testid="board-empty" className="px-6 text-slate-500">
           Set a start date and number of days to build the board.
         </p>
+      ) : viewport === 'mobile' ? (
+        // Below the laptop breakpoint: one day at a time, paged by swipe or the
+        // prev/next controls. Same cards/accommodation/direction logic as desktop.
+        <BoardDnd doc={doc} direction={direction}>
+          <MobileDayView
+            days={days}
+            cardsByDay={cardsByDay}
+            accommodations={accommodations}
+            overrides={overrides}
+            cityById={cityById}
+            direction={direction}
+            onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
+            onEditCard={(card) => setEditor({ mode: 'edit', card })}
+          />
+        </BoardDnd>
       ) : (
         <div className="overflow-x-auto px-6 pb-4">
           <AccommodationLane
