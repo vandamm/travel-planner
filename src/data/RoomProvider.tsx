@@ -4,6 +4,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type * as Y from 'yjs'
+import { installDevBridge } from './devBridge'
 import { connectRoom, roomIdFromHash, type SyncStatus } from './provider'
 
 export interface RoomContextValue {
@@ -60,6 +61,7 @@ export function RoomProvider({
 
   useEffect(() => {
     setStatus(connection.getStatus())
+    installDevBridge(connection.doc)
     const unsubscribe = connection.onStatus(setStatus)
     return () => {
       unsubscribe()
