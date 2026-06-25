@@ -1,6 +1,7 @@
 import { RoomProvider } from './data/RoomProvider'
 import { Board } from './features/board/Board'
 import { CityManager } from './features/cities/CityManager'
+import { ImportExport } from './features/io/ImportExport'
 import { TripSettings } from './features/trip/TripSettings'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6">
           <TripSettings />
           <CityManager />
+          <ImportExport />
         </div>
         <Board />
       </main>

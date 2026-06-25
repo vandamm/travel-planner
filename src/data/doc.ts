@@ -59,6 +59,24 @@ function patchYMap(map: Y.Map<unknown>, patch: object): void {
   }
 }
 
+// --- Whole-document reset --------------------------------------------------
+
+/**
+ * Remove every entity and reset trip settings. Used before applying an
+ * imported or agent-supplied trip so the apply is a full *replace* (not a
+ * field-by-field merge). Runs in a single transaction so the wipe-and-refill
+ * lands as one atomic update for local persistence and remote sync.
+ */
+export function clearTrip(doc: Y.Doc): void {
+  doc.transact(() => {
+    doc.getMap(TRIP).clear()
+    entityMap(doc, CITIES).clear()
+    doc.getMap(DAY_OVERRIDES).clear()
+    entityMap(doc, CARDS).clear()
+    entityMap(doc, ACCOMMODATIONS).clear()
+  })
+}
+
 // --- Trip ------------------------------------------------------------------
 
 export function getTrip(doc: Y.Doc): Trip {

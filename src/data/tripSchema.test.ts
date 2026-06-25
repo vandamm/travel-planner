@@ -1,0 +1,78 @@
+import { describe, expect, it } from 'vitest'
+import { parseTripText, tripDocumentSchema } from './tripSchema'
+
+const VALID = {
+  trip: { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 },
+  cities: [{ id: 'rome', name: 'Rome', color: '#ef4444' }],
+  accommodations: [
+    { id: 'stay-1', label: 'Hotel Roma', cityId: 'rome', startNight: '2027-05-01', endNight: '2027-05-02' },
+  ],
+  cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Colosseum', order: 0 }],
+  dayOverrides: { '2027-05-03': 'rome' },
+}
+
+describe('tripDocumentSchema', () => {
+  it('accepts a complete, well-formed trip document', () => {
+    const parsed = tripDocumentSchema.parse(VALID)
+    expect(parsed).toEqual(VALID)
+  })
+
+  it('fills empty defaults for the optional collections', () => {
+    const parsed = tripDocumentSchema.parse({
+      trip: { title: '', startDate: '', numDays: 0 },
+    })
+    expect(parsed).toEqual({
+      trip: { title: '', startDate: '', numDays: 0 },
+      cities: [],
+      accommodations: [],
+      cards: [],
+      dayOverrides: {},
+    })
+  })
+
+  it('rejects a card with a malformed date and points at the offending path', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cards: [{ id: 'card-1', dayKey: '05/01/2027', title: 'Bad', order: 0 }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].path).toEqual(['cards', 0, 'dayKey'])
+    }
+  })
+
+  it('rejects a card time that is not HH:mm', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, startTime: '9am' }],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a negative day count', () => {
+    const result = tripDocumentSchema.safeParse({
+      trip: { title: 'X', startDate: '2027-05-01', numDays: -1 },
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('parseTripText', () => {
+  it('parses and validates well-formed JSON text', () => {
+    const out = parseTripText(JSON.stringify(VALID))
+    expect(out.ok).toBe(true)
+    if (out.ok) expect(out.data.trip.title).toBe('Italy 2027')
+  })
+
+  it('reports malformed JSON with a clear error', () => {
+    const out = parseTripText('{ not json')
+    expect(out.ok).toBe(false)
+    if (!out.ok) expect(out.error).toMatch(/Invalid JSON/i)
+  })
+
+  it('reports a schema violation with the offending field path', () => {
+    const out = parseTripText(JSON.stringify({ trip: { title: 'X', startDate: 'nope', numDays: 1 } }))
+    expect(out.ok).toBe(false)
+    if (!out.ok) expect(out.error).toMatch(/trip\.startDate/)
+  })
+})
