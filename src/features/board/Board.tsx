@@ -4,6 +4,7 @@
 // presentational <DayColumn> per day. The morning↔evening direction toggle is a
 // per-user view preference (localStorage), so it lives here, not in the doc.
 
+import { useState } from 'react'
 import {
   getTrip,
   listAccommodations,
@@ -16,13 +17,18 @@ import { useDocVersion } from '../../data/useDoc'
 import { resolveDayCity } from '../../data/cityResolution'
 import { generateDays } from '../../data/days'
 import type { Card } from '../../data/schema'
+import { CardEditor } from '../cards/CardEditor'
 import { DayColumn } from './DayColumn'
 import { useTimeDirection } from './useTimeDirection'
+
+/** Which card the editor is open on: a new card on a day, or an existing card. */
+type EditorState = { mode: 'create'; dayKey: string } | { mode: 'edit'; card: Card }
 
 export function Board() {
   const { doc } = useRoom()
   useDocVersion(doc)
   const { direction, toggle } = useTimeDirection()
+  const [editor, setEditor] = useState<EditorState | null>(null)
 
   const trip = getTrip(doc)
   const days = generateDays(trip.startDate, trip.numDays)
@@ -69,10 +75,20 @@ export function Board() {
                 city={cityId ? cityById.get(cityId) : undefined}
                 cards={cardsByDay.get(day.key) ?? []}
                 direction={direction}
+                onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
+                onEditCard={(card) => setEditor({ mode: 'edit', card })}
               />
             )
           })}
         </div>
+      )}
+
+      {editor && (
+        <CardEditor
+          card={editor.mode === 'edit' ? editor.card : undefined}
+          dayKey={editor.mode === 'create' ? editor.dayKey : undefined}
+          onClose={() => setEditor(null)}
+        />
       )}
     </section>
   )

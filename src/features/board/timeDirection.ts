@@ -8,6 +8,7 @@
 // appear vertically given that direction.
 
 import type { Card } from '../../data/schema'
+import { sortCardsForColumn } from '../cards/cardSort'
 
 /** 'down' = morning at the top (default); 'up' = morning at the bottom. */
 export type TimeDirection = 'down' | 'up'
@@ -54,22 +55,12 @@ export function toggleDirection(direction: TimeDirection): TimeDirection {
 }
 
 /**
- * Canonical morning→evening order for a day's cards: time-bound cards (those
- * with a `startTime`) come first, sorted ascending by start time; untimed cards
- * follow in their manual `order`. Ties among timed cards break by `order` so the
- * result is stable. Returns a new array; the input is untouched. (Task 6 will
- * own the combined sort definitively in `cardSort.ts`.)
+ * Canonical morning→evening order for a day's cards. The combined sort itself
+ * lives in `cardSort.ts` (its definitive owner); this re-export keeps the board's
+ * direction helpers importing from one place.
  */
 export function canonicalCardOrder(cards: Card[]): Card[] {
-  const timed = cards.filter((c) => c.startTime)
-  const untimed = cards.filter((c) => !c.startTime)
-  timed.sort((a, b) => {
-    const at = a.startTime as string
-    const bt = b.startTime as string
-    return at < bt ? -1 : at > bt ? 1 : a.order - b.order
-  })
-  untimed.sort((a, b) => a.order - b.order)
-  return [...timed, ...untimed]
+  return sortCardsForColumn(cards)
 }
 
 /**

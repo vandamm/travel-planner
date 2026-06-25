@@ -5,21 +5,26 @@
 // mobile single-day view in Task 11 reuses the same card/scale logic).
 
 import { format, parseISO } from 'date-fns'
-import type { Card, City, Day } from '../../data/schema'
+import type { Card as CardType, City, Day } from '../../data/schema'
+import { Card } from '../cards/Card'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
 
 export interface DayColumnProps {
   day: Day
   /** Resolved city for the day, if any (drives the header color). */
   city?: City
-  cards: Card[]
+  cards: CardType[]
   direction: TimeDirection
+  /** Open the editor to add a card to this day. */
+  onAddCard?: (dayKey: string) => void
+  /** Open the editor on an existing card. */
+  onEditCard?: (card: CardType) => void
 }
 
 /** A neutral band color for days with no resolved city (travel days). */
 const NO_CITY_COLOR = '#cbd5e1' // slate-300
 
-export function DayColumn({ day, city, cards, direction }: DayColumnProps) {
+export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }: DayColumnProps) {
   const ordered = orderCardsForDirection(cards, direction)
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const weekday = format(parseISO(day.key), 'EEE')
@@ -71,24 +76,23 @@ export function DayColumn({ day, city, cards, direction }: DayColumnProps) {
 
         <ol className="relative flex flex-col gap-2">
           {ordered.map((c) => (
-            <li
-              key={c.id}
-              data-testid="card"
-              className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-800 shadow-sm"
-            >
-              <span data-testid="card-title" className="font-medium">
-                {c.title}
-              </span>
-              {c.startTime && (
-                <span data-testid="card-time" className="ml-2 text-xs text-slate-500">
-                  {c.startTime}
-                  {c.endTime ? `–${c.endTime}` : ''}
-                </span>
-              )}
+            <li key={c.id}>
+              <Card card={c} onEdit={onEditCard} />
             </li>
           ))}
         </ol>
       </div>
+
+      <footer className="px-3 pb-3 pt-1">
+        <button
+          type="button"
+          aria-label={`Add card to ${weekday} ${dateLabel}`}
+          onClick={() => onAddCard?.(day.key)}
+          className="w-full rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-500 hover:border-slate-400 hover:text-slate-700"
+        >
+          + Add card
+        </button>
+      </footer>
     </section>
   )
 }
