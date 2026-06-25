@@ -18,6 +18,7 @@ import { resolveDayCity } from '../../data/cityResolution'
 import { generateDays } from '../../data/days'
 import type { Card } from '../../data/schema'
 import { CardEditor } from '../cards/CardEditor'
+import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
 import { useTimeDirection } from './useTimeDirection'
 
@@ -65,22 +66,24 @@ export function Board() {
           Set a start date and number of days to build the board.
         </p>
       ) : (
-        <div data-testid="board" className="flex gap-3 overflow-x-auto px-6 pb-4">
-          {days.map((day) => {
-            const cityId = resolveDayCity(day.key, accommodations, overrides)
-            return (
-              <DayColumn
-                key={day.key}
-                day={day}
-                city={cityId ? cityById.get(cityId) : undefined}
-                cards={cardsByDay.get(day.key) ?? []}
-                direction={direction}
-                onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
-                onEditCard={(card) => setEditor({ mode: 'edit', card })}
-              />
-            )
-          })}
-        </div>
+        <BoardDnd doc={doc} direction={direction}>
+          <div data-testid="board" className="flex gap-3 overflow-x-auto px-6 pb-4">
+            {days.map((day) => {
+              const cityId = resolveDayCity(day.key, accommodations, overrides)
+              return (
+                <DayColumn
+                  key={day.key}
+                  day={day}
+                  city={cityId ? cityById.get(cityId) : undefined}
+                  cards={cardsByDay.get(day.key) ?? []}
+                  direction={direction}
+                  onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
+                  onEditCard={(card) => setEditor({ mode: 'edit', card })}
+                />
+              )
+            })}
+          </div>
+        </BoardDnd>
       )}
 
       {editor && (

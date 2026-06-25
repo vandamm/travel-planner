@@ -4,9 +4,12 @@
 // city and the day's cards as props so it is trivial to test and reuse (the
 // mobile single-day view in Task 11 reuses the same card/scale logic).
 
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format, parseISO } from 'date-fns'
 import type { Card as CardType, City, Day } from '../../data/schema'
-import { Card } from '../cards/Card'
+import { SortableCard } from '../cards/Card'
+import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
 
 export interface DayColumnProps {
@@ -29,6 +32,10 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const weekday = format(parseISO(day.key), 'EEE')
   const dateLabel = format(parseISO(day.key), 'd MMM')
+
+  // The column body is a drop target so cards can be dropped onto an empty day
+  // (or its blank space), not only onto another card.
+  const { setNodeRef } = useDroppable({ id: dayDroppableId(day.key) })
 
   return (
     <section
@@ -61,7 +68,7 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
         </div>
       </header>
 
-      <div className="relative flex-1 px-3 py-2">
+      <div ref={setNodeRef} className="relative flex-1 px-3 py-2">
         <ol data-testid="scale" className="pointer-events-none absolute inset-0 flex flex-col">
           {scale.map((label) => (
             <li
@@ -74,13 +81,15 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
           ))}
         </ol>
 
-        <ol className="relative flex flex-col gap-2">
-          {ordered.map((c) => (
-            <li key={c.id}>
-              <Card card={c} onEdit={onEditCard} />
-            </li>
-          ))}
-        </ol>
+        <SortableContext items={ordered.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          <ol className="relative flex flex-col gap-2">
+            {ordered.map((c) => (
+              <li key={c.id}>
+                <SortableCard card={c} onEdit={onEditCard} />
+              </li>
+            ))}
+          </ol>
+        </SortableContext>
       </div>
 
       <footer className="px-3 pb-3 pt-1">
