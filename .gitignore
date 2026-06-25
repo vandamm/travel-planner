@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Test + coverage artifacts
+coverage
+playwright-report
+test-results
+.playwright
+
+# Local env / secrets
+.env
+.env.local
+.env.*.local
+worker/.dev.vars
+
+# Editor / OS
+.DS_Store
+*.local
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea
