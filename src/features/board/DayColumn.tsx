@@ -31,7 +31,7 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
   const ordered = orderCardsForDirection(cards, direction)
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const weekday = format(parseISO(day.key), 'EEE')
-  const dateLabel = format(parseISO(day.key), 'd MMM')
+  const dateLabel = format(parseISO(day.key), 'dd.MM') // day-first (dd.mm) for the EU audience
 
   // The column body is a drop target so cards can be dropped onto an empty day
   // (or its blank space), not only onto another card.
@@ -51,7 +51,10 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
           className="h-1.5 w-full"
         />
         <div className="flex flex-col gap-0.5 px-3 py-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <span
+            data-testid="day-label"
+            className="text-xs font-medium uppercase tracking-wide text-slate-400"
+          >
             {weekday} · {dateLabel}
           </span>
           <span

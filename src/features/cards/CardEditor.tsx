@@ -139,6 +139,9 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                 Start time
                 <input
                   type="time"
+                  // lang="de" hints the native picker toward a 24h clock; the value
+                  // stays HH:mm. ponytail: picker format is browser-dependent.
+                  lang="de"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
@@ -148,6 +151,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                 End time
                 <input
                   type="time"
+                  lang="de"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"

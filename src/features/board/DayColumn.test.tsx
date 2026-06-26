@@ -32,6 +32,13 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('city-name')).toHaveTextContent('No city')
   })
 
+  it('labels the day with a day-first dd.MM date', () => {
+    render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
+    // 2027-05-01 → "Sat · 01.05" (day-first, not "1 May")
+    expect(screen.getByTestId('day-label')).toHaveTextContent('01.05')
+    expect(screen.getByTestId('day-label')).not.toHaveTextContent('May')
+  })
+
   it('lays out cards morning→evening with the down direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     expect(titles()).toEqual(['Breakfast', 'Dinner', 'Stroll'])

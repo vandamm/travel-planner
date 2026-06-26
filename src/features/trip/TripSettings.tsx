@@ -37,6 +37,9 @@ export function TripSettings() {
           Start date
           <input
             type="date"
+            // lang="de" hints the native picker toward dd.mm.yyyy; the value stays
+            // ISO so data is unambiguous. ponytail: picker format is browser-dependent.
+            lang="de"
             value={trip.startDate}
             onChange={(e) => setTrip(doc, { startDate: e.target.value })}
             className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"

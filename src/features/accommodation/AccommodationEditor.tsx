@@ -115,6 +115,9 @@ export function AccommodationEditor({
               First night
               <input
                 type="date"
+                // lang="de" hints the native picker toward dd.mm.yyyy; the value
+                // stays ISO. ponytail: picker format is browser-dependent.
+                lang="de"
                 value={startNight}
                 onChange={(e) => setStartNight(e.target.value)}
                 className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
@@ -124,6 +127,7 @@ export function AccommodationEditor({
               Last night
               <input
                 type="date"
+                lang="de"
                 value={endNight}
                 onChange={(e) => setEndNight(e.target.value)}
                 className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
