@@ -29,8 +29,11 @@ import { useColumnsThatFit, useViewport } from './useViewport'
 /** Which card the editor is open on: a new card on a day, or an existing card. */
 type EditorState = { mode: 'create'; dayKey: string } | { mode: 'edit'; card: Card }
 
-/** Which stay the accommodation editor is open on: a new one, or an existing one. */
-type AccEditorState = { mode: 'create' } | { mode: 'edit'; accommodation: Accommodation }
+/** Which stay the accommodation editor is open on: a new one (optionally seeded
+ * with a first night), or an existing one. */
+type AccEditorState =
+  | { mode: 'create'; startNight?: string }
+  | { mode: 'edit'; accommodation: Accommodation }
 
 export function Board() {
   const { doc } = useRoom()
@@ -61,7 +64,9 @@ export function Board() {
           Board
         </h2>
         <div className="flex items-center gap-2">
-          {days.length > 0 && (
+          {/* Desktop's "Add stay" lives at the right end of the stays lane; mobile
+              has no lane, so it keeps the header button. */}
+          {days.length > 0 && viewport === 'mobile' && (
             <button
               type="button"
               aria-label="Add stay"
@@ -112,6 +117,7 @@ export function Board() {
             accommodations={accommodations}
             cityById={cityById}
             onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
+            onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
           />
           <BoardDnd doc={doc} direction={direction}>
             <div data-testid="board" className="flex gap-3">
@@ -147,8 +153,16 @@ export function Board() {
       {accEditor && (
         <AccommodationEditor
           accommodation={accEditor.mode === 'edit' ? accEditor.accommodation : undefined}
-          defaultStartNight={trip.startDate || days[0]?.key}
-          defaultEndNight={trip.startDate || days[0]?.key}
+          defaultStartNight={
+            accEditor.mode === 'create'
+              ? (accEditor.startNight ?? trip.startDate ?? days[0]?.key)
+              : undefined
+          }
+          defaultEndNight={
+            accEditor.mode === 'create'
+              ? (accEditor.startNight ?? trip.startDate ?? days[0]?.key)
+              : undefined
+          }
           onClose={() => setAccEditor(null)}
         />
       )}
