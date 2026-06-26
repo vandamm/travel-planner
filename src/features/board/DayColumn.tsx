@@ -6,7 +6,7 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { format, parseISO } from 'date-fns'
+import { format, isWeekend, parseISO } from 'date-fns'
 import type { Card as CardType, City, Day } from '../../data/schema'
 import { SortableCard } from '../cards/Card'
 import { dayDroppableId } from './dndHandlers'
@@ -18,6 +18,10 @@ export interface DayColumnProps {
   city?: City
   cards: CardType[]
   direction: TimeDirection
+  /** Start of the day's timeline window, 'HH:mm' (sizes the body). */
+  dayStart?: string
+  /** End of the day's timeline window, 'HH:mm'. */
+  dayEnd?: string
   /** Open the editor to add a card to this day. */
   onAddCard?: (dayKey: string) => void
   /** Open the editor on an existing card. */
@@ -27,11 +31,50 @@ export interface DayColumnProps {
 /** A neutral band color for days with no resolved city (travel days). */
 const NO_CITY_COLOR = '#cbd5e1' // slate-300
 
-export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }: DayColumnProps) {
+/** Pixels per hour of the time window — the timeline's vertical scale. */
+const PX_PER_HOUR = 44
+/** Fallback span (hours) for an untimed card or a timed card with no end. */
+const DEFAULT_CARD_HOURS = 1
+
+/** Minutes since midnight for an 'HH:mm' clock string; 0 when unparseable. */
+function clockMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number)
+  return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 0
+}
+
+/** Body height (px) for the day window; never shorter than one default block. */
+function windowHeightPx(dayStart: string, dayEnd: string): number {
+  const hours = (clockMinutes(dayEnd) - clockMinutes(dayStart)) / 60
+  return Math.max(hours, DEFAULT_CARD_HOURS) * PX_PER_HOUR
+}
+
+/**
+ * A card's height (px), scaled by its duration so empty time stays visible:
+ * end−start, with a timed card lacking an end (and any untimed card) given the
+ * default block. Bad/overnight ranges floor to the default block.
+ */
+function cardHeightPx(card: CardType): number {
+  if (!card.startTime) return DEFAULT_CARD_HOURS * PX_PER_HOUR
+  const start = clockMinutes(card.startTime)
+  const end = card.endTime ? clockMinutes(card.endTime) : start + 60
+  return Math.max((end - start) / 60, DEFAULT_CARD_HOURS) * PX_PER_HOUR
+}
+
+export function DayColumn({
+  day,
+  city,
+  cards,
+  direction,
+  dayStart = '06:00',
+  dayEnd = '21:00',
+  onAddCard,
+  onEditCard,
+}: DayColumnProps) {
   const ordered = orderCardsForDirection(cards, direction)
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const weekday = format(parseISO(day.key), 'EEE')
   const dateLabel = format(parseISO(day.key), 'dd.MM') // day-first (dd.mm) for the EU audience
+  const weekend = isWeekend(parseISO(day.key))
 
   // The column body is a drop target so cards can be dropped onto an empty day
   // (or its blank space), not only onto another card.
@@ -42,7 +85,7 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
       data-testid="day-column"
       data-day={day.key}
       aria-label={`${weekday} ${dateLabel}${city ? ` — ${city.name}` : ''}`}
-      className="flex w-56 shrink-0 flex-col rounded-lg border border-slate-200 bg-white shadow-sm"
+      className={`flex w-56 shrink-0 flex-col rounded-lg border border-slate-200 shadow-sm ${weekend ? 'bg-rose-50' : 'bg-white'}`}
     >
       <header className="overflow-hidden rounded-t-lg">
         <div
@@ -71,13 +114,25 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
         </div>
       </header>
 
-      <div ref={setNodeRef} className="relative flex-1 px-3 py-2">
-        <ol data-testid="scale" className="pointer-events-none absolute inset-0 flex flex-col">
+      <div
+        ref={setNodeRef}
+        data-testid="day-body"
+        style={{ minHeight: windowHeightPx(dayStart, dayEnd) }}
+        className="relative flex-1 px-3 py-2"
+      >
+        {/* Continuous time scale in a left gutter — kept clear of the cards
+            (which sit in the padded column to its right) so labels never hide
+            behind a card. */}
+        <ol
+          data-testid="scale"
+          aria-hidden
+          className="pointer-events-none absolute inset-y-2 left-0 flex w-16 flex-col"
+        >
           {scale.map((label) => (
             <li
               key={label}
               data-testid="scale-label"
-              className="flex flex-1 items-start justify-end px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-300"
+              className="flex flex-1 items-start whitespace-nowrap px-2 text-[10px] font-medium uppercase tracking-wide text-slate-300"
             >
               {label}
             </li>
@@ -85,9 +140,9 @@ export function DayColumn({ day, city, cards, direction, onAddCard, onEditCard }
         </ol>
 
         <SortableContext items={ordered.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          <ol className="relative flex flex-col gap-2">
+          <ol data-testid="card-list" className="relative flex flex-col gap-2 pl-16">
             {ordered.map((c) => (
-              <li key={c.id}>
+              <li key={c.id} style={{ minHeight: cardHeightPx(c) }}>
                 <SortableCard card={c} onEdit={onEditCard} />
               </li>
             ))}

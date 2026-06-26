@@ -56,4 +56,36 @@ describe('DayColumn', () => {
     const dinner = screen.getByText('Dinner').closest('[data-testid="card"]') as HTMLElement
     expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00–21:00')
   })
+
+  it('sizes the body to the day window even when empty', () => {
+    // 06:00–21:00 = 15h × 44px/h = 660px, so columns stay aligned regardless of
+    // how many cards each holds.
+    render(<DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />)
+    expect(screen.getByTestId('day-body')).toHaveStyle({ minHeight: '660px' })
+  })
+
+  it('keeps the scale in a left gutter the cards clear, so labels are never covered', () => {
+    render(<DayColumn day={day} cards={cards} direction="down" />)
+    expect(screen.getByTestId('scale')).toHaveClass('left-0', 'w-16')
+    expect(screen.getByTestId('card-list')).toHaveClass('pl-16')
+  })
+
+  it('scales each card by its duration; untimed and end-less cards get one block', () => {
+    render(<DayColumn day={day} cards={cards} direction="down" />)
+    const li = (title: string) =>
+      screen.getByText(title).closest('li') as HTMLElement
+    expect(li('Dinner')).toHaveStyle({ minHeight: '88px' }) // 19:00–21:00 = 2h
+    expect(li('Breakfast')).toHaveStyle({ minHeight: '44px' }) // timed, no end = 1h
+    expect(li('Stroll')).toHaveStyle({ minHeight: '44px' }) // untimed = 1 block
+  })
+
+  it('tints weekend columns and leaves weekdays white', () => {
+    const { rerender } = render(<DayColumn day={day} cards={[]} direction="down" />)
+    // 2027-05-01 is a Saturday.
+    expect(screen.getByTestId('day-column')).toHaveClass('bg-rose-50')
+
+    const monday: Day = { key: '2027-05-03', index: 2 }
+    rerender(<DayColumn day={monday} cards={[]} direction="down" />)
+    expect(screen.getByTestId('day-column')).toHaveClass('bg-white')
+  })
 })

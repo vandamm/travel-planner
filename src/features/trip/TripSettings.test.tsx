@@ -23,4 +23,16 @@ describe('TripSettings', () => {
     expect(screen.getByLabelText('Start date')).toHaveValue('2027-05-01')
     expect(screen.getByLabelText('Number of days')).toHaveValue(12)
   })
+
+  it('defaults and writes the day timeline window', () => {
+    renderInRoom(<TripSettings />)
+    expect(screen.getByLabelText('Day start')).toHaveValue('06:00')
+    expect(screen.getByLabelText('Day end')).toHaveValue('21:00')
+
+    fireEvent.change(screen.getByLabelText('Day start'), { target: { value: '07:30' } })
+    fireEvent.change(screen.getByLabelText('Day end'), { target: { value: '22:00' } })
+
+    expect(screen.getByLabelText('Day start')).toHaveValue('07:30')
+    expect(screen.getByLabelText('Day end')).toHaveValue('22:00')
+  })
 })

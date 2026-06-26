@@ -58,6 +58,31 @@ export function TripSettings() {
           />
         </label>
       </div>
+
+      <div className="flex gap-3">
+        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
+          Day start
+          <input
+            type="time"
+            // lang="de" hints the native picker toward 24h; the value stays HH:mm.
+            lang="de"
+            value={trip.dayStart}
+            onChange={(e) => setTrip(doc, { dayStart: e.target.value })}
+            className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+          />
+        </label>
+
+        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
+          Day end
+          <input
+            type="time"
+            lang="de"
+            value={trip.dayEnd}
+            onChange={(e) => setTrip(doc, { dayEnd: e.target.value })}
+            className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+          />
+        </label>
+      </div>
     </section>
   )
 }

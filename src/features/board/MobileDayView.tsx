@@ -25,6 +25,9 @@ export interface MobileDayViewProps {
   /** City lookup for coloring the day header. */
   cityById: Map<string, City>
   direction: TimeDirection
+  /** Day timeline window 'HH:mm', forwarded to the day column. */
+  dayStart?: string
+  dayEnd?: string
   onAddCard?: (dayKey: string) => void
   onEditCard?: (card: Card) => void
 }
@@ -45,6 +48,8 @@ export function MobileDayView({
   overrides,
   cityById,
   direction,
+  dayStart,
+  dayEnd,
   onAddCard,
   onEditCard,
 }: MobileDayViewProps) {
@@ -120,6 +125,8 @@ export function MobileDayView({
           city={city}
           cards={cardsByDay.get(day.key) ?? []}
           direction={direction}
+          dayStart={dayStart}
+          dayEnd={dayEnd}
           onAddCard={onAddCard}
           onEditCard={onEditCard}
         />

@@ -97,6 +97,8 @@ export function Board() {
             overrides={overrides}
             cityById={cityById}
             direction={direction}
+            dayStart={trip.dayStart}
+            dayEnd={trip.dayEnd}
             onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
             onEditCard={(card) => setEditor({ mode: 'edit', card })}
           />
@@ -120,6 +122,8 @@ export function Board() {
                     city={cityId ? cityById.get(cityId) : undefined}
                     cards={cardsByDay.get(day.key) ?? []}
                     direction={direction}
+                    dayStart={trip.dayStart}
+                    dayEnd={trip.dayEnd}
                     onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
                     onEditCard={(card) => setEditor({ mode: 'edit', card })}
                   />
