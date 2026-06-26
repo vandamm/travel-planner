@@ -83,14 +83,40 @@ const uniqueIds = (items: { id: string }[]) =>
   new Set(items.map((i) => i.id)).size === items.length
 const DUPLICATE_ID = 'Duplicate id — entity ids must be unique'
 
-export const tripDocumentSchema = z.object({
-  trip: tripSettingsSchema,
-  cities: z.array(citySchema).refine(uniqueIds, DUPLICATE_ID).default([]),
-  accommodations: z.array(accommodationSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
-  cards: z.array(cardSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
-  // dayKey → cityId.
-  dayOverrides: z.record(z.string(), z.string()).default({}),
-})
+export const tripDocumentSchema = z
+  .object({
+    trip: tripSettingsSchema,
+    cities: z.array(citySchema).refine(uniqueIds, DUPLICATE_ID).default([]),
+    accommodations: z.array(accommodationSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
+    cards: z.array(cardSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
+    // dayKey → cityId.
+    dayOverrides: z.record(z.string(), z.string()).default({}),
+  })
+  // Referential integrity: every accommodation/override cityId must name a city
+  // in `cities`. `removeCity` cascades to prevent dangling references (see
+  // doc.ts / CLAUDE.md); enforce the same invariant at the import/agent boundary
+  // so a payload can't write the orphan the delete path is careful to avoid.
+  .superRefine((document, ctx) => {
+    const cityIds = new Set(document.cities.map((c) => c.id))
+    document.accommodations.forEach((acc, i) => {
+      if (acc.cityId !== undefined && !cityIds.has(acc.cityId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['accommodations', i, 'cityId'],
+          message: `Unknown cityId '${acc.cityId}' — no matching city`,
+        })
+      }
+    })
+    for (const [dayKey, cityId] of Object.entries(document.dayOverrides)) {
+      if (!cityIds.has(cityId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['dayOverrides', dayKey],
+          message: `Unknown cityId '${cityId}' — no matching city`,
+        })
+      }
+    }
+  })
 
 /** A complete, validated trip document — the shape exported and imported. */
 export type TripDocument = z.infer<typeof tripDocumentSchema>

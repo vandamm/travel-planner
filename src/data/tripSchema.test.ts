@@ -112,6 +112,26 @@ describe('tripDocumentSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('rejects an accommodation cityId that names no city (would dangle on apply)', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      accommodations: [
+        { id: 'stay-1', label: 'Hotel', cityId: 'ghost', startNight: '2027-05-01', endNight: '2027-05-02' },
+      ],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].path).toEqual(['accommodations', 0, 'cityId'])
+  })
+
+  it('rejects a dayOverride pointing at a city that does not exist', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      dayOverrides: { '2027-05-02': 'ghost' },
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].path).toEqual(['dayOverrides', '2027-05-02'])
+  })
+
   it('rejects a card link with a non-http(s) scheme', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,

@@ -103,4 +103,22 @@ describe('handleRequest (router + CORS)', () => {
     const res = await handleRequest(req, env, makeApi())
     expect(res.status).toBe(405)
   })
+
+  it('returns a CORS-bearing 502 when the Liveblocks layer throws, not a bare 500', async () => {
+    // The REST layer throws on any non-2xx (outage, 429, 5xx). The router must
+    // catch it and still answer with CORS headers, or the browser sees an opaque
+    // CORS error instead of a usable status.
+    const api = makeApi({
+      roomExists: async () => {
+        throw new Error('Liveblocks room lookup failed: 503')
+      },
+    })
+    const req = new Request('https://worker.test/api/trip/room1', {
+      method: 'GET',
+      headers: { 'x-owner-secret': 'owner-pw', origin: 'https://app.example' },
+    })
+    const res = await handleRequest(req, env, api)
+    expect(res.status).toBe(502)
+    expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
+  })
 })

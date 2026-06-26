@@ -53,41 +53,49 @@ export async function handleRequest(
 
   const { pathname } = new URL(request.url)
 
-  let res: Response
-  if (pathname === '/api/auth') {
-    res =
-      request.method === 'POST'
-        ? await handleAuth(request, api)
-        : json({ error: 'method not allowed' }, 405)
-  } else if (pathname === '/api/rooms') {
-    res =
-      request.method === 'POST'
-        ? await handleCreateRoom(request, env, api)
-        : json({ error: 'method not allowed' }, 405)
-  } else if (pathname.startsWith('/api/trip/')) {
-    let roomId: string
-    try {
-      // A malformed percent-escape (e.g. invalid UTF-8 like '%C0') makes
-      // decodeURIComponent throw a URIError; answer 400 rather than letting it
-      // escape the handler as a CORS-less 500.
-      roomId = decodeURIComponent(pathname.slice('/api/trip/'.length))
-    } catch {
-      return withCors(json({ error: 'invalid room id' }, 400), cors)
-    }
-    if (!roomId) {
-      res = json({ error: 'missing room id' }, 400)
-    } else if (request.method === 'GET') {
-      res = await handleGetTrip(request, env, api, roomId)
-    } else if (request.method === 'POST') {
-      res = await handlePostTrip(request, env, api, roomId)
+  try {
+    let res: Response
+    if (pathname === '/api/auth') {
+      res =
+        request.method === 'POST'
+          ? await handleAuth(request, api)
+          : json({ error: 'method not allowed' }, 405)
+    } else if (pathname === '/api/rooms') {
+      res =
+        request.method === 'POST'
+          ? await handleCreateRoom(request, env, api)
+          : json({ error: 'method not allowed' }, 405)
+    } else if (pathname.startsWith('/api/trip/')) {
+      let roomId: string
+      try {
+        // A malformed percent-escape (e.g. invalid UTF-8 like '%C0') makes
+        // decodeURIComponent throw a URIError; answer 400 rather than letting it
+        // escape the handler as a CORS-less 500.
+        roomId = decodeURIComponent(pathname.slice('/api/trip/'.length))
+      } catch {
+        return withCors(json({ error: 'invalid room id' }, 400), cors)
+      }
+      if (!roomId) {
+        res = json({ error: 'missing room id' }, 400)
+      } else if (request.method === 'GET') {
+        res = await handleGetTrip(request, env, api, roomId)
+      } else if (request.method === 'POST') {
+        res = await handlePostTrip(request, env, api, roomId)
+      } else {
+        res = json({ error: 'method not allowed' }, 405)
+      }
     } else {
-      res = json({ error: 'method not allowed' }, 405)
+      res = json({ error: 'not found' }, 404)
     }
-  } else {
-    res = json({ error: 'not found' }, 404)
-  }
 
-  return withCors(res, cors)
+    return withCors(res, cors)
+  } catch {
+    // The Liveblocks REST layer throws on any non-2xx (outage, 429, transient
+    // 5xx). Without this guard that rejection escapes `fetch` as a bare 500 with
+    // no CORS headers, so the browser surfaces an opaque CORS error instead of a
+    // usable status. Return a CORS'd 502 — same intent as the URIError guard above.
+    return withCors(json({ error: 'upstream error' }, 502), cors)
+  }
 }
 
 export default {
