@@ -70,6 +70,27 @@ describe('tripDocumentSchema', () => {
     ).toBe(false)
   })
 
+  it('rejects an accommodation whose endNight precedes its startNight', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      accommodations: [
+        { id: 'stay-1', label: 'Hotel', startNight: '2027-05-03', endNight: '2027-05-01' },
+      ],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].path).toEqual(['accommodations', 0, 'endNight'])
+  })
+
+  it('accepts an accommodation whose endNight equals its startNight (single night)', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      accommodations: [
+        { id: 'stay-1', label: 'Hotel', startNight: '2027-05-01', endNight: '2027-05-01' },
+      ],
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('rejects a card link with a non-http(s) scheme', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,

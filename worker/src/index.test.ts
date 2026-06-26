@@ -85,6 +85,19 @@ describe('handleRequest (router + CORS)', () => {
     expect(res.status).toBe(404)
   })
 
+  it('returns 400 with CORS headers for a malformed room id, not an uncaught throw', async () => {
+    // '%C0' is a syntactically valid percent-escape (so it survives the URL
+    // parser) but invalid UTF-8, so decodeURIComponent throws a URIError. The
+    // handler must catch it and answer 400 with CORS, never let it escape.
+    const req = new Request('https://worker.test/api/trip/%C0', {
+      method: 'GET',
+      headers: { origin: 'https://app.example' },
+    })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(400)
+    expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
+  })
+
   it('returns 405 for a wrong method on a known route', async () => {
     const req = new Request('https://worker.test/api/auth', { method: 'GET' })
     const res = await handleRequest(req, env, makeApi())

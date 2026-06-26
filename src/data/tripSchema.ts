@@ -38,13 +38,21 @@ export const citySchema = z.object({
   color: z.string().min(1),
 })
 
-export const accommodationSchema = z.object({
-  id: z.string().min(1),
-  label: z.string(),
-  cityId: z.string().optional(),
-  startNight: dateOnly,
-  endNight: dateOnly,
-})
+export const accommodationSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string(),
+    cityId: z.string().optional(),
+    startNight: dateOnly,
+    endNight: dateOnly,
+  })
+  // Inclusive night span: the last night must not precede the first. ISO
+  // date-only strings compare correctly lexicographically. An inverted span
+  // would otherwise validate yet render no bar and color no day.
+  .refine((a) => a.endNight >= a.startNight, {
+    message: 'endNight must be on or after startNight',
+    path: ['endNight'],
+  })
 
 export const cardSchema = z.object({
   id: z.string().min(1),

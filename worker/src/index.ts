@@ -65,7 +65,15 @@ export async function handleRequest(
         ? await handleCreateRoom(request, env, api)
         : json({ error: 'method not allowed' }, 405)
   } else if (pathname.startsWith('/api/trip/')) {
-    const roomId = decodeURIComponent(pathname.slice('/api/trip/'.length))
+    let roomId: string
+    try {
+      // A malformed percent-escape (e.g. invalid UTF-8 like '%C0') makes
+      // decodeURIComponent throw a URIError; answer 400 rather than letting it
+      // escape the handler as a CORS-less 500.
+      roomId = decodeURIComponent(pathname.slice('/api/trip/'.length))
+    } catch {
+      return withCors(json({ error: 'invalid room id' }, 400), cors)
+    }
     if (!roomId) {
       res = json({ error: 'missing room id' }, 400)
     } else if (request.method === 'GET') {
