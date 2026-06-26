@@ -155,7 +155,6 @@ export function applyCardDragEnd(
     const { dayStart, dayEnd } = getTrip(doc)
     const time = deriveDropTime(neighbours, insertIndex, dayStart, dayEnd)
     if (time !== undefined) {
-      if (active.startTime === time && active.dayKey === targetDayKey) return
       updateCard(doc, activeId, { startTime: time, dayKey: targetDayKey })
       return
     }

@@ -18,6 +18,8 @@ show accommodation as horizontal bars spanning the nights they cover.
   columns as fit the viewport and pages by that count.
 - A day's city is resolved automatically (a covering stay, else none), but each
   day header has a city control to **pin a city manually** ("Auto" clears it).
+  New cities are auto-assigned a distinct color from a built-in palette
+  (preferring an unused one), still overridable in the color picker.
 - The stays lane is always shown: each uncovered gap's first day carries an
   **Add stay** button (and one sits at the right end of the lane). Two stays
   that share only a changeover day meet mid-day on one row; genuine
