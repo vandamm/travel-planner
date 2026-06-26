@@ -1,10 +1,11 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
 
 const day: Day = { key: '2027-05-01', index: 0 }
 const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
+const florence: City = { id: 'florence', name: 'Florence', color: '#3b82f6' }
 
 const cards: Card[] = [
   { id: 'a', dayKey: '2027-05-01', title: 'Stroll', order: 0 },
@@ -77,6 +78,59 @@ describe('DayColumn', () => {
     expect(li('Dinner')).toHaveStyle({ minHeight: '88px' }) // 19:00–21:00 = 2h
     expect(li('Breakfast')).toHaveStyle({ minHeight: '44px' }) // timed, no end = 1h
     expect(li('Stroll')).toHaveStyle({ minHeight: '44px' }) // untimed = 1 block
+  })
+
+  it('offers an Auto + per-city override control, defaulting to Auto', () => {
+    render(
+      <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
+    )
+    const select = screen.getByTestId('city-override') as HTMLSelectElement
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Auto', 'Rome', 'Florence'])
+    expect(select.value).toBe('') // no override → Auto
+  })
+
+  it('reflects an existing manual override and flags it as manual', () => {
+    render(
+      <DayColumn
+        day={day}
+        city={florence}
+        cards={[]}
+        direction="down"
+        cities={[rome, florence]}
+        overrideCityId="florence"
+      />,
+    )
+    expect((screen.getByTestId('city-override') as HTMLSelectElement).value).toBe('florence')
+    expect(screen.getByTestId('override-indicator')).toBeInTheDocument()
+  })
+
+  it('shows no manual indicator for an accommodation-resolved city', () => {
+    render(<DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />)
+    expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
+  })
+
+  it('calls onSetCity with a city id when one is chosen, and null for Auto', () => {
+    const onSetCity = vi.fn()
+    render(
+      <DayColumn
+        day={day}
+        city={rome}
+        cards={[]}
+        direction="down"
+        cities={[rome, florence]}
+        onSetCity={onSetCity}
+      />,
+    )
+    const select = screen.getByTestId('city-override')
+    fireEvent.change(select, { target: { value: 'florence' } })
+    expect(onSetCity).toHaveBeenCalledWith('2027-05-01', 'florence')
+    fireEvent.change(select, { target: { value: '' } })
+    expect(onSetCity).toHaveBeenCalledWith('2027-05-01', null)
+  })
+
+  it('omits the override control when there are no cities to choose from', () => {
+    render(<DayColumn day={day} cards={[]} direction="down" cities={[]} />)
+    expect(screen.queryByTestId('city-override')).not.toBeInTheDocument()
   })
 
   it('tints weekend columns and leaves weekdays white', () => {

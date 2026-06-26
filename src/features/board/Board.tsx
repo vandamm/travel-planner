@@ -11,6 +11,7 @@ import {
   listCards,
   listCities,
   listDayOverrides,
+  setDayCityOverride,
 } from '../../data/doc'
 import { useRoom } from '../../data/RoomProvider'
 import { useDocVersion } from '../../data/useDoc'
@@ -48,7 +49,8 @@ export function Board() {
   const days = generateDays(trip.startDate, trip.numDays)
   const accommodations = listAccommodations(doc)
   const overrides = listDayOverrides(doc)
-  const cityById = new Map(listCities(doc).map((c) => [c.id, c]))
+  const cities = listCities(doc)
+  const cityById = new Map(cities.map((c) => [c.id, c]))
 
   const cardsByDay = new Map<string, Card[]>()
   for (const card of listCards(doc)) {
@@ -113,12 +115,14 @@ export function Board() {
             accommodations={accommodations}
             overrides={overrides}
             cityById={cityById}
+            cities={cities}
             direction={direction}
             dayStart={trip.dayStart}
             dayEnd={trip.dayEnd}
             columns={columns}
             onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
             onEditCard={(card) => setEditor({ mode: 'edit', card })}
+            onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
           />
         </BoardDnd>
       ) : (
@@ -143,6 +147,9 @@ export function Board() {
                     direction={direction}
                     dayStart={trip.dayStart}
                     dayEnd={trip.dayEnd}
+                    cities={cities}
+                    overrideCityId={overrides[day.key]}
+                    onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
                     onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
                     onEditCard={(card) => setEditor({ mode: 'edit', card })}
                   />

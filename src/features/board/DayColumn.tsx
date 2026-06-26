@@ -23,6 +23,12 @@ export interface DayColumnProps {
   dayStart?: string
   /** End of the day's timeline window, 'HH:mm'. */
   dayEnd?: string
+  /** All cities, to populate the per-day override picker (omit/empty → no picker). */
+  cities?: City[]
+  /** The day's *manual* override city id, if any (drives the picker value + flag). */
+  overrideCityId?: string
+  /** Set or clear this day's manual city override (`null` = Auto / no override). */
+  onSetCity?: (dayKey: string, cityId: string | null) => void
   /** Open the editor to add a card to this day. */
   onAddCard?: (dayKey: string) => void
   /** Open the editor on an existing card. */
@@ -68,6 +74,9 @@ export function DayColumn({
   direction,
   dayStart = '06:00',
   dayEnd = '21:00',
+  cities = [],
+  overrideCityId,
+  onSetCity,
   onAddCard,
   onEditCard,
 }: DayColumnProps) {
@@ -104,17 +113,45 @@ export function DayColumn({
           >
             {weekday} · {dateLabel}
           </span>
-          <span
-            data-testid="city-name"
-            className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"
-          >
+          <div className="flex items-center justify-between gap-1.5">
             <span
-              aria-hidden
-              style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
-              className="inline-block h-2.5 w-2.5 rounded-full"
-            />
-            {city ? city.name : <span className="text-slate-400">No city</span>}
-          </span>
+              data-testid="city-name"
+              className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"
+            >
+              <span
+                aria-hidden
+                style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
+                className="inline-block h-2.5 w-2.5 rounded-full"
+              />
+              {city ? city.name : <span className="text-slate-400">No city</span>}
+              {overrideCityId && (
+                <span
+                  data-testid="override-indicator"
+                  title="Manual city override"
+                  aria-label="Manual city override"
+                  className="text-slate-400"
+                >
+                  📌
+                </span>
+              )}
+            </span>
+            {cities.length > 0 && (
+              <select
+                data-testid="city-override"
+                aria-label={`City for ${weekday} ${dateLabel}`}
+                value={overrideCityId ?? ''}
+                onChange={(e) => onSetCity?.(day.key, e.target.value === '' ? null : e.target.value)}
+                className="max-w-[6rem] rounded border border-slate-200 bg-white px-1 py-0.5 text-xs text-slate-600"
+              >
+                <option value="">Auto</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
       </header>
 

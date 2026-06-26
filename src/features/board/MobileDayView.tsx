@@ -24,6 +24,8 @@ export interface MobileDayViewProps {
   overrides: Record<string, string>
   /** City lookup for coloring the day header. */
   cityById: Map<string, City>
+  /** All cities, forwarded to each day's override picker. */
+  cities?: City[]
   direction: TimeDirection
   /** Day timeline window 'HH:mm', forwarded to the day column. */
   dayStart?: string
@@ -32,6 +34,8 @@ export interface MobileDayViewProps {
   columns?: number
   onAddCard?: (dayKey: string) => void
   onEditCard?: (card: Card) => void
+  /** Set or clear a day's manual city override (`null` = Auto). */
+  onSetCity?: (dayKey: string, cityId: string | null) => void
 }
 
 /**
@@ -49,12 +53,14 @@ export function MobileDayView({
   accommodations,
   overrides,
   cityById,
+  cities,
   direction,
   dayStart,
   dayEnd,
   columns = 1,
   onAddCard,
   onEditCard,
+  onSetCity,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -138,6 +144,9 @@ export function MobileDayView({
               direction={direction}
               dayStart={dayStart}
               dayEnd={dayEnd}
+              cities={cities}
+              overrideCityId={overrides[day.key]}
+              onSetCity={onSetCity}
               onAddCard={onAddCard}
               onEditCard={onEditCard}
             />

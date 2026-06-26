@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { ReactNode } from 'react'
 import * as Y from 'yjs'
@@ -72,6 +72,40 @@ describe('Board', () => {
     const bar = screen.getByTestId('accommodation-bar')
     expect(bar).toHaveTextContent('Hotel Roma')
     expect(screen.getByTestId('accommodation-cell')).toHaveStyle({ gridColumn: '1 / span 2' })
+  })
+
+  it('overrides a day’s city from its header, then reverts to Auto', () => {
+    renderBoard(<Board />)
+    act(() => {
+      setTrip(doc, { startDate: '2027-05-01', numDays: 1 })
+      addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+      addCity(doc, { id: 'florence', name: 'Florence', color: '#3b82f6' })
+      addAccommodation(doc, {
+        label: 'Hotel Roma',
+        cityId: 'rome',
+        startNight: '2027-05-01',
+        endNight: '2027-05-01',
+      })
+    })
+    const column = screen.getAllByTestId('day-column')[0]
+    // Accommodation-resolved → Rome, no manual flag.
+    expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
+    expect(within(column).queryByTestId('override-indicator')).not.toBeInTheDocument()
+
+    // Pin Florence via the header picker → recolors and flags as manual.
+    const select = within(column).getByTestId('city-override')
+    act(() => {
+      fireEvent.change(select, { target: { value: 'florence' } })
+    })
+    expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#3b82f6' })
+    expect(within(column).getByTestId('override-indicator')).toBeInTheDocument()
+
+    // Auto clears the override → back to the accommodation's Rome.
+    act(() => {
+      fireEvent.change(within(column).getByTestId('city-override'), { target: { value: '' } })
+    })
+    expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
+    expect(within(column).queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
   it('opens the accommodation editor from the Add stay button', () => {
