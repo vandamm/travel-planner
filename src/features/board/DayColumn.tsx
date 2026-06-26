@@ -7,6 +7,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format, isWeekend, parseISO } from 'date-fns'
+import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day } from '../../data/schema'
 import { SortableCard } from '../cards/Card'
 import { cardHeightPx, windowHeightPx } from '../cards/cardHeight'
@@ -55,7 +56,7 @@ export function DayColumn({
   const ordered = orderCardsForDirection(cards, direction)
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const weekday = format(parseISO(day.key), 'EEE')
-  const dateLabel = format(parseISO(day.key), 'dd.MM') // day-first (dd.mm) for the EU audience
+  const dateLabel = formatDay(day.key) // day-first dd.MM for the EU audience
   const weekend = isWeekend(parseISO(day.key))
 
   // The column body is a drop target so cards can be dropped onto an empty day

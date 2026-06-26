@@ -6,6 +6,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import type { CSSProperties, HTMLAttributes } from 'react'
+import { formatTimeRange } from '../../data/dateFormat'
 import type { Card as CardType } from '../../data/schema'
 
 export interface CardProps {
@@ -80,8 +81,7 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
           </span>
           {card.startTime && (
             <span data-testid="card-time" className="shrink-0 text-xs text-slate-500">
-              {card.startTime}
-              {card.endTime ? `–${card.endTime}` : ''}
+              {formatTimeRange(card.startTime, card.endTime)}
             </span>
           )}
         </button>
