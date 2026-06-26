@@ -10,8 +10,16 @@
 // dnd-kit, jsdom, or a live drag.
 
 import type * as Y from 'yjs'
-import { getCard, listCards, reorderCards } from '../../data/doc'
+import { getCard, getTrip, listCards, reorderCards, updateCard } from '../../data/doc'
+import type { Card } from '../../data/schema'
+import { clockMinutes, clockString } from '../cards/cardHeight'
+import { isTimed } from '../cards/cardSort'
 import { orderCardsForDirection, type TimeDirection } from './timeDirection'
+
+/** Snap derived drop times to this granularity (minutes). */
+const SNAP_MINUTES = 15
+/** Offset (minutes) used when a drop has a timed neighbour on only one side. */
+const NEIGHBOR_GAP_MINUTES = 60
 
 /** Prefix marking a *column's* droppable id, distinguishing it from a card id. */
 export const DAY_DROPPABLE_PREFIX = 'day:'
@@ -39,6 +47,53 @@ export interface CardDragEnd {
 
 function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i])
+}
+
+/**
+ * Derive a start time for an untimed card dropped into a day, inferred from its
+ * neighbours in canonical (morning→evening) order. `neighbours` are the day's
+ * other cards in that order; `insertIndex` is where the dragged card landed
+ * among them.
+ *
+ * The day column is a *stacked* timeline, not a clock ruler, so the time comes
+ * from the nearest timed card on each side of the drop, not from pixels:
+ * - timed neighbours both above and below → their midpoint;
+ * - only an earlier (above) timed neighbour → that time + a gap (later);
+ * - only a later (below) timed neighbour → that time − a gap (earlier).
+ * The result is snapped to {@link SNAP_MINUTES} and clamped to the day window.
+ * Returns `undefined` when there is no timed neighbour to anchor against — the
+ * caller then falls back to a plain untimed reorder.
+ */
+export function deriveDropTime(
+  neighbours: Card[],
+  insertIndex: number,
+  dayStart: string,
+  dayEnd: string,
+): string | undefined {
+  let before: number | undefined
+  for (let i = insertIndex - 1; i >= 0; i--) {
+    if (isTimed(neighbours[i])) {
+      before = clockMinutes(neighbours[i].startTime as string)
+      break
+    }
+  }
+  let after: number | undefined
+  for (let i = insertIndex; i < neighbours.length; i++) {
+    if (isTimed(neighbours[i])) {
+      after = clockMinutes(neighbours[i].startTime as string)
+      break
+    }
+  }
+
+  let target: number
+  if (before !== undefined && after !== undefined) target = (before + after) / 2
+  else if (before !== undefined) target = before + NEIGHBOR_GAP_MINUTES
+  else if (after !== undefined) target = after - NEIGHBOR_GAP_MINUTES
+  else return undefined
+
+  const snapped = Math.round(target / SNAP_MINUTES) * SNAP_MINUTES
+  const clamped = Math.min(Math.max(snapped, clockMinutes(dayStart)), clockMinutes(dayEnd))
+  return clockString(clamped)
 }
 
 /**
@@ -85,6 +140,26 @@ export function applyCardDragEnd(
 
   // Convert the visible order back to canonical (morning→evening) for storage.
   const canonical = direction === 'up' ? [...newVisible].reverse() : newVisible
+
+  // An untimed card dropped among timed neighbours becomes timed: infer a start
+  // time from where it landed (relative to those neighbours), independent of the
+  // viewer's direction because the slot is read in canonical order. With no timed
+  // neighbour to anchor against, fall through to the plain untimed reorder below.
+  if (!isTimed(active)) {
+    const byId = new Map(targetCards.map((c) => [c.id, c]))
+    const neighbours = canonical
+      .filter((id) => id !== activeId)
+      .map((id) => byId.get(id))
+      .filter((c): c is Card => c !== undefined)
+    const insertIndex = canonical.indexOf(activeId)
+    const { dayStart, dayEnd } = getTrip(doc)
+    const time = deriveDropTime(neighbours, insertIndex, dayStart, dayEnd)
+    if (time !== undefined) {
+      if (active.startTime === time && active.dayKey === targetDayKey) return
+      updateCard(doc, activeId, { startTime: time, dayKey: targetDayKey })
+      return
+    }
+  }
 
   // Skip a within-day drop that leaves the canonical order untouched.
   if (targetDayKey === active.dayKey) {

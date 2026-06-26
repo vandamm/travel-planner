@@ -21,6 +21,12 @@ export function clockMinutes(hhmm: string): number {
   return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 0
 }
 
+/** 'HH:mm' for minutes since midnight (inverse of {@link clockMinutes}). */
+export function clockString(minutes: number): string {
+  const m = ((Math.round(minutes) % 1440) + 1440) % 1440
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
 /** Length of the day window in hours (floored to a default block). */
 function windowHours(dayStart: string, dayEnd: string): number {
   return Math.max((clockMinutes(dayEnd) - clockMinutes(dayStart)) / 60, DEFAULT_CARD_HOURS)
