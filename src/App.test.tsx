@@ -7,4 +7,10 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Travel Planner' })).toBeInTheDocument()
   })
+
+  it('does not render the on-page import/export controls', () => {
+    render(<App />)
+    expect(screen.queryByRole('button', { name: 'Export trip' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Import / Export' })).not.toBeInTheDocument()
+  })
 })
