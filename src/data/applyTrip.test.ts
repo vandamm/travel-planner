@@ -12,7 +12,7 @@ import {
 } from './doc'
 
 const TRIP = {
-  trip: { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 },
+  trip: { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'rome', name: 'Rome', color: '#ef4444' }],
   accommodations: [
     { id: 'stay-1', label: 'Hotel Roma', cityId: 'rome', startNight: '2027-05-01', endNight: '2027-05-02' },

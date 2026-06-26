@@ -39,6 +39,9 @@ export const tripSettingsSchema = z.object({
   startDate: z.union([dateOnly, z.literal('')]),
   // Bounded so an oversized count can't generate an unbounded board (see days.ts).
   numDays: z.number().int().min(0).max(MAX_TRIP_DAYS),
+  // The day's timeline window; defaults mirror DEFAULT_TRIP in doc.ts.
+  dayStart: clockTime.default('06:00'),
+  dayEnd: clockTime.default('21:00'),
 })
 
 export const citySchema = z.object({
@@ -74,6 +77,7 @@ export const cardSchema = z.object({
   order: z.number().int(),
   color: z.string().optional(),
   icon: z.string().optional(),
+  transport: z.boolean().optional(),
 })
 
 // Entities are keyed by `id` on apply (into `Y.Map`s), so a duplicate id would

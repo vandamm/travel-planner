@@ -32,7 +32,13 @@ describe('exportTrip', () => {
     seed(doc)
     const out = exportTrip(doc)
     expect(() => tripDocumentSchema.parse(out)).not.toThrow()
-    expect(out.trip).toEqual({ title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+    expect(out.trip).toEqual({
+      title: 'Italy 2027',
+      startDate: '2027-05-01',
+      numDays: 3,
+      dayStart: '06:00',
+      dayEnd: '21:00',
+    })
     expect(out.cities).toEqual([{ id: 'rome', name: 'Rome', color: '#ef4444' }])
   })
 
@@ -45,7 +51,7 @@ describe('exportTrip', () => {
   it('exports a fresh, never-set-up doc as a valid empty document', () => {
     const out = exportTrip(new Y.Doc())
     expect(out).toEqual({
-      trip: { title: '', startDate: '', numDays: 0 },
+      trip: { title: '', startDate: '', numDays: 0, dayStart: '06:00', dayEnd: '21:00' },
       cities: [],
       accommodations: [],
       cards: [],
@@ -71,6 +77,19 @@ describe('export → import round-trip', () => {
     const target = new Y.Doc()
     applyTrip(target, exported)
 
+    expect(exportTrip(target)).toEqual(exported)
+  })
+
+  it('round-trips a custom day window and a transport card', () => {
+    const source = new Y.Doc()
+    setTrip(source, { title: 'T', startDate: '2027-05-01', numDays: 1, dayStart: '08:00', dayEnd: '23:00' })
+    addCard(source, { id: 'flight', dayKey: '2027-05-01', title: 'Flight', order: 0, transport: true })
+    const exported = exportTrip(source)
+    expect(exported.trip).toMatchObject({ dayStart: '08:00', dayEnd: '23:00' })
+    expect(exported.cards[0].transport).toBe(true)
+
+    const target = new Y.Doc()
+    applyTrip(target, exported)
     expect(exportTrip(target)).toEqual(exported)
   })
 })

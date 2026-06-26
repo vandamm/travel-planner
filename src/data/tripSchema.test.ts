@@ -3,7 +3,7 @@ import { MAX_TRIP_DAYS } from './days'
 import { parseTripText, tripDocumentSchema } from './tripSchema'
 
 const VALID = {
-  trip: { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 },
+  trip: { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'rome', name: 'Rome', color: '#ef4444' }],
   accommodations: [
     { id: 'stay-1', label: 'Hotel Roma', cityId: 'rome', startNight: '2027-05-01', endNight: '2027-05-02' },
@@ -18,17 +18,39 @@ describe('tripDocumentSchema', () => {
     expect(parsed).toEqual(VALID)
   })
 
-  it('fills empty defaults for the optional collections', () => {
+  it('fills empty defaults for the optional collections and day window', () => {
     const parsed = tripDocumentSchema.parse({
       trip: { title: '', startDate: '', numDays: 0 },
     })
     expect(parsed).toEqual({
-      trip: { title: '', startDate: '', numDays: 0 },
+      trip: { title: '', startDate: '', numDays: 0, dayStart: '06:00', dayEnd: '21:00' },
       cities: [],
       accommodations: [],
       cards: [],
       dayOverrides: {},
     })
+  })
+
+  it('keeps an explicit day window and rejects a malformed one', () => {
+    const parsed = tripDocumentSchema.parse({
+      trip: { title: 'X', startDate: '2027-05-01', numDays: 1, dayStart: '07:30', dayEnd: '22:00' },
+    })
+    expect(parsed.trip).toMatchObject({ dayStart: '07:30', dayEnd: '22:00' })
+
+    expect(
+      tripDocumentSchema.safeParse({
+        trip: { title: 'X', startDate: '2027-05-01', numDays: 1, dayStart: '6am', dayEnd: '21:00' },
+      }).success,
+    ).toBe(false)
+  })
+
+  it('accepts a card flagged as transport', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Flight', order: 0, transport: true }],
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.cards[0].transport).toBe(true)
   })
 
   it('rejects a card with a malformed date and points at the offending path', () => {

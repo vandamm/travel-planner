@@ -25,7 +25,13 @@ const DAY_OVERRIDES = 'dayOverrides'
 const CARDS = 'cards'
 const ACCOMMODATIONS = 'accommodations'
 
-const DEFAULT_TRIP: Trip = { title: '', startDate: '', numDays: 0 }
+const DEFAULT_TRIP: Trip = {
+  title: '',
+  startDate: '',
+  numDays: 0,
+  dayStart: '06:00',
+  dayEnd: '21:00',
+}
 
 /** Generate an id, preferring WebCrypto's UUID when present (browser/Worker). */
 function newId(): string {
@@ -86,6 +92,8 @@ export function getTrip(doc: Y.Doc): Trip {
     title: (m.get('title') as string | undefined) ?? DEFAULT_TRIP.title,
     startDate: (m.get('startDate') as string | undefined) ?? DEFAULT_TRIP.startDate,
     numDays: (m.get('numDays') as number | undefined) ?? DEFAULT_TRIP.numDays,
+    dayStart: (m.get('dayStart') as string | undefined) ?? DEFAULT_TRIP.dayStart,
+    dayEnd: (m.get('dayEnd') as string | undefined) ?? DEFAULT_TRIP.dayEnd,
   }
 }
 
@@ -106,6 +114,8 @@ export function setTrip(doc: Y.Doc, patch: Partial<Trip>): void {
     if (patch.title !== undefined) m.set('title', patch.title)
     if (patch.startDate !== undefined) m.set('startDate', patch.startDate)
     if (patch.numDays !== undefined) m.set('numDays', clampNumDays(patch.numDays))
+    if (patch.dayStart !== undefined) m.set('dayStart', patch.dayStart)
+    if (patch.dayEnd !== undefined) m.set('dayEnd', patch.dayEnd)
   })
 }
 
@@ -164,6 +174,7 @@ export interface NewCard {
   order?: number
   color?: string
   icon?: string
+  transport?: boolean
   id?: string
 }
 
@@ -206,6 +217,7 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
     ...(input.endTime !== undefined && { endTime: input.endTime }),
     ...(input.color !== undefined && { color: input.color }),
     ...(input.icon !== undefined && { icon: input.icon }),
+    ...(input.transport !== undefined && { transport: input.transport }),
   }
   doc.transact(() => entityMap(doc, CARDS).set(id, toYMap(card)))
   return card

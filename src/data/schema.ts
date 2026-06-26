@@ -15,6 +15,10 @@ export interface Trip {
   startDate: string
   /** Total number of day columns, counted inclusively from `startDate`. */
   numDays: number
+  /** Start of each day's timeline window, 'HH:mm' (default '06:00'). */
+  dayStart: string
+  /** End of each day's timeline window, 'HH:mm' (default '21:00'). */
+  dayEnd: string
 }
 
 /** A city with a display color; cities color-code the days they cover. */
@@ -53,6 +57,8 @@ export interface Card {
   order: number
   color?: string
   icon?: string
+  /** Marks the card as a transportation leg (distinct rendering). */
+  transport?: boolean
 }
 
 /**

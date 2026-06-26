@@ -53,7 +53,7 @@ function seededDoc(): Y.Doc {
 }
 
 const validTrip = {
-  trip: { title: 'Italy', startDate: '2027-05-01', numDays: 3 },
+  trip: { title: 'Italy', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'c2', name: 'Rome', color: '#ff0000' }],
   accommodations: [],
   cards: [{ id: 'k2', dayKey: '2027-05-01', title: 'Colosseum', order: 0 }],
@@ -66,7 +66,13 @@ describe('handleGetTrip', () => {
 
     expect(res.status).toBe(200)
     const body = (await res.json()) as { trip: unknown; cities: unknown[]; cards: unknown[] }
-    expect(body.trip).toEqual({ title: 'Seed Trip', startDate: '2027-01-01', numDays: 2 })
+    expect(body.trip).toEqual({
+      title: 'Seed Trip',
+      startDate: '2027-01-01',
+      numDays: 2,
+      dayStart: '06:00',
+      dayEnd: '21:00',
+    })
     expect(body.cities).toEqual([{ id: 'c1', name: 'Paris', color: '#0000ff' }])
     expect(body.cards).toEqual([{ id: 'k1', dayKey: '2027-01-01', title: 'Louvre', order: 0 }])
   })
@@ -76,7 +82,7 @@ describe('handleGetTrip', () => {
 
     expect(res.status).toBe(200)
     const body = (await res.json()) as { trip: unknown; cities: unknown[] }
-    expect(body.trip).toEqual({ title: '', startDate: '', numDays: 0 })
+    expect(body.trip).toEqual({ title: '', startDate: '', numDays: 0, dayStart: '06:00', dayEnd: '21:00' })
     expect(body.cities).toEqual([])
   })
 

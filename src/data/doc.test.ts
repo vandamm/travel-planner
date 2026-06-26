@@ -32,16 +32,34 @@ function freshDoc() {
 
 describe('trip settings', () => {
   it('returns empty defaults for a brand-new doc', () => {
-    expect(getTrip(freshDoc())).toEqual({ title: '', startDate: '', numDays: 0 })
+    expect(getTrip(freshDoc())).toEqual({
+      title: '',
+      startDate: '',
+      numDays: 0,
+      dayStart: '06:00',
+      dayEnd: '21:00',
+    })
   })
 
   it('sets and reads back trip fields, merging partial updates', () => {
     const doc = freshDoc()
     setTrip(doc, { title: 'Italy', startDate: '2027-05-01', numDays: 14 })
-    expect(getTrip(doc)).toEqual({ title: 'Italy', startDate: '2027-05-01', numDays: 14 })
+    expect(getTrip(doc)).toEqual({
+      title: 'Italy',
+      startDate: '2027-05-01',
+      numDays: 14,
+      dayStart: '06:00',
+      dayEnd: '21:00',
+    })
 
     setTrip(doc, { numDays: 21 })
-    expect(getTrip(doc)).toEqual({ title: 'Italy', startDate: '2027-05-01', numDays: 21 })
+    expect(getTrip(doc)).toMatchObject({ title: 'Italy', startDate: '2027-05-01', numDays: 21 })
+  })
+
+  it('sets and reads back a custom day window', () => {
+    const doc = freshDoc()
+    setTrip(doc, { dayStart: '08:00', dayEnd: '23:00' })
+    expect(getTrip(doc)).toMatchObject({ dayStart: '08:00', dayEnd: '23:00' })
   })
 
   it('clamps numDays to the schema range and floors fractions', () => {
@@ -163,6 +181,14 @@ describe('cards', () => {
     const card = addCard(doc, { dayKey: '2027-05-01', title: 'gone' })
     removeCard(doc, card.id)
     expect(listCards(doc)).toHaveLength(0)
+  })
+
+  it('stores the transport flag and can clear it', () => {
+    const doc = freshDoc()
+    const card = addCard(doc, { dayKey: '2027-05-01', title: 'Train', transport: true })
+    expect(getCard(doc, card.id)?.transport).toBe(true)
+    updateCard(doc, card.id, { transport: undefined })
+    expect(getCard(doc, card.id)?.transport).toBeUndefined()
   })
 
   it('reads a single card by id', () => {
