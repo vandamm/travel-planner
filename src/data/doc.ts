@@ -16,6 +16,7 @@
 // clobbering one another — the whole point of using a CRDT.
 
 import * as Y from 'yjs'
+import { MAX_TRIP_DAYS } from './days'
 import type { Accommodation, Card, City, Trip } from './schema'
 
 const TRIP = 'trip'
@@ -88,12 +89,23 @@ export function getTrip(doc: Y.Doc): Trip {
   }
 }
 
+/**
+ * Coerce a day count into the schema's valid range — a non-negative integer no
+ * greater than {@link MAX_TRIP_DAYS}. Clamping here (not just via the setup UI's
+ * `max` attribute, which a typed or pasted value bypasses) keeps the doc from
+ * ever holding a count that `tripDocumentSchema` would later reject on export.
+ */
+function clampNumDays(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.min(Math.max(Math.floor(value), 0), MAX_TRIP_DAYS)
+}
+
 export function setTrip(doc: Y.Doc, patch: Partial<Trip>): void {
   const m = doc.getMap(TRIP)
   doc.transact(() => {
     if (patch.title !== undefined) m.set('title', patch.title)
     if (patch.startDate !== undefined) m.set('startDate', patch.startDate)
-    if (patch.numDays !== undefined) m.set('numDays', patch.numDays)
+    if (patch.numDays !== undefined) m.set('numDays', clampNumDays(patch.numDays))
   })
 }
 

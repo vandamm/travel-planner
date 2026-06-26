@@ -61,6 +61,19 @@ describe('sortCardsForColumn', () => {
     expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['early-order', 'late-order'])
   })
 
+  it('breaks ties between equal-order untimed cards by id for a stable order', () => {
+    const cards = [card({ id: 'b', order: 0 }), card({ id: 'a', order: 0 }), card({ id: 'c', order: 0 })]
+    expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('breaks ties between timed cards with equal start time and order by id', () => {
+    const cards = [
+      card({ id: 'b', order: 0, startTime: '08:00' }),
+      card({ id: 'a', order: 0, startTime: '08:00' }),
+    ]
+    expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['a', 'b'])
+  })
+
   it('ignores endTime when ordering', () => {
     const cards = [
       card({ id: 'short-late', order: 0, startTime: '10:00', endTime: '10:30' }),

@@ -25,8 +25,11 @@ export function sortCardsForColumn(cards: Card[]): Card[] {
   timed.sort((a, b) => {
     const at = a.startTime as string
     const bt = b.startTime as string
-    return at < bt ? -1 : at > bt ? 1 : a.order - b.order
+    return at < bt ? -1 : at > bt ? 1 : a.order - b.order || a.id.localeCompare(b.id)
   })
-  untimed.sort((a, b) => a.order - b.order)
+  // Tie-break equal orders by id so the order is stable and deterministic —
+  // equal orders are reachable via import or concurrent offline `addCard`s that
+  // each pick the same next order, and `exportTrip` already tie-breaks by id.
+  untimed.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
   return [...timed, ...untimed]
 }

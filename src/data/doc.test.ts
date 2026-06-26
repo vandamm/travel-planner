@@ -24,6 +24,7 @@ import {
   updateCard,
   updateCity,
 } from './doc'
+import { MAX_TRIP_DAYS } from './days'
 
 function freshDoc() {
   return new Y.Doc()
@@ -41,6 +42,21 @@ describe('trip settings', () => {
 
     setTrip(doc, { numDays: 21 })
     expect(getTrip(doc)).toEqual({ title: 'Italy', startDate: '2027-05-01', numDays: 21 })
+  })
+
+  it('clamps numDays to the schema range and floors fractions', () => {
+    const doc = freshDoc()
+    setTrip(doc, { numDays: MAX_TRIP_DAYS + 5000 })
+    expect(getTrip(doc).numDays).toBe(MAX_TRIP_DAYS)
+
+    setTrip(doc, { numDays: -3 })
+    expect(getTrip(doc).numDays).toBe(0)
+
+    setTrip(doc, { numDays: 5.9 })
+    expect(getTrip(doc).numDays).toBe(5)
+
+    setTrip(doc, { numDays: Number.NaN })
+    expect(getTrip(doc).numDays).toBe(0)
   })
 })
 

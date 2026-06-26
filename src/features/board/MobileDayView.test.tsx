@@ -94,4 +94,15 @@ describe('MobileDayView', () => {
     fireEvent.touchEnd(view, { changedTouches: [{ clientX: 300 }] })
     expect(currentDay()).toBe('2027-05-01')
   })
+
+  it('ignores a mostly-vertical gesture so scrolling does not page', () => {
+    renderView()
+    const view = screen.getByTestId('mobile-day-view')
+
+    // Horizontal drift exceeds the threshold, but vertical travel dominates:
+    // this is a scroll, not a swipe, so the day must not change.
+    fireEvent.touchStart(view, { touches: [{ clientX: 300, clientY: 100 }] })
+    fireEvent.touchEnd(view, { changedTouches: [{ clientX: 255, clientY: 400 }] })
+    expect(currentDay()).toBe('2027-05-01')
+  })
 })

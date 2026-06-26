@@ -41,7 +41,16 @@ export function ImportExport() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   function onExport() {
-    downloadFile(exportFilename(getTrip(doc).title), exportTripJSON(doc))
+    try {
+      downloadFile(exportFilename(getTrip(doc).title), exportTripJSON(doc))
+    } catch (e) {
+      // `exportTripJSON` validates against the schema, so a doc holding an
+      // invalid value (e.g. one merged from a peer) throws. Surface it instead
+      // of failing the download silently — open the panel so the error shows.
+      setOpen(true)
+      setStatus(null)
+      setError(`Could not export this trip: ${(e as Error).message}`)
+    }
   }
 
   function onImport() {

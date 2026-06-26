@@ -80,4 +80,19 @@ describe('ImportExport', () => {
     await user.click(screen.getByRole('button', { name: 'Export trip' }))
     expect(createObjectURL).toHaveBeenCalledTimes(1)
   })
+
+  it('surfaces an error instead of failing silently when the doc is not exportable', async () => {
+    const createObjectURL = vi.fn(() => 'blob:fake')
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL: vi.fn() })
+
+    const user = userEvent.setup()
+    // An out-of-range numDays (e.g. merged from a peer running older code)
+    // makes the export-time schema validation reject the doc.
+    renderIO((d) => d.getMap('trip').set('numDays', 99999))
+
+    await user.click(screen.getByRole('button', { name: 'Export trip' }))
+
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+  })
 })

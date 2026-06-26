@@ -49,7 +49,7 @@ export function MobileDayView({
   onEditCard,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
-  const touchStartX = useRef<number | null>(null)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   if (days.length === 0) return null
 
@@ -65,17 +65,22 @@ export function MobileDayView({
   const go = (delta: number) => setIndex((i) => clampDayIndex(clampDayIndex(i, days.length) + delta, days.length))
 
   function onTouchStart(event: React.TouchEvent) {
-    touchStartX.current = event.touches[0]?.clientX ?? null
+    const t = event.touches[0]
+    touchStart.current = t ? { x: t.clientX, y: t.clientY ?? 0 } : null
   }
 
   function onTouchEnd(event: React.TouchEvent) {
-    const start = touchStartX.current
-    touchStartX.current = null
-    if (start == null) return
-    const delta = (event.changedTouches[0]?.clientX ?? start) - start
-    if (Math.abs(delta) < SWIPE_THRESHOLD) return
+    const start = touchStart.current
+    touchStart.current = null
+    if (!start) return
+    const end = event.changedTouches[0]
+    const dx = (end?.clientX ?? start.x) - start.x
+    const dy = (end?.clientY ?? start.y) - start.y
+    // Require a clear horizontal swipe: past the threshold AND more horizontal
+    // than vertical, so a vertical scroll that drifts sideways doesn't page.
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) <= Math.abs(dy)) return
     // Swipe left (negative delta) advances; swipe right goes back.
-    go(delta < 0 ? 1 : -1)
+    go(dx < 0 ? 1 : -1)
   }
 
   return (
