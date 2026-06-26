@@ -33,6 +33,10 @@ function currentDay() {
   return screen.getByTestId('day-column').getAttribute('data-day')
 }
 
+function visibleDays() {
+  return screen.getAllByTestId('day-column').map((el) => el.getAttribute('data-day'))
+}
+
 describe('clampDayIndex', () => {
   it('clamps below zero to the first day', () => {
     expect(clampDayIndex(-3, 3)).toBe(0)
@@ -104,5 +108,26 @@ describe('MobileDayView', () => {
     fireEvent.touchStart(view, { touches: [{ clientX: 300, clientY: 100 }] })
     fireEvent.touchEnd(view, { changedTouches: [{ clientX: 255, clientY: 400 }] })
     expect(currentDay()).toBe('2027-05-01')
+  })
+
+  it('renders a window of days when more than one column fits', () => {
+    renderView({ columns: 2 })
+    expect(visibleDays()).toEqual(['2027-05-01', '2027-05-02'])
+    expect(screen.getByTestId('mobile-day-position')).toHaveTextContent('Days 1–2 of 3')
+  })
+
+  it('pages by a whole window and shows the trailing partial page', async () => {
+    const user = userEvent.setup()
+    renderView({ columns: 2 })
+    const next = screen.getByRole('button', { name: 'Next day' })
+
+    await user.click(next)
+    // Three days, window of two: the second page is the single trailing day.
+    expect(visibleDays()).toEqual(['2027-05-03'])
+    expect(screen.getByTestId('mobile-day-position')).toHaveTextContent('Day 3 of 3')
+    expect(next).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Previous day' }))
+    expect(visibleDays()).toEqual(['2027-05-01', '2027-05-02'])
   })
 })

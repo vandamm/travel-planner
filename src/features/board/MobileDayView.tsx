@@ -28,6 +28,8 @@ export interface MobileDayViewProps {
   /** Day timeline window 'HH:mm', forwarded to the day column. */
   dayStart?: string
   dayEnd?: string
+  /** How many day columns to show per page (≥1); pages advance by this count. */
+  columns?: number
   onAddCard?: (dayKey: string) => void
   onEditCard?: (card: Card) => void
 }
@@ -50,6 +52,7 @@ export function MobileDayView({
   direction,
   dayStart,
   dayEnd,
+  columns = 1,
   onAddCard,
   onEditCard,
 }: MobileDayViewProps) {
@@ -58,16 +61,20 @@ export function MobileDayView({
 
   if (days.length === 0) return null
 
+  const perPage = Math.max(1, columns)
   // The trip can shrink (fewer days) under us, so clamp on every render rather
   // than trusting the stored index.
   const safeIndex = clampDayIndex(index, days.length)
-  const day = days[safeIndex]
-  const cityId = resolveDayCity(day.key, accommodations, overrides)
-  const city = cityId ? cityById.get(cityId) : undefined
+  const visible = days.slice(safeIndex, safeIndex + perPage)
+  const firstPos = safeIndex + 1
+  const lastPos = safeIndex + visible.length
 
   const atFirst = safeIndex === 0
-  const atLast = safeIndex === days.length - 1
-  const go = (delta: number) => setIndex((i) => clampDayIndex(clampDayIndex(i, days.length) + delta, days.length))
+  // The window already reaches the last day — nowhere further to page.
+  const atLast = safeIndex + perPage >= days.length
+  // Page by a whole window so days never repeat between pages.
+  const go = (delta: number) =>
+    setIndex((i) => clampDayIndex(clampDayIndex(i, days.length) + delta * perPage, days.length))
 
   function onTouchStart(event: React.TouchEvent) {
     const t = event.touches[0]
@@ -106,7 +113,7 @@ export function MobileDayView({
           ‹ Prev
         </button>
         <span data-testid="mobile-day-position" className="text-sm font-medium text-slate-600">
-          Day {safeIndex + 1} of {days.length}
+          {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of {days.length}
         </span>
         <button
           type="button"
@@ -119,17 +126,23 @@ export function MobileDayView({
         </button>
       </div>
 
-      <div className="flex justify-center">
-        <DayColumn
-          day={day}
-          city={city}
-          cards={cardsByDay.get(day.key) ?? []}
-          direction={direction}
-          dayStart={dayStart}
-          dayEnd={dayEnd}
-          onAddCard={onAddCard}
-          onEditCard={onEditCard}
-        />
+      <div className="flex justify-center gap-3">
+        {visible.map((day) => {
+          const cityId = resolveDayCity(day.key, accommodations, overrides)
+          return (
+            <DayColumn
+              key={day.key}
+              day={day}
+              city={cityId ? cityById.get(cityId) : undefined}
+              cards={cardsByDay.get(day.key) ?? []}
+              direction={direction}
+              dayStart={dayStart}
+              dayEnd={dayEnd}
+              onAddCard={onAddCard}
+              onEditCard={onEditCard}
+            />
+          )
+        })}
       </div>
     </div>
   )

@@ -24,7 +24,7 @@ import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
 import { MobileDayView } from './MobileDayView'
 import { useTimeDirection } from './useTimeDirection'
-import { useViewport } from './useViewport'
+import { useColumnsThatFit, useViewport } from './useViewport'
 
 /** Which card the editor is open on: a new card on a day, or an existing card. */
 type EditorState = { mode: 'create'; dayKey: string } | { mode: 'edit'; card: Card }
@@ -37,6 +37,7 @@ export function Board() {
   useDocVersion(doc)
   const { direction, toggle } = useTimeDirection()
   const viewport = useViewport()
+  const columns = useColumnsThatFit()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [accEditor, setAccEditor] = useState<AccEditorState | null>(null)
 
@@ -99,6 +100,7 @@ export function Board() {
             direction={direction}
             dayStart={trip.dayStart}
             dayEnd={trip.dayEnd}
+            columns={columns}
             onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
             onEditCard={(card) => setEditor({ mode: 'edit', card })}
           />
