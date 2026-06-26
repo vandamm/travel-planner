@@ -54,13 +54,13 @@ describe('AccommodationLane', () => {
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }))
   })
 
-  it('splits two overlapping stays onto one row, earlier left / later right', () => {
+  it('splits two stays covering the same columns onto one row, earlier left / later right', () => {
     render(
       <AccommodationLane
         days={days}
         accommodations={[
-          stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
-          stay({ id: 'b', startNight: '2027-05-03', endNight: '2027-05-04' }),
+          stay({ id: 'a', label: 'A', startNight: '2027-05-02', endNight: '2027-05-03' }),
+          stay({ id: 'b', label: 'B', startNight: '2027-05-02', endNight: '2027-05-03' }),
         ]}
         cityById={cityById}
       />,

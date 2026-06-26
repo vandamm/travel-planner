@@ -2,9 +2,18 @@
 
 A laptop-first, mobile-friendly web app for two people to visually plan a
 multi-week trip on a board where **each column is a day**. Days are color-coded
-by city, host activity cards on a continuous time scale (only time-bound cards
-like trains/flights carry real start/end times), and show accommodation as
-horizontal bars spanning the nights they cover.
+by city, host activity cards on a continuous, time-proportional timeline, and
+show accommodation as horizontal bars spanning the nights they cover.
+
+- Each day column is a time-scaled timeline over a configurable window (default
+  06:00–21:00, set per trip in Trip settings); timed cards are sized by their
+  duration so free time stays visible. Dates display day-first (`dd.mm`).
+- Any card can be flagged as a **transportation leg** (train/flight), which gives
+  it a distinct style. Weekend columns are tinted.
+- Dragging a card shows an overlay that follows the cursor across days and
+  highlights the day it will land in. The narrow/mobile view shows as many day
+  columns as fit the viewport and pages by that count.
+- Two stays covering the same days are drawn side-by-side (split left/right).
 
 Edits persist instantly to local storage (IndexedDB) and sync in the background
 via Liveblocks + Yjs (CRDT), so two people can co-edit the same board in real
@@ -61,7 +70,8 @@ conventions.
   Yjs + `@liveblocks/client`/`@liveblocks/yjs` (sync), `y-indexeddb` (local
   persistence), `zod` (schema), `date-fns` (date math).
 - **Worker:** a single Cloudflare Worker using Liveblocks REST + the secret key,
-  configured and deployed with Wrangler.
+  configured and deployed with Wrangler. `zod-to-json-schema` publishes the trip
+  JSON Schema at `GET /api/schema`.
 - **Tests:** Vitest + React Testing Library + jsdom for pure logic; Playwright
   for end-to-end UI flows.
 

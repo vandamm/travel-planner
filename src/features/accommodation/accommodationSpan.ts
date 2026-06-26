@@ -69,8 +69,11 @@ export function accommodationColumnSpan(days: Day[], acc: Accommodation): Column
  * column-overlapping stays. Within a cluster:
  *
  * - a lone stay sits on row 0;
- * - exactly two stays share row 0, split left/right (earlier = `'left'`, later =
- *   `'right'`) — issue 7's "two stays on one day" case;
+ * - exactly two stays covering the *same* columns share row 0, split left/right
+ *   (earlier = `'left'`, later = `'right'`) — issue 7's "two stays on one day"
+ *   case. The halves only line up on the shared day when the spans are identical;
+ *   a partial overlap stacks instead (each bar then sits correctly on its own
+ *   columns);
  * - three or more fall back to greedy row stacking so their bars never collide.
  *
  * Clusters never overlap each other in columns, so each starts its rows at 0.
@@ -94,14 +97,21 @@ export function packAccommodations(
     )
 
   const placeCluster = (cluster: PlacedAccommodation[]) => {
-    if (cluster.length === 2) {
+    // Two stays covering the exact same columns split that one row left/right.
+    // (Partial overlaps fall through to stacking: half-width bars aligned to
+    // each stay's own span wouldn't meet on the day they actually share.)
+    if (
+      cluster.length === 2 &&
+      cluster[0].startIndex === cluster[1].startIndex &&
+      cluster[0].span === cluster[1].span
+    ) {
       cluster[0].row = 0
       cluster[0].half = 'left'
       cluster[1].row = 0
       cluster[1].half = 'right'
       return
     }
-    // Lone stay or 3+ overlaps: greedily stack onto the first free row.
+    // Lone stay, partial overlap, or 3+ overlaps: greedily stack onto the first free row.
     const rowEnds: number[] = []
     for (const p of cluster) {
       let row = rowEnds.findIndex((end) => end < p.startIndex)

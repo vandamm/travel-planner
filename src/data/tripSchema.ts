@@ -33,16 +33,25 @@ const webLink = z
   .string()
   .refine((v) => v === '' || /^https?:\/\//i.test(v), 'Expected an http(s) URL')
 
-export const tripSettingsSchema = z.object({
-  title: z.string(),
-  // Empty while the trip is not yet set up; otherwise a calendar date.
-  startDate: z.union([dateOnly, z.literal('')]),
-  // Bounded so an oversized count can't generate an unbounded board (see days.ts).
-  numDays: z.number().int().min(0).max(MAX_TRIP_DAYS),
-  // The day's timeline window; defaults mirror DEFAULT_TRIP in doc.ts.
-  dayStart: clockTime.default('06:00'),
-  dayEnd: clockTime.default('21:00'),
-})
+export const tripSettingsSchema = z
+  .object({
+    title: z.string(),
+    // Empty while the trip is not yet set up; otherwise a calendar date.
+    startDate: z.union([dateOnly, z.literal('')]),
+    // Bounded so an oversized count can't generate an unbounded board (see days.ts).
+    numDays: z.number().int().min(0).max(MAX_TRIP_DAYS),
+    // The day's timeline window; defaults mirror DEFAULT_TRIP in doc.ts.
+    dayStart: clockTime.default('06:00'),
+    dayEnd: clockTime.default('21:00'),
+  })
+  // The window must be non-empty: the day ends after it starts. 'HH:mm' strings
+  // compare lexicographically so a plain `>` is correct. An inverted window
+  // would otherwise validate yet render a collapsed, mis-scaled day column
+  // (DayColumn floors it to a 1-hour body). Mirrors the accommodation refine.
+  .refine((t) => t.dayEnd > t.dayStart, {
+    message: 'dayEnd must be after dayStart',
+    path: ['dayEnd'],
+  })
 
 export const citySchema = z.object({
   id: z.string().min(1),

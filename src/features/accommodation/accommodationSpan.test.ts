@@ -52,17 +52,19 @@ describe('packAccommodations', () => {
     ])
   })
 
-  it('splits two overlapping stays onto one row, earlier left / later right', () => {
+  it('stacks two partially-overlapping stays (different spans) on separate rows', () => {
+    // They share only 05-03, so the left/right halves would not line up on it.
     const placed = packAccommodations(days, [
       stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
       stay({ id: 'b', startNight: '2027-05-03', endNight: '2027-05-04' }),
     ])
     const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
-    expect(byId.a).toMatchObject({ row: 0, half: 'left' })
-    expect(byId.b).toMatchObject({ row: 0, half: 'right' })
+    expect(byId.a).toMatchObject({ row: 0 })
+    expect(byId.b).toMatchObject({ row: 1 })
+    expect([byId.a.half, byId.b.half]).toEqual([undefined, undefined])
   })
 
-  it('splits two fully-overlapping stays the same way', () => {
+  it('splits two stays covering the same columns, earlier left / later right', () => {
     const placed = packAccommodations(days, [
       stay({ id: 'b', label: 'B', startNight: '2027-05-02', endNight: '2027-05-04' }),
       stay({ id: 'a', label: 'A', startNight: '2027-05-02', endNight: '2027-05-04' }),
@@ -86,10 +88,10 @@ describe('packAccommodations', () => {
     expect([byId.a.half, byId.b.half, byId.c.half]).toEqual([undefined, undefined, undefined])
   })
 
-  it('splits one overlapping pair while leaving a separate stay un-split', () => {
+  it('splits one same-column pair while leaving a separate stay un-split', () => {
     const placed = packAccommodations(days, [
-      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-02' }),
-      stay({ id: 'b', startNight: '2027-05-02', endNight: '2027-05-03' }),
+      stay({ id: 'a', label: 'A', startNight: '2027-05-01', endNight: '2027-05-02' }),
+      stay({ id: 'b', label: 'B', startNight: '2027-05-01', endNight: '2027-05-02' }),
       stay({ id: 'c', startNight: '2027-05-05', endNight: '2027-05-05' }),
     ])
     const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))

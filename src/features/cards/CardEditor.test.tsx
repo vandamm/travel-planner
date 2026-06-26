@@ -23,7 +23,7 @@ function CardDump() {
     <ul aria-label="card dump">
       {listCards(doc).map((c) => (
         <li key={c.id} data-testid="dump-row">
-          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, transport: c.transport })}
+          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, link: c.link, transport: c.transport })}
         </li>
       ))}
     </ul>
@@ -109,6 +109,28 @@ describe('CardEditor — create', () => {
     expect(row).toContain('"startTime":"10:00"')
     expect(row).toContain('"endTime":"12:30"')
     expect(row).toContain('"note":"platform 4"')
+  })
+
+  it('stores a link entered in the link field', () => {
+    renderInRoom(<CreateHarness />)
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Booking' } })
+    fireEvent.change(screen.getByLabelText('Link'), { target: { value: 'https://example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    const row = rows().find((r) => r.includes('Booking')) ?? ''
+    expect(row).toContain('"link":"https://example.com"')
+  })
+
+  it('drops the end time when timed but no start time is given', () => {
+    renderInRoom(<CreateHarness />)
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Loose end' } })
+    fireEvent.click(screen.getByLabelText('Set a time'))
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '12:30' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    const row = rows().find((r) => r.includes('Loose end')) ?? ''
+    expect(row).not.toContain('"startTime":"')
+    expect(row).not.toContain('"endTime":"')
   })
 
   it('flags the card as transport when the toggle is on', () => {

@@ -44,6 +44,14 @@ describe('tripDocumentSchema', () => {
     ).toBe(false)
   })
 
+  it('rejects a day window whose end is not after its start', () => {
+    const result = tripDocumentSchema.safeParse({
+      trip: { title: 'X', startDate: '2027-05-01', numDays: 1, dayStart: '21:00', dayEnd: '06:00' },
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].path).toEqual(['trip', 'dayEnd'])
+  })
+
   it('accepts a card flagged as transport', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
