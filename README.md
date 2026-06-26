@@ -133,10 +133,11 @@ See [`docs/deployment.md`](./docs/deployment.md) for the full Cloudflare Pages +
 Worker deploy flow (secrets, CORS, Pages build config, creating the first room,
 and sharing the secret link).
 
-## Agent / import-export API
+## Agent API
 
-The trip serializes to a single JSON document — the format the in-app
-import/export uses and the agent API reads and writes. The zod schema in
-`src/data/tripSchema.ts` is the single source of truth. See
+The trip serializes to a single JSON document — the format the agent API reads
+and writes (there is no in-app import/export). The zod schema in
+`src/data/tripSchema.ts` is the single source of truth, and `GET /api/schema`
+publishes the matching JSON Schema. See
 [`docs/trip-schema.md`](./docs/trip-schema.md) for the schema and the agent API
-(`GET`/`POST /api/trip/:room`, owner token, example payloads).
+(`GET`/`POST /api/trip/:room`, `GET /api/schema`, owner token, example payloads).

@@ -17,7 +17,7 @@ Everything persistent lives on one shared `Y.Doc`. Top-level containers:
 
 | Container | Yjs type | Holds |
 | --- | --- | --- |
-| `trip` | `Y.Map` | `title`, `startDate` (`YYYY-MM-DD`), `numDays` (plain values) |
+| `trip` | `Y.Map` | `title`, `startDate` (`YYYY-MM-DD`), `numDays`, `dayStart`/`dayEnd` (`HH:mm`, the day's timeline window, default `06:00`/`21:00`) (plain values) |
 | `cities` | `Y.Map<Y.Map>` | id → `{ id, name, color }` |
 | `dayOverrides` | `Y.Map` | `YYYY-MM-DD` → `cityId` (manual per-day city) |
 | `cards` | `Y.Map<Y.Map>` | id → `Card` fields |
@@ -56,13 +56,12 @@ of browser- or Worker-only APIs:
 
 - `schema.ts` — plain-JS domain types (`Trip`, `City`, `Day`, `Card`, `Accommodation`).
 - `doc.ts` — the Y.Doc shape + typed mutators.
-- `tripSchema.ts` — the **zod schema**, the single source of truth for the
-  import/export JSON *and* the agent API. Validation lives here (`parseTripText`,
-  `formatTripErrors`).
+- `tripSchema.ts` — the **zod schema**, the single source of truth for the trip
+  JSON *and* the agent API (`GET /api/schema` publishes it as JSON Schema).
+  Validation lives here (`parseTripText`, `formatTripErrors`).
 - `applyTrip.ts` — validated trip JSON → doc mutations (a full replace: clear,
-  then re-add via the mutators). Used by the import UI and `POST /api/trip/:room`.
-- `exportTrip.ts` — doc → validated JSON. Used by the export UI and
-  `GET /api/trip/:room`.
+  then re-add via the mutators). Used by `POST /api/trip/:room`.
+- `exportTrip.ts` — doc → validated JSON. Used by `GET /api/trip/:room`.
 
 `days.ts` (day generation) and `cityResolution.ts` (resolve a day's city/color)
 are also pure shared logic.
@@ -85,6 +84,10 @@ Time-bound cards (those with a `startTime`) sort by time; untimed cards keep a
 manual `order` within their day. The combined ordering lives in
 `src/features/cards/cardSort.ts`.
 
+A card may carry an optional `transport?: boolean` flag marking it as a
+transportation leg (train/flight/etc.); it only changes rendering (distinct
+style), not ordering.
+
 ## Synced vs. per-user state
 
 Not everything is on the doc. The **time-direction** view preference
@@ -104,8 +107,9 @@ local (localStorage).
 - `POST /api/rooms` creates a room and is gated by `OWNER_SECRET`
   (`x-owner-secret`). This is the *only* way rooms are created → "nobody but me
   can create rooms".
-- The agent API (`GET`/`POST /api/trip/:room`) is **owner-gated** too — as
-  privileged as room creation.
+- The agent API (`GET`/`POST /api/trip/:room` and `GET /api/schema`, which
+  publishes the JSON Schema derived from `tripDocumentSchema`) is **owner-gated**
+  too — as privileged as room creation.
 - `LIVEBLOCKS_SECRET_KEY` and `OWNER_SECRET` live **only on the Worker**. The
   client's only configured secret-adjacent value is `VITE_WORKER_URL`, a public
   URL baked into the bundle.
