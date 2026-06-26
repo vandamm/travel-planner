@@ -28,6 +28,12 @@ export interface PlacedAccommodation extends ColumnSpan {
   accommodation: Accommodation
   /** 0-based stacking row; overlapping stays get distinct rows. */
   row: number
+  /**
+   * When exactly two stays overlap, they share one row split left/right
+   * (earlier = `'left'`, later = `'right'`) instead of stacking. Undefined for a
+   * lone stay or a group of 3+ overlaps (which fall back to row stacking).
+   */
+  half?: 'left' | 'right'
 }
 
 /**
@@ -58,11 +64,17 @@ export function accommodationColumnSpan(days: Day[], acc: Accommodation): Column
 }
 
 /**
- * Place every visible stay onto stacking rows. Stays are ordered by their start
- * column (then by night/label for a stable layout) and greedily assigned to the
- * first row whose last-occupied column ends before this stay begins, so two
- * stays that share a column (e.g. a checkout/check-in day) land on separate rows
- * instead of overlapping. Stays outside the visible range are dropped.
+ * Place every visible stay onto rows of the lane. Stays are ordered by start
+ * column (then night/label for a stable layout), then grouped into clusters of
+ * column-overlapping stays. Within a cluster:
+ *
+ * - a lone stay sits on row 0;
+ * - exactly two stays share row 0, split left/right (earlier = `'left'`, later =
+ *   `'right'`) — issue 7's "two stays on one day" case;
+ * - three or more fall back to greedy row stacking so their bars never collide.
+ *
+ * Clusters never overlap each other in columns, so each starts its rows at 0.
+ * Stays outside the visible range are dropped.
  */
 export function packAccommodations(
   days: Day[],
@@ -81,13 +93,38 @@ export function packAccommodations(
         a.accommodation.label.localeCompare(b.accommodation.label),
     )
 
-  // The last column index occupied in each row so far.
-  const rowEnds: number[] = []
-  for (const p of placed) {
-    let row = rowEnds.findIndex((end) => end < p.startIndex)
-    if (row === -1) row = rowEnds.length
-    rowEnds[row] = p.startIndex + p.span - 1
-    p.row = row
+  const placeCluster = (cluster: PlacedAccommodation[]) => {
+    if (cluster.length === 2) {
+      cluster[0].row = 0
+      cluster[0].half = 'left'
+      cluster[1].row = 0
+      cluster[1].half = 'right'
+      return
+    }
+    // Lone stay or 3+ overlaps: greedily stack onto the first free row.
+    const rowEnds: number[] = []
+    for (const p of cluster) {
+      let row = rowEnds.findIndex((end) => end < p.startIndex)
+      if (row === -1) row = rowEnds.length
+      rowEnds[row] = p.startIndex + p.span - 1
+      p.row = row
+    }
   }
+
+  // Walk the sorted stays, merging each into the current cluster while it starts
+  // at or before the cluster's running end column (inclusive ranges → overlap).
+  let cluster: PlacedAccommodation[] = []
+  let clusterEnd = -1
+  for (const p of placed) {
+    if (cluster.length > 0 && p.startIndex > clusterEnd) {
+      placeCluster(cluster)
+      cluster = []
+      clusterEnd = -1
+    }
+    cluster.push(p)
+    clusterEnd = Math.max(clusterEnd, p.startIndex + p.span - 1)
+  }
+  if (cluster.length > 0) placeCluster(cluster)
+
   return placed
 }

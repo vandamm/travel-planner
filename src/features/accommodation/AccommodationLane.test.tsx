@@ -54,6 +54,27 @@ describe('AccommodationLane', () => {
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }))
   })
 
+  it('splits two overlapping stays onto one row, earlier left / later right', () => {
+    render(
+      <AccommodationLane
+        days={days}
+        accommodations={[
+          stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
+          stay({ id: 'b', startNight: '2027-05-03', endNight: '2027-05-04' }),
+        ]}
+        cityById={cityById}
+      />,
+    )
+
+    const cellA = document.querySelector('[data-testid="accommodation-cell"][data-acc="a"]')!
+    const cellB = document.querySelector('[data-testid="accommodation-cell"][data-acc="b"]')!
+    expect(cellA).toHaveAttribute('data-half', 'left')
+    expect(cellB).toHaveAttribute('data-half', 'right')
+    // Both share row 1 (one row, split) instead of stacking on rows 1 and 2.
+    expect(cellA).toHaveStyle({ gridRow: '1' })
+    expect(cellB).toHaveStyle({ gridRow: '1' })
+  })
+
   it('renders nothing when there are no days', () => {
     const { container } = render(
       <AccommodationLane days={[]} accommodations={[stay()]} cityById={cityById} />,

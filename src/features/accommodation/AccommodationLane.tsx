@@ -41,16 +41,8 @@ export function AccommodationLane({
       }}
       className="mb-2"
     >
-      {placed.map((p) => (
-        <div
-          key={p.accommodation.id}
-          data-testid="accommodation-cell"
-          data-acc={p.accommodation.id}
-          style={{
-            gridColumn: `${p.startIndex + 1} / span ${p.span}`,
-            gridRow: p.row + 1,
-          }}
-        >
+      {placed.map((p) => {
+        const bar = (
           <AccommodationBar
             accommodation={p.accommodation}
             city={p.accommodation.cityId ? cityById.get(p.accommodation.cityId) : undefined}
@@ -58,8 +50,30 @@ export function AccommodationLane({
             clippedEnd={p.clippedEnd}
             onEdit={onEditAccommodation}
           />
-        </div>
-      ))}
+        )
+        return (
+          <div
+            key={p.accommodation.id}
+            data-testid="accommodation-cell"
+            data-acc={p.accommodation.id}
+            data-half={p.half}
+            style={{
+              gridColumn: `${p.startIndex + 1} / span ${p.span}`,
+              gridRow: p.row + 1,
+            }}
+          >
+            {/* Two stays sharing a day split the row: each takes half the width, the
+                earlier on the left, the later pushed right. */}
+            {p.half ? (
+              <div style={{ width: '50%', marginLeft: p.half === 'right' ? 'auto' : undefined }}>
+                {bar}
+              </div>
+            ) : (
+              bar
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

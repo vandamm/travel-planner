@@ -52,14 +52,56 @@ describe('packAccommodations', () => {
     ])
   })
 
-  it('stacks overlapping stays onto separate rows', () => {
+  it('splits two overlapping stays onto one row, earlier left / later right', () => {
     const placed = packAccommodations(days, [
       stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
       stay({ id: 'b', startNight: '2027-05-03', endNight: '2027-05-04' }),
     ])
-    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p.row]))
-    expect(byId.a).toBe(0)
-    expect(byId.b).toBe(1)
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    expect(byId.a).toMatchObject({ row: 0, half: 'left' })
+    expect(byId.b).toMatchObject({ row: 0, half: 'right' })
+  })
+
+  it('splits two fully-overlapping stays the same way', () => {
+    const placed = packAccommodations(days, [
+      stay({ id: 'b', label: 'B', startNight: '2027-05-02', endNight: '2027-05-04' }),
+      stay({ id: 'a', label: 'A', startNight: '2027-05-02', endNight: '2027-05-04' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    // Tie on startNight → label breaks it: 'A' is earlier (left), 'B' is later (right).
+    expect(byId.a).toMatchObject({ row: 0, half: 'left' })
+    expect(byId.b).toMatchObject({ row: 0, half: 'right' })
+  })
+
+  it('falls back to stacked rows for three or more overlapping stays', () => {
+    const placed = packAccommodations(days, [
+      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
+      stay({ id: 'b', startNight: '2027-05-02', endNight: '2027-05-04' }),
+      stay({ id: 'c', startNight: '2027-05-03', endNight: '2027-05-05' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    expect(byId.a).toMatchObject({ row: 0 })
+    expect(byId.b).toMatchObject({ row: 1 })
+    expect(byId.c).toMatchObject({ row: 2 })
+    expect([byId.a.half, byId.b.half, byId.c.half]).toEqual([undefined, undefined, undefined])
+  })
+
+  it('splits one overlapping pair while leaving a separate stay un-split', () => {
+    const placed = packAccommodations(days, [
+      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-02' }),
+      stay({ id: 'b', startNight: '2027-05-02', endNight: '2027-05-03' }),
+      stay({ id: 'c', startNight: '2027-05-05', endNight: '2027-05-05' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    expect(byId.a).toMatchObject({ row: 0, half: 'left' })
+    expect(byId.b).toMatchObject({ row: 0, half: 'right' })
+    expect(byId.c).toMatchObject({ row: 0 })
+    expect(byId.c.half).toBeUndefined()
+  })
+
+  it('leaves a single stay un-split', () => {
+    const [p] = packAccommodations(days, [stay({ id: 'a' })])
+    expect(p.half).toBeUndefined()
   })
 
   it('drops stays that fall outside the visible days', () => {
