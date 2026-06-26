@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_TRIP_DAYS } from './days'
 import { parseTripText, tripDocumentSchema } from './tripSchema'
 
 const VALID = {
@@ -54,6 +55,40 @@ describe('tripDocumentSchema', () => {
       trip: { title: 'X', startDate: '2027-05-01', numDays: -1 },
     })
     expect(result.success).toBe(false)
+  })
+
+  it('accepts a day count at the maximum but rejects one beyond it', () => {
+    expect(
+      tripDocumentSchema.safeParse({
+        trip: { title: 'X', startDate: '2027-05-01', numDays: MAX_TRIP_DAYS },
+      }).success,
+    ).toBe(true)
+    expect(
+      tripDocumentSchema.safeParse({
+        trip: { title: 'X', startDate: '2027-05-01', numDays: MAX_TRIP_DAYS + 1 },
+      }).success,
+    ).toBe(false)
+  })
+
+  it('rejects a card link with a non-http(s) scheme', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cards: [
+        { id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, link: 'javascript:alert(1)' },
+      ],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].path).toEqual(['cards', 0, 'link'])
+  })
+
+  it('accepts an http(s) card link', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cards: [
+        { id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, link: 'https://example.com' },
+      ],
+    })
+    expect(result.success).toBe(true)
   })
 })
 

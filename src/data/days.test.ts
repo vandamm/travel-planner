@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateDays } from './days'
+import { generateDays, MAX_TRIP_DAYS } from './days'
 
 describe('generateDays', () => {
   it('returns an empty list for zero or negative day counts', () => {
@@ -37,5 +37,12 @@ describe('generateDays', () => {
   it('crosses a year boundary', () => {
     const days = generateDays('2027-12-31', 2)
     expect(days.map((d) => d.key)).toEqual(['2027-12-31', '2028-01-01'])
+  })
+
+  it('clamps a pathological day count to the maximum to bound the board', () => {
+    const days = generateDays('2027-05-01', 100_000_000)
+    expect(days).toHaveLength(MAX_TRIP_DAYS)
+    expect(days[0]).toEqual({ key: '2027-05-01', index: 0 })
+    expect(days[days.length - 1].index).toBe(MAX_TRIP_DAYS - 1)
   })
 })

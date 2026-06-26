@@ -29,6 +29,21 @@ function linkLabel(link: string): string {
   }
 }
 
+/**
+ * Whether a link is safe to render as a clickable anchor. Only http(s) URLs
+ * qualify, so a `javascript:`/`data:` URI — which could be planted by any
+ * collaborator with the secret link, or via the import / agent API — can never
+ * execute when another viewer clicks the card's link.
+ */
+function isSafeHref(link: string): boolean {
+  try {
+    const { protocol } = new URL(link)
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export function Card({ card, onEdit, dragHandleProps }: CardProps) {
   return (
     <article
@@ -70,17 +85,24 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
         </p>
       )}
 
-      {card.link && (
-        <a
-          data-testid="card-link"
-          href={card.link}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="truncate text-xs font-medium text-blue-600 hover:underline"
-        >
-          {linkLabel(card.link)}
-        </a>
-      )}
+      {card.link &&
+        (isSafeHref(card.link) ? (
+          <a
+            data-testid="card-link"
+            href={card.link}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="truncate text-xs font-medium text-blue-600 hover:underline"
+          >
+            {linkLabel(card.link)}
+          </a>
+        ) : (
+          // Not an http(s) URL — show it as inert text rather than a clickable
+          // anchor so a dangerous scheme can't run.
+          <span data-testid="card-link" className="truncate text-xs text-slate-400">
+            {card.link}
+          </span>
+        ))}
     </article>
   )
 }

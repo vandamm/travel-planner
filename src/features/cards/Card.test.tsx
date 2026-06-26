@@ -38,6 +38,15 @@ describe('Card', () => {
     expect(link).toHaveAttribute('href', 'https://example.com')
   })
 
+  it('never renders a javascript: link as a clickable anchor', () => {
+    render(<Card card={{ ...base, link: 'javascript:alert(document.cookie)' }} />)
+    // No anchor at all, so the dangerous scheme can't be a clickable href.
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    const inert = screen.getByTestId('card-link')
+    expect(inert.tagName).toBe('SPAN')
+    expect(inert).not.toHaveAttribute('href')
+  })
+
   it('omits note and link when absent', () => {
     render(<Card card={base} />)
     expect(screen.queryByTestId('card-note')).not.toBeInTheDocument()

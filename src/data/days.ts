@@ -12,6 +12,14 @@ import type { Day } from './schema'
 /** The canonical day-key format: ISO date-only, 'YYYY-MM-DD'. */
 export const DAY_KEY_FORMAT = 'yyyy-MM-dd'
 
+/**
+ * Hard upper bound on the number of days a trip can span. It guards every day
+ * source — the setup UI, JSON import, and the agent API — against a pathological
+ * `numDays` (e.g. `100000000`) that would otherwise build an enormous array and
+ * freeze or OOM the tab. ~2 years is far beyond any real trip.
+ */
+export const MAX_TRIP_DAYS = 730
+
 /** Format a `Date` as a day key in trip-local calendar terms. */
 export function toDayKey(date: Date): string {
   return format(date, DAY_KEY_FORMAT)
@@ -25,9 +33,10 @@ export function toDayKey(date: Date): string {
  */
 export function generateDays(startDate: string, numDays: number): Day[] {
   if (!startDate || numDays <= 0) return []
+  const count = Math.min(numDays, MAX_TRIP_DAYS)
   const start = parseISO(startDate)
   const days: Day[] = []
-  for (let index = 0; index < numDays; index++) {
+  for (let index = 0; index < count; index++) {
     days.push({ key: toDayKey(addDays(start, index)), index })
   }
   return days

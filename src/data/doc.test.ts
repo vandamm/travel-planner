@@ -66,6 +66,29 @@ describe('cities', () => {
     expect(listCities(doc)).toHaveLength(0)
     expect(() => updateCity(doc, 'rome', { name: 'Roma' })).not.toThrow()
   })
+
+  it('prunes dangling references when a city is removed', () => {
+    const doc = freshDoc()
+    addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+    setDayCityOverride(doc, '2027-05-03', 'rome')
+    const stay = addAccommodation(doc, {
+      label: 'Hotel Roma',
+      cityId: 'rome',
+      startNight: '2027-05-01',
+      endNight: '2027-05-04',
+    })
+    // A second day/stay pointing elsewhere must survive the cascade untouched.
+    setDayCityOverride(doc, '2027-05-10', 'venice')
+
+    removeCity(doc, 'rome')
+
+    // The override and accommodation cityId that referenced the removed city are
+    // gone, so no orphan reference persists or round-trips through export.
+    expect(getDayOverride(doc, '2027-05-03')).toBeUndefined()
+    expect(getAccommodation(doc, stay.id)?.cityId).toBeUndefined()
+    // Unrelated references are left intact.
+    expect(getDayOverride(doc, '2027-05-10')).toBe('venice')
+  })
 })
 
 describe('cards', () => {

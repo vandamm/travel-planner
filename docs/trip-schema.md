@@ -16,7 +16,7 @@ rebuilt from the payload, so what you send is exactly what the board shows.
   "trip": {
     "title": "Italy 2027",      // string (may be empty)
     "startDate": "2027-05-01",  // "YYYY-MM-DD", or "" when not set up
-    "numDays": 14               // integer ≥ 0 — day columns, counted from startDate
+    "numDays": 14               // integer 0–730 — day columns, counted from startDate
   },
   "cities": [
     { "id": "rome", "name": "Rome", "color": "#ef4444" }
@@ -36,7 +36,7 @@ rebuilt from the payload, so what you send is exactly what the board shows.
       "dayKey": "2027-05-01",     // the day column this card lives in, "YYYY-MM-DD"
       "title": "Colosseum",
       "note": "book ahead",       // optional
-      "link": "https://...",      // optional
+      "link": "https://...",      // optional; must be an http(s) URL (or empty)
       "startTime": "10:00",       // optional "HH:mm" — its presence makes the card time-bound
       "endTime": "12:00",         // optional "HH:mm"
       "order": 0,                 // integer — manual position among untimed cards in the day
@@ -56,12 +56,13 @@ rebuilt from the payload, so what you send is exactly what the board shows.
 | --- | --- | --- |
 | `trip.title` | string | May be empty. |
 | `trip.startDate` | `"YYYY-MM-DD"` or `""` | Empty only before the trip is set up. |
-| `trip.numDays` | integer ≥ 0 | Number of day columns from `startDate` (inclusive). |
+| `trip.numDays` | integer 0–730 | Number of day columns from `startDate` (inclusive). Bounded at 730 (~2 years) to keep the board finite; a larger count is rejected. |
 | `cities[].id` | non-empty string | Referenced by `accommodations[].cityId` and `dayOverrides`. |
 | `cities[].color` | non-empty string | Any CSS color, e.g. `#ef4444`. |
 | `accommodations[].cityId` | string, optional | The covered days inherit this city's color. |
 | `accommodations[].startNight` / `endNight` | `"YYYY-MM-DD"` | Inclusive night span; `endNight ≥ startNight`. |
 | `cards[].dayKey` | `"YYYY-MM-DD"` | The day column the card belongs to. |
+| `cards[].link` | `"http(s)://…"` or `""`, optional | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected. |
 | `cards[].startTime` / `endTime` | `"HH:mm"`, optional | 24-hour; presence makes the card time-bound (auto-sorted by time). |
 | `cards[].order` | integer | Manual position among untimed cards in a day. |
 

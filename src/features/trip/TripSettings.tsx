@@ -3,6 +3,7 @@
 // sync like everything else.
 
 import { getTrip, setTrip } from '../../data/doc'
+import { MAX_TRIP_DAYS } from '../../data/days'
 import { useRoom } from '../../data/RoomProvider'
 import { useDocVersion } from '../../data/useDoc'
 
@@ -47,6 +48,7 @@ export function TripSettings() {
           <input
             type="number"
             min={1}
+            max={MAX_TRIP_DAYS}
             value={trip.numDays || ''}
             onChange={(e) => setTrip(doc, { numDays: Number(e.target.value) })}
             className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"

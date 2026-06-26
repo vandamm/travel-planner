@@ -124,7 +124,19 @@ export function updateCity(doc: Y.Doc, id: string, patch: Partial<Omit<City, 'id
 }
 
 export function removeCity(doc: Y.Doc, id: string): void {
-  doc.transact(() => entityMap(doc, CITIES).delete(id))
+  doc.transact(() => {
+    entityMap(doc, CITIES).delete(id)
+    // Prune dangling references so the deleted city leaves no orphan behind: a
+    // day override or accommodation `cityId` pointing at a missing city would
+    // silently resolve to "no city" yet persist and round-trip through export.
+    const overrides = doc.getMap(DAY_OVERRIDES)
+    for (const [dayKey, cityId] of [...overrides.entries()]) {
+      if (cityId === id) overrides.delete(dayKey)
+    }
+    for (const acc of entityMap(doc, ACCOMMODATIONS).values()) {
+      if (acc.get('cityId') === id) acc.delete('cityId')
+    }
+  })
 }
 
 // --- Cards -----------------------------------------------------------------

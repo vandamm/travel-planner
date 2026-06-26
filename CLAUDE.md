@@ -43,6 +43,11 @@ features or the Worker.
 Patch semantics: in an update patch an explicit `undefined` value *clears* that
 field (e.g. untiming a card); absent keys are left untouched.
 
+Referential integrity: `removeCity` cascades — it also deletes any `dayOverrides`
+entry and clears any accommodation `cityId` that pointed at the removed city, so
+no dangling `cityId` reference survives (one would otherwise resolve to no-city
+yet persist and round-trip through export).
+
 ## Shared between client and Worker — never duplicate
 
 These `src/data/` modules are **environment-agnostic** and imported by *both* the
