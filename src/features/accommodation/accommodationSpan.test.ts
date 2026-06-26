@@ -158,6 +158,26 @@ describe('packAccommodations', () => {
     expect(byId.c).toMatchObject({ row: 0, startHalf: true })
   })
 
+  it('stacks a one-night stay sandwiched between two changeovers instead of collapsing it', () => {
+    // A checks out 05-03, B is a single night on 05-03, C checks in 05-03 — all
+    // three claim 05-03. A span-1 B can't be both startHalf and endHalf on one
+    // column (that renders negative-width) and must not share B's column with C,
+    // so the genuine triple-claim stacks rather than chaining on row 0.
+    const placed = packAccommodations(days, [
+      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
+      stay({ id: 'b', label: 'B', startNight: '2027-05-03', endNight: '2027-05-03' }),
+      stay({ id: 'c', label: 'C', startNight: '2027-05-03', endNight: '2027-05-05' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    // No bar is ever both startHalf and endHalf on a single column.
+    for (const p of placed) expect(p.span === 1 && p.startHalf && p.endHalf).toBeFalsy()
+    expect(byId.a).toMatchObject({ row: 0, endHalf: true })
+    expect(byId.b).toMatchObject({ row: 0, startHalf: true })
+    expect(byId.b.endHalf).toBeUndefined()
+    // C shares B's start column, so it must stack on a different row, not collide.
+    expect(byId.c.row).not.toBe(byId.b.row)
+  })
+
   it('leaves non-adjacent stays unchanged (no halves)', () => {
     const placed = packAccommodations(days, [
       stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-02' }),

@@ -143,7 +143,12 @@ export function packAccommodations(
         } else if (
           qEnd === p.startIndex &&
           q.accommodation.endNight === p.accommodation.startNight &&
-          changeoverRow === -1
+          changeoverRow === -1 &&
+          // A span-1 stay already meeting a predecessor mid-day (startHalf) has no
+          // room to also meet p mid-day on the same single column — chaining would
+          // make it both startHalf and endHalf (negative width) and leave p sharing
+          // its column. Such a genuine triple-claim stacks instead.
+          !(q.span === 1 && q.startHalf)
         ) {
           changeoverRow = r
         }
