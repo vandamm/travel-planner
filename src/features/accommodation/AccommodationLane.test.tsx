@@ -75,6 +75,32 @@ describe('AccommodationLane', () => {
     expect(cellB).toHaveStyle({ gridRow: '1' })
   })
 
+  it('insets a changeover pair onto one row, outgoing endHalf / incoming startHalf', () => {
+    render(
+      <AccommodationLane
+        days={days}
+        accommodations={[
+          stay({ id: 'a', label: 'A', startNight: '2027-05-01', endNight: '2027-05-03' }),
+          stay({ id: 'b', label: 'B', startNight: '2027-05-03', endNight: '2027-05-05' }),
+        ]}
+        cityById={cityById}
+      />,
+    )
+
+    const cellA = document.querySelector('[data-testid="accommodation-cell"][data-acc="a"]')!
+    const cellB = document.querySelector('[data-testid="accommodation-cell"][data-acc="b"]')!
+    expect(cellA).toHaveAttribute('data-end-half', 'true')
+    expect(cellA).not.toHaveAttribute('data-start-half')
+    expect(cellB).toHaveAttribute('data-start-half', 'true')
+    expect(cellB).not.toHaveAttribute('data-end-half')
+    // One shared row.
+    expect(cellA).toHaveStyle({ gridRow: '1' })
+    expect(cellB).toHaveStyle({ gridRow: '1' })
+    // The half-day inset is applied so the bars meet at the middle of the shared day.
+    expect(cellA.querySelector('div')).toHaveStyle({ marginRight: 'calc((14rem + 0.75rem) / 2)' })
+    expect(cellB.querySelector('div')).toHaveStyle({ marginLeft: 'calc((14rem + 0.75rem) / 2)' })
+  })
+
   it('renders nothing when there are no days', () => {
     const { container } = render(
       <AccommodationLane days={[]} accommodations={[stay()]} cityById={cityById} />,

@@ -126,3 +126,35 @@ test('Add-stay popup preselects the first uncovered night, chains pickers, and s
   await editor.getByRole('button', { name: 'Save stay' }).click()
   await expect(page.getByTestId('accommodation-bar').filter({ hasText: 'Hotel C' })).toBeVisible()
 })
+
+test('two stays sharing a changeover day render on one row meeting mid-day', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('Trip title').fill('Italy 2027')
+  await page.getByLabel('Start date').fill('2027-05-01')
+  await page.getByLabel('Number of days').fill('5')
+
+  // A checks out 05-03; B checks in 05-03 — a pure changeover, only that day shared.
+  await seedStays(page, [
+    { label: 'Hotel A', startNight: '2027-05-01', endNight: '2027-05-03' },
+    { label: 'Hotel B', startNight: '2027-05-03', endNight: '2027-05-05' },
+  ])
+
+  const barA = page.getByTestId('accommodation-bar').filter({ hasText: 'Hotel A' })
+  const barB = page.getByTestId('accommodation-bar').filter({ hasText: 'Hotel B' })
+  await expect(barA).toBeVisible()
+  await expect(barB).toBeVisible()
+
+  const a = await barA.boundingBox()
+  const b = await barB.boundingBox()
+  if (!a || !b) throw new Error('missing bar geometry')
+
+  // Same row: identical top (chained, not stacked).
+  expect(Math.abs(a.y - b.y)).toBeLessThan(2)
+  // They meet near the middle of the shared day: B starts right where A ends —
+  // not overlapping, and within roughly a column gap (the inset formula folds in
+  // half the 0.75rem gap), nowhere near a full column apart.
+  const aRight = a.x + a.width
+  const between = b.x - aRight
+  expect(between).toBeGreaterThanOrEqual(-1)
+  expect(between).toBeLessThan(16)
+})

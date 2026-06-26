@@ -13,6 +13,8 @@ import { packAccommodations } from './accommodationSpan'
 /** Must match the day columns: `w-56` (14rem) tracks, `gap-3` (0.75rem) gaps. */
 const COLUMN_WIDTH = '14rem'
 const COLUMN_GAP = '0.75rem'
+/** Half a column (incl. its gap) — a changeover bar starts/ends at the day's middle. */
+const HALF_DAY_INSET = `calc((${COLUMN_WIDTH} + ${COLUMN_GAP}) / 2)`
 
 export interface AccommodationLaneProps {
   days: Day[]
@@ -68,15 +70,28 @@ export function AccommodationLane({
               data-testid="accommodation-cell"
               data-acc={p.accommodation.id}
               data-half={p.half}
+              data-start-half={p.startHalf || undefined}
+              data-end-half={p.endHalf || undefined}
               style={{
                 gridColumn: `${p.startIndex + 1} / span ${p.span}`,
                 gridRow: p.row + 1,
               }}
             >
               {/* Two stays sharing a day split the row: each takes half the width, the
-                earlier on the left, the later pushed right. */}
+                earlier on the left, the later pushed right. A changeover pair instead
+                insets the bar by half a day so the outgoing and incoming bars meet at
+                the middle of the shared day. */}
               {p.half ? (
                 <div style={{ width: '50%', marginLeft: p.half === 'right' ? 'auto' : undefined }}>
+                  {bar}
+                </div>
+              ) : p.startHalf || p.endHalf ? (
+                <div
+                  style={{
+                    marginLeft: p.startHalf ? HALF_DAY_INSET : undefined,
+                    marginRight: p.endHalf ? HALF_DAY_INSET : undefined,
+                  }}
+                >
                   {bar}
                 </div>
               ) : (

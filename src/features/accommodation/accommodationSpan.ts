@@ -34,6 +34,14 @@ export interface PlacedAccommodation extends ColumnSpan {
    * lone stay or a group of 3+ overlaps (which fall back to row stacking).
    */
   half?: 'left' | 'right'
+  /**
+   * The stay's bar starts at the *middle* of its first day — it checks in on a
+   * changeover day the preceding stay checks out of, so the two meet mid-day on
+   * one row instead of stacking.
+   */
+  startHalf?: boolean
+  /** The stay's bar ends at the *middle* of its last day — its check-out is a changeover. */
+  endHalf?: boolean
 }
 
 /**
@@ -74,7 +82,13 @@ export function accommodationColumnSpan(days: Day[], acc: Accommodation): Column
  *   case. The halves only line up on the shared day when the spans are identical;
  *   a partial overlap stacks instead (each bar then sits correctly on its own
  *   columns);
- * - three or more fall back to greedy row stacking so their bars never collide.
+ * - a *changeover* pair — the only shared day is one stay's check-out
+ *   (`endNight`) and the next's check-in (`startNight`) — shares one row, the
+ *   outgoing bar flagged `endHalf` and the incoming `startHalf` so they meet at
+ *   the middle of that day instead of stacking. Chains of changeovers all land on
+ *   row 0;
+ * - genuine overlaps (sharing more than a single changeover boundary) and three
+ *   or more conflicting stays fall back to greedy row stacking so bars never collide.
  *
  * Clusters never overlap each other in columns, so each starts its rows at 0.
  * Stays outside the visible range are dropped.
@@ -111,12 +125,41 @@ export function packAccommodations(
       cluster[1].half = 'right'
       return
     }
-    // Lone stay, partial overlap, or 3+ overlaps: greedily stack onto the first free row.
-    const rowEnds: number[] = []
+    // Lone stay, partial overlap, or 3+ overlaps: greedily stack onto a row.
+    // `lastOnRow[r]` is the latest-ending stay on row r (rows fill left→right as
+    // the cluster is sorted by start). A stay fits a row if it starts after that
+    // stay ends (plain fit), or if it only *touches* it on a changeover day —
+    // the row's stay checks out (`endNight`) exactly as this one checks in
+    // (`startNight`) — in which case the two meet mid-day via half insets.
+    const lastOnRow: PlacedAccommodation[] = []
     for (const p of cluster) {
-      let row = rowEnds.findIndex((end) => end < p.startIndex)
-      if (row === -1) row = rowEnds.length
-      rowEnds[row] = p.startIndex + p.span - 1
+      let plainRow = -1
+      let changeoverRow = -1
+      for (let r = 0; r < lastOnRow.length; r++) {
+        const q = lastOnRow[r]
+        const qEnd = q.startIndex + q.span - 1
+        if (qEnd < p.startIndex) {
+          if (plainRow === -1) plainRow = r
+        } else if (
+          qEnd === p.startIndex &&
+          q.accommodation.endNight === p.accommodation.startNight &&
+          changeoverRow === -1
+        ) {
+          changeoverRow = r
+        }
+      }
+      // Prefer a changeover row so chained stays meet mid-day on one row.
+      let row: number
+      if (changeoverRow !== -1) {
+        row = changeoverRow
+        lastOnRow[row].endHalf = true
+        p.startHalf = true
+      } else if (plainRow !== -1) {
+        row = plainRow
+      } else {
+        row = lastOnRow.length
+      }
+      lastOnRow[row] = p
       p.row = row
     }
   }

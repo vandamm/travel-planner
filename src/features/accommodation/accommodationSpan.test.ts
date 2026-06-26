@@ -52,11 +52,12 @@ describe('packAccommodations', () => {
     ])
   })
 
-  it('stacks two partially-overlapping stays (different spans) on separate rows', () => {
-    // They share only 05-03, so the left/right halves would not line up on it.
+  it('stacks two genuinely-overlapping stays (share >1 night) on separate rows', () => {
+    // They share 05-02 and 05-03 — more than a changeover boundary — so they
+    // genuinely conflict and stack. (A bare changeover would chain on one row.)
     const placed = packAccommodations(days, [
       stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
-      stay({ id: 'b', startNight: '2027-05-03', endNight: '2027-05-04' }),
+      stay({ id: 'b', startNight: '2027-05-02', endNight: '2027-05-04' }),
     ])
     const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
     expect(byId.a).toMatchObject({ row: 0 })
@@ -75,11 +76,13 @@ describe('packAccommodations', () => {
     expect(byId.b).toMatchObject({ row: 0, half: 'right' })
   })
 
-  it('falls back to stacked rows for three or more overlapping stays', () => {
+  it('falls back to stacked rows for three or more genuinely-overlapping stays', () => {
+    // All three start on 05-01 and overlap fully — no changeover boundary — so
+    // they stack on three rows.
     const placed = packAccommodations(days, [
       stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
-      stay({ id: 'b', startNight: '2027-05-02', endNight: '2027-05-04' }),
-      stay({ id: 'c', startNight: '2027-05-03', endNight: '2027-05-05' }),
+      stay({ id: 'b', startNight: '2027-05-01', endNight: '2027-05-04' }),
+      stay({ id: 'c', startNight: '2027-05-01', endNight: '2027-05-05' }),
     ])
     const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
     expect(byId.a).toMatchObject({ row: 0 })
@@ -109,5 +112,63 @@ describe('packAccommodations', () => {
   it('drops stays that fall outside the visible days', () => {
     const placed = packAccommodations(days, [stay({ id: 'x', startNight: '2030-01-01', endNight: '2030-01-02' })])
     expect(placed).toEqual([])
+  })
+
+  it('chains a changeover pair on one row with half insets meeting mid-day', () => {
+    // A checks out on 05-03, B checks in on 05-03 — they share only that day.
+    const placed = packAccommodations(days, [
+      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-03' }),
+      stay({ id: 'b', startNight: '2027-05-03', endNight: '2027-05-05' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    expect(byId.a).toMatchObject({ row: 0, endHalf: true })
+    expect(byId.b).toMatchObject({ row: 0, startHalf: true })
+    expect(byId.a.startHalf).toBeUndefined()
+    expect(byId.b.endHalf).toBeUndefined()
+    // A changeover is not the same as a left/right split.
+    expect([byId.a.half, byId.b.half]).toEqual([undefined, undefined])
+  })
+
+  it('stacks a genuine multi-night overlap on separate rows', () => {
+    // A(05-01..05-04) and B(05-02..05-05) share 3 nights — not just a changeover.
+    const placed = packAccommodations(days, [
+      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-04' }),
+      stay({ id: 'b', startNight: '2027-05-02', endNight: '2027-05-05' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    expect(byId.a).toMatchObject({ row: 0 })
+    expect(byId.b).toMatchObject({ row: 1 })
+    expect([byId.a.startHalf, byId.a.endHalf, byId.b.startHalf, byId.b.endHalf]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ])
+  })
+
+  it('chains three consecutive changeover stays on one row', () => {
+    const placed = packAccommodations(days, [
+      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-02' }),
+      stay({ id: 'b', startNight: '2027-05-02', endNight: '2027-05-04' }),
+      stay({ id: 'c', startNight: '2027-05-04', endNight: '2027-05-05' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    expect(byId.a).toMatchObject({ row: 0, endHalf: true })
+    expect(byId.b).toMatchObject({ row: 0, startHalf: true, endHalf: true })
+    expect(byId.c).toMatchObject({ row: 0, startHalf: true })
+  })
+
+  it('leaves non-adjacent stays unchanged (no halves)', () => {
+    const placed = packAccommodations(days, [
+      stay({ id: 'a', startNight: '2027-05-01', endNight: '2027-05-02' }),
+      stay({ id: 'b', startNight: '2027-05-04', endNight: '2027-05-05' }),
+    ])
+    const byId = Object.fromEntries(placed.map((p) => [p.accommodation.id, p]))
+    expect([byId.a.startHalf, byId.a.endHalf, byId.b.startHalf, byId.b.endHalf]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ])
   })
 })
