@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
 import * as Y from 'yjs'
-import { handleGetTrip, handlePostTrip } from './trip'
+import { handleGetSchema, handleGetTrip, handlePostTrip } from './trip'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 
@@ -86,6 +86,12 @@ describe('handleGetTrip', () => {
     expect(body.cities).toEqual([])
   })
 
+  it('points an empty trip at the schema endpoint via $schema so an agent learns the shape', async () => {
+    const res = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, makeApi(), 'room1')
+    const body = (await res.json()) as { $schema: string }
+    expect(body.$schema).toBe('https://worker.test/api/schema')
+  })
+
   it('rejects without the owner secret (401)', async () => {
     const res = await handleGetTrip(tripRequest('GET'), env, makeApi(seededDoc()), 'room1')
     expect(res.status).toBe(401)
@@ -95,6 +101,30 @@ describe('handleGetTrip', () => {
     const api = makeApi(seededDoc(), { roomExists: async () => false })
     const res = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, api, 'room1')
     expect(res.status).toBe(404)
+  })
+})
+
+describe('handleGetSchema', () => {
+  function schemaRequest(ownerSecret?: string): Request {
+    const headers: Record<string, string> = {}
+    if (ownerSecret !== undefined) headers['x-owner-secret'] = ownerSecret
+    return new Request('https://worker.test/api/schema', { method: 'GET', headers })
+  }
+
+  it('returns the JSON Schema derived from the trip document schema with the owner secret', async () => {
+    const res = await handleGetSchema(schemaRequest('owner-pw'), env)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { type?: string; properties?: Record<string, unknown> }
+    expect(body.type).toBe('object')
+    // Derived from tripDocumentSchema — the same single source of truth, not a duplicate.
+    expect(Object.keys(body.properties ?? {})).toEqual(
+      expect.arrayContaining(['trip', 'cities', 'accommodations', 'cards', 'dayOverrides']),
+    )
+  })
+
+  it('rejects without the owner secret (401)', async () => {
+    const res = await handleGetSchema(schemaRequest(), env)
+    expect(res.status).toBe(401)
   })
 })
 

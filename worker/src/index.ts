@@ -4,6 +4,7 @@
 //   OPTIONS *               → CORS preflight
 //   POST /api/auth          → mint a room-scoped token for an existing room
 //   POST /api/rooms         → create a room (owner-gated)
+//   GET  /api/schema        → JSON Schema for the trip document (owner-gated)
 //   GET  /api/trip/:room    → read the room's trip as JSON (owner-gated)
 //   POST /api/trip/:room    → write trip JSON into the room (owner-gated)
 //
@@ -12,7 +13,7 @@
 
 import { handleAuth } from './auth'
 import { handleCreateRoom } from './rooms'
-import { handleGetTrip, handlePostTrip } from './trip'
+import { handleGetSchema, handleGetTrip, handlePostTrip } from './trip'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -64,6 +65,11 @@ export async function handleRequest(
       res =
         request.method === 'POST'
           ? await handleCreateRoom(request, env, api)
+          : json({ error: 'method not allowed' }, 405)
+    } else if (pathname === '/api/schema') {
+      res =
+        request.method === 'GET'
+          ? await handleGetSchema(request, env)
           : json({ error: 'method not allowed' }, 405)
     } else if (pathname.startsWith('/api/trip/')) {
       let roomId: string

@@ -67,6 +67,24 @@ describe('handleRequest (router + CORS)', () => {
     expect(body.trip.title).toBe('')
   })
 
+  it('routes GET /api/schema to the schema handler (owner-gated) with CORS', async () => {
+    const req = new Request('https://worker.test/api/schema', {
+      method: 'GET',
+      headers: { 'x-owner-secret': 'owner-pw', origin: 'https://app.example' },
+    })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(200)
+    expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
+    const body = (await res.json()) as { type?: string }
+    expect(body.type).toBe('object')
+  })
+
+  it('rejects GET /api/schema without the owner secret', async () => {
+    const req = new Request('https://worker.test/api/schema', { method: 'GET' })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(401)
+  })
+
   it('rejects GET /api/trip/:room without the owner secret', async () => {
     const req = new Request('https://worker.test/api/trip/room1', { method: 'GET' })
     const res = await handleRequest(req, env, makeApi())

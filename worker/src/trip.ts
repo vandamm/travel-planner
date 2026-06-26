@@ -14,6 +14,7 @@
 // live document so connected clients converge in real time.
 
 import * as Y from 'yjs'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { exportTrip } from '../../src/data/exportTrip'
 import { applyTrip } from '../../src/data/applyTrip'
@@ -40,6 +41,17 @@ async function loadRoomDoc(api: LiveblocksApi, roomId: string): Promise<Y.Doc> {
   return doc
 }
 
+/**
+ * Serve the JSON Schema derived from `tripDocumentSchema` — the same zod schema
+ * the agent API validates against, so the published shape can never drift from
+ * what POST actually accepts (no hand-written duplicate). Owner-gated like the
+ * rest of the agent API.
+ */
+export async function handleGetSchema(request: Request, env: Env): Promise<Response> {
+  if (!ownerAuthorized(request, env)) return json({ error: 'unauthorized' }, 401)
+  return json(zodToJsonSchema(tripDocumentSchema), 200)
+}
+
 export async function handleGetTrip(
   request: Request,
   env: Env,
@@ -50,7 +62,10 @@ export async function handleGetTrip(
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
 
   const doc = await loadRoomDoc(api, roomId)
-  return json(exportTrip(doc), 200)
+  // Point at the schema endpoint so an agent reading even an empty trip learns
+  // where to fetch the full shape.
+  const schemaUrl = new URL('/api/schema', request.url).toString()
+  return json({ $schema: schemaUrl, ...exportTrip(doc) }, 200)
 }
 
 export async function handlePostTrip(
