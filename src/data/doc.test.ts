@@ -76,6 +76,24 @@ describe('trip settings', () => {
     setTrip(doc, { numDays: Number.NaN })
     expect(getTrip(doc).numDays).toBe(0)
   })
+
+  it('rejects an inverted day window so the doc never holds one exportTrip would throw on', () => {
+    const doc = freshDoc()
+    setTrip(doc, { dayStart: '08:00', dayEnd: '20:00' })
+
+    // A single-field edit that would invert (or empty) the window is dropped;
+    // the valid window stays so a later export can't fail the schema refine.
+    setTrip(doc, { dayEnd: '07:00' })
+    expect(getTrip(doc)).toMatchObject({ dayStart: '08:00', dayEnd: '20:00' })
+    setTrip(doc, { dayStart: '21:00' })
+    expect(getTrip(doc)).toMatchObject({ dayStart: '08:00', dayEnd: '20:00' })
+    setTrip(doc, { dayStart: '20:00' }) // equal to dayEnd = empty window
+    expect(getTrip(doc)).toMatchObject({ dayStart: '08:00', dayEnd: '20:00' })
+
+    // A valid move of the whole window in one patch still applies.
+    setTrip(doc, { dayStart: '09:00', dayEnd: '10:00' })
+    expect(getTrip(doc)).toMatchObject({ dayStart: '09:00', dayEnd: '10:00' })
+  })
 })
 
 describe('cities', () => {

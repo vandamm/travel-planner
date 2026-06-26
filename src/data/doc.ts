@@ -114,8 +114,22 @@ export function setTrip(doc: Y.Doc, patch: Partial<Trip>): void {
     if (patch.title !== undefined) m.set('title', patch.title)
     if (patch.startDate !== undefined) m.set('startDate', patch.startDate)
     if (patch.numDays !== undefined) m.set('numDays', clampNumDays(patch.numDays))
-    if (patch.dayStart !== undefined) m.set('dayStart', patch.dayStart)
-    if (patch.dayEnd !== undefined) m.set('dayEnd', patch.dayEnd)
+    // The day window must stay non-empty (dayEnd > dayStart, comparing 'HH:mm'
+    // lexicographically) — `tripDocumentSchema` refines on it, so an inverted
+    // window in the doc would make `exportTrip`/agent-GET throw. Resolve the
+    // candidate against the current values and only write when valid, so the doc
+    // can never hold a window export rejects (same guarantee `clampNumDays` gives
+    // numDays). ponytail: a single-field edit that would invert is dropped (input
+    // snaps back); edit the other bound first to move the whole window past it.
+    if (patch.dayStart !== undefined || patch.dayEnd !== undefined) {
+      const current = getTrip(doc)
+      const dayStart = patch.dayStart ?? current.dayStart
+      const dayEnd = patch.dayEnd ?? current.dayEnd
+      if (dayEnd > dayStart) {
+        if (patch.dayStart !== undefined) m.set('dayStart', dayStart)
+        if (patch.dayEnd !== undefined) m.set('dayEnd', dayEnd)
+      }
+    }
   })
 }
 
