@@ -17,7 +17,7 @@
 
 import * as Y from 'yjs'
 import { MAX_TRIP_DAYS } from './days'
-import type { Accommodation, Card, City, Trip } from './schema'
+import type { Accommodation, Card, CardSize, City, Trip } from './schema'
 
 const TRIP = 'trip'
 const CITIES = 'cities'
@@ -189,6 +189,7 @@ export interface NewCard {
   color?: string
   icon?: string
   transport?: boolean
+  size?: CardSize
   id?: string
 }
 
@@ -232,6 +233,7 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
     ...(input.color !== undefined && { color: input.color }),
     ...(input.icon !== undefined && { icon: input.icon }),
     ...(input.transport !== undefined && { transport: input.transport }),
+    ...(input.size !== undefined && { size: input.size }),
   }
   doc.transact(() => entityMap(doc, CARDS).set(id, toYMap(card)))
   return card

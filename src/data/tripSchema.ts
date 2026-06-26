@@ -87,6 +87,7 @@ export const cardSchema = z.object({
   color: z.string().optional(),
   icon: z.string().optional(),
   transport: z.boolean().optional(),
+  size: z.enum(['auto', 'small', 'half', 'full']).optional(),
 })
 
 // Entities are keyed by `id` on apply (into `Y.Map`s), so a duplicate id would

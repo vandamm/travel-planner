@@ -7,7 +7,7 @@
 import { useState, type FormEvent } from 'react'
 import { addCard, removeCard, updateCard } from '../../data/doc'
 import { useRoom } from '../../data/RoomProvider'
-import type { Card } from '../../data/schema'
+import type { Card, CardSize } from '../../data/schema'
 
 export interface CardEditorProps {
   /** The card being edited; omit for create mode. */
@@ -34,6 +34,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
   const [startTime, setStartTime] = useState(card?.startTime ?? '')
   const [endTime, setEndTime] = useState(card?.endTime ?? '')
   const [transport, setTransport] = useState(Boolean(card?.transport))
+  const [size, setSize] = useState<CardSize>(card?.size ?? 'auto')
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -44,6 +45,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
     const end = timed && start ? clean(endTime) : undefined
     // `undefined` clears, so unchecking removes the flag rather than storing `false`.
     const isTransport = transport ? true : undefined
+    // `auto` is the default — store `undefined` so it clears rather than persisting.
+    const cardSize = size === 'auto' ? undefined : size
 
     if (isEdit) {
       // `undefined` clears the field, so toggling time off or emptying a field removes it.
@@ -54,6 +57,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         startTime: start,
         endTime: end,
         transport: isTransport,
+        size: cardSize,
       })
     } else {
       if (!dayKey) return
@@ -65,6 +69,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         startTime: start,
         endTime: end,
         transport: isTransport,
+        size: cardSize,
       })
     }
     onClose()
@@ -146,6 +151,20 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
               className="h-4 w-4"
             />
             This is transportation
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-600">
+            Height
+            <select
+              value={size}
+              onChange={(e) => setSize(e.target.value as CardSize)}
+              className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+            >
+              <option value="auto">Exact duration</option>
+              <option value="small">Small</option>
+              <option value="half">Half day</option>
+              <option value="full">Whole day</option>
+            </select>
           </label>
 
           {timed && (

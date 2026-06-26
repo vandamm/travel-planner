@@ -92,4 +92,16 @@ describe('export → import round-trip', () => {
     applyTrip(target, exported)
     expect(exportTrip(target)).toEqual(exported)
   })
+
+  it('round-trips a card height preset', () => {
+    const source = new Y.Doc()
+    setTrip(source, { title: 'T', startDate: '2027-05-01', numDays: 1 })
+    addCard(source, { id: 'tall', dayKey: '2027-05-01', title: 'All day', order: 0, size: 'full' })
+    const exported = exportTrip(source)
+    expect(exported.cards[0].size).toBe('full')
+
+    const target = new Y.Doc()
+    applyTrip(target, exported)
+    expect(exportTrip(target)).toEqual(exported)
+  })
 })

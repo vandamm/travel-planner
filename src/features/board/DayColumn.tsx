@@ -9,6 +9,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format, isWeekend, parseISO } from 'date-fns'
 import type { Card as CardType, City, Day } from '../../data/schema'
 import { SortableCard } from '../cards/Card'
+import { cardHeightPx, windowHeightPx } from '../cards/cardHeight'
 import { useIsDragOverDay } from './dndContext'
 import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
@@ -37,35 +38,6 @@ export interface DayColumnProps {
 
 /** A neutral band color for days with no resolved city (travel days). */
 const NO_CITY_COLOR = '#cbd5e1' // slate-300
-
-/** Pixels per hour of the time window — the timeline's vertical scale. */
-const PX_PER_HOUR = 44
-/** Fallback span (hours) for an untimed card or a timed card with no end. */
-const DEFAULT_CARD_HOURS = 1
-
-/** Minutes since midnight for an 'HH:mm' clock string; 0 when unparseable. */
-function clockMinutes(hhmm: string): number {
-  const [h, m] = hhmm.split(':').map(Number)
-  return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 0
-}
-
-/** Body height (px) for the day window; never shorter than one default block. */
-function windowHeightPx(dayStart: string, dayEnd: string): number {
-  const hours = (clockMinutes(dayEnd) - clockMinutes(dayStart)) / 60
-  return Math.max(hours, DEFAULT_CARD_HOURS) * PX_PER_HOUR
-}
-
-/**
- * A card's height (px), scaled by its duration so empty time stays visible:
- * end−start, with a timed card lacking an end (and any untimed card) given the
- * default block. Bad/overnight ranges floor to the default block.
- */
-function cardHeightPx(card: CardType): number {
-  if (!card.startTime) return DEFAULT_CARD_HOURS * PX_PER_HOUR
-  const start = clockMinutes(card.startTime)
-  const end = card.endTime ? clockMinutes(card.endTime) : start + 60
-  return Math.max((end - start) / 60, DEFAULT_CARD_HOURS) * PX_PER_HOUR
-}
 
 export function DayColumn({
   day,
@@ -183,7 +155,7 @@ export function DayColumn({
         <SortableContext items={ordered.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           <ol data-testid="card-list" className="relative flex flex-col gap-2 pl-16">
             {ordered.map((c) => (
-              <li key={c.id} style={{ minHeight: cardHeightPx(c) }}>
+              <li key={c.id} style={{ minHeight: cardHeightPx(c, dayStart, dayEnd) }}>
                 <SortableCard card={c} onEdit={onEditCard} />
               </li>
             ))}

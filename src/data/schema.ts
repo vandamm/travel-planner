@@ -42,6 +42,13 @@ export interface Day {
   cityId?: string
 }
 
+/**
+ * Card height preset. `auto` (the default / absent) sizes the card by its
+ * duration (end−start, or a 1-hour block); the presets override that with a
+ * fixed height relative to the day's timeline window (see `cardHeight.ts`).
+ */
+export type CardSize = 'auto' | 'small' | 'half' | 'full'
+
 /** An activity card living in a single day column. */
 export interface Card {
   id: string
@@ -59,6 +66,8 @@ export interface Card {
   icon?: string
   /** Marks the card as a transportation leg (distinct rendering). */
   transport?: boolean
+  /** Height preset; absent = `auto` (height from duration). */
+  size?: CardSize
 }
 
 /**

@@ -23,7 +23,7 @@ function CardDump() {
     <ul aria-label="card dump">
       {listCards(doc).map((c) => (
         <li key={c.id} data-testid="dump-row">
-          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, link: c.link, transport: c.transport })}
+          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, link: c.link, transport: c.transport, size: c.size })}
         </li>
       ))}
     </ul>
@@ -141,6 +141,25 @@ describe('CardEditor — create', () => {
 
     const row = rows().find((r) => r.includes('Flight')) ?? ''
     expect(row).toContain('"transport":true')
+  })
+
+  it('stores a height preset chosen from the selector', () => {
+    renderInRoom(<CreateHarness />)
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'All day' } })
+    fireEvent.change(screen.getByLabelText('Height'), { target: { value: 'full' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    const row = rows().find((r) => r.includes('All day')) ?? ''
+    expect(row).toContain('"size":"full"')
+  })
+
+  it('omits size when left on the default (exact duration)', () => {
+    renderInRoom(<CreateHarness />)
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Plain' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    const row = rows().find((r) => r.includes('Plain')) ?? ''
+    expect(row).not.toContain('"size":')
   })
 
   it('omits the time fields when the time toggle is off', () => {
