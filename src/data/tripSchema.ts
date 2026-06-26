@@ -8,11 +8,20 @@
 // optional on input (a minimal document is just `trip`) and default to empty,
 // so `tripDocumentSchema.parse` always yields a fully-populated `TripDocument`.
 
+import { isValid, parseISO } from 'date-fns'
 import { z } from 'zod'
 import { MAX_TRIP_DAYS } from './days'
 
-/** ISO-8601 date-only, 'YYYY-MM-DD'. */
-const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date as YYYY-MM-DD')
+/**
+ * ISO-8601 date-only, 'YYYY-MM-DD'. The regex only checks shape, so a real
+ * calendar check follows: an impossible date like '2027-99-99' or '2027-02-30'
+ * matches the pattern yet would make `generateDays`' `parseISO`/`format` throw a
+ * `RangeError` when the board renders. Reject it at the boundary instead.
+ */
+const dateOnly = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date as YYYY-MM-DD')
+  .refine((s) => isValid(parseISO(s)), 'Expected a real calendar date')
 /** 24-hour clock time, 'HH:mm'. */
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected a time as HH:mm')
 /**
@@ -67,11 +76,18 @@ export const cardSchema = z.object({
   icon: z.string().optional(),
 })
 
+// Entities are keyed by `id` on apply (into `Y.Map`s), so a duplicate id would
+// silently overwrite an earlier entity and lose it. Reject duplicates here so
+// the loss surfaces as a clear validation error at the import / agent boundary.
+const uniqueIds = (items: { id: string }[]) =>
+  new Set(items.map((i) => i.id)).size === items.length
+const DUPLICATE_ID = 'Duplicate id — entity ids must be unique'
+
 export const tripDocumentSchema = z.object({
   trip: tripSettingsSchema,
-  cities: z.array(citySchema).default([]),
-  accommodations: z.array(accommodationSchema).default([]),
-  cards: z.array(cardSchema).default([]),
+  cities: z.array(citySchema).refine(uniqueIds, DUPLICATE_ID).default([]),
+  accommodations: z.array(accommodationSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
+  cards: z.array(cardSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
   // dayKey → cityId.
   dayOverrides: z.record(z.string(), z.string()).default({}),
 })

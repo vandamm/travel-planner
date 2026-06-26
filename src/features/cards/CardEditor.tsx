@@ -111,6 +111,11 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
             Link
             <input
               type="url"
+              // `type="url"` still accepts ftp:/mailto:/javascript: schemes; restrict
+              // to http(s) to match `webLink` in tripSchema, or a saved card could
+              // hold a link the doc can never export. Native validation blocks submit.
+              pattern="https?://.*"
+              title="Links must start with http:// or https://"
               value={link}
               onChange={(e) => setLink(e.target.value)}
               placeholder="https://…"

@@ -42,6 +42,27 @@ describe('tripDocumentSchema', () => {
     }
   })
 
+  it('rejects a date that matches the pattern but is not a real calendar date', () => {
+    // Would otherwise pass the regex yet make generateDays' parseISO/format throw.
+    for (const bad of ['2027-99-99', '2027-02-30', '2027-13-01']) {
+      const result = tripDocumentSchema.safeParse({
+        trip: { title: 'X', startDate: bad, numDays: 1 },
+      })
+      expect(result.success).toBe(false)
+    }
+  })
+
+  it('rejects duplicate ids within a collection (silent overwrite on apply)', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cards: [
+        { id: 'dup', dayKey: '2027-05-01', title: 'A', order: 0 },
+        { id: 'dup', dayKey: '2027-05-01', title: 'B', order: 1 },
+      ],
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('rejects a card time that is not HH:mm', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
