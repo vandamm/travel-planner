@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { ReactNode } from 'react'
 import { RoomProvider } from '../../data/RoomProvider'
 import { CityManager } from './CityManager'
+import { CITY_PALETTE } from './colors'
 
 function renderInRoom(ui: ReactNode) {
   return render(
@@ -36,6 +37,25 @@ describe('CityManager', () => {
 
     fireEvent.change(screen.getByLabelText('Colour for Rome'), { target: { value: '#00ff00' } })
     expect(screen.getByLabelText('Colour for Rome')).toHaveValue('#00ff00')
+  })
+
+  it('preselects a palette colour for a new city', () => {
+    renderInRoom(<CityManager />)
+    const picker = screen.getByLabelText('New city colour') as HTMLInputElement
+    expect(CITY_PALETTE).toContain(picker.value)
+  })
+
+  it('re-rolls a different default colour after adding', () => {
+    renderInRoom(<CityManager />)
+    const picker = () => screen.getByLabelText('New city colour') as HTMLInputElement
+    const first = picker().value
+
+    fireEvent.change(screen.getByLabelText('New city name'), { target: { value: 'Rome' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add city' }))
+
+    const second = picker().value
+    expect(CITY_PALETTE).toContain(second)
+    expect(second).not.toBe(first)
   })
 
   it('removes a city', () => {

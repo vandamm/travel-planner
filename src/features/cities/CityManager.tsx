@@ -6,9 +6,7 @@ import { useState, type FormEvent } from 'react'
 import { addCity, listCities, removeCity, updateCity } from '../../data/doc'
 import { useRoom } from '../../data/RoomProvider'
 import { useDocVersion } from '../../data/useDoc'
-
-/** A pleasant default so the color picker never starts on black. */
-const DEFAULT_COLOR = '#3b82f6'
+import { randomCityColor } from './colors'
 
 export function CityManager() {
   const { doc } = useRoom()
@@ -16,7 +14,8 @@ export function CityManager() {
   const cities = listCities(doc)
 
   const [name, setName] = useState('')
-  const [color, setColor] = useState(DEFAULT_COLOR)
+  // Default to a random palette colour not already used, re-rolled after each add.
+  const [color, setColor] = useState(() => randomCityColor(cities.map((c) => c.color)))
 
   function onAdd(e: FormEvent) {
     e.preventDefault()
@@ -24,7 +23,7 @@ export function CityManager() {
     if (!trimmed) return
     addCity(doc, { name: trimmed, color })
     setName('')
-    setColor(DEFAULT_COLOR)
+    setColor(randomCityColor([...cities.map((c) => c.color), color]))
   }
 
   return (
