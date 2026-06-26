@@ -48,7 +48,8 @@ write can survive it.)
       "order": 0,                 // integer — manual position among untimed cards in the day
       "color": "#3b82f6",         // optional
       "icon": "🎟️",                // optional
-      "transport": false          // optional — true marks a transport leg (distinct rendering)
+      "transport": false,         // optional — true marks a transport leg (distinct rendering)
+      "size": "auto"              // optional — "auto"|"small"|"half"|"full" card height (absent = "auto")
     }
   ],
   "dayOverrides": {
@@ -74,6 +75,7 @@ write can survive it.)
 | `cards[].startTime` / `endTime` | `"HH:mm"`, optional | 24-hour; presence makes the card time-bound (auto-sorted by time). |
 | `cards[].order` | integer | Manual position among untimed cards in a day. |
 | `cards[].transport` | boolean, optional | `true` marks the card as a transportation leg (train/flight/etc.), rendered with a distinct style. |
+| `cards[].size` | `"auto"`/`"small"`/`"half"`/`"full"`, optional | Card height preset. `auto` (default/absent) sizes the card from its start/end time (1h when untimed); `small` ≈ half an hour; `half`/`full` are half/all of the day's `dayStart`–`dayEnd` window. |
 
 ## Defaults
 

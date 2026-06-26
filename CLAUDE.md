@@ -63,8 +63,13 @@ of browser- or Worker-only APIs:
   then re-add via the mutators). Used by `POST /api/trip/:room`.
 - `exportTrip.ts` — doc → validated JSON. Used by `GET /api/trip/:room`.
 
-`days.ts` (day generation) and `cityResolution.ts` (resolve a day's city/color)
-are also pure shared logic.
+`days.ts` (day generation) and `cityResolution.ts` are also pure shared logic.
+`cityResolution.ts` resolves a day's city/color (`resolveDayCity`) *and* exposes
+the stay-coverage helpers — `uncoveredDays`, `firstUncoveredDay`, `uncoveredGaps`
+(contiguous gap ranges) — that drive the lane's per-gap "Add stay" buttons and the
+preselected start date. `dateFormat.ts` holds the European display formatters
+(`formatDay` → `dd.MM`, `formatTimeRange` → 24-hour `HH:mm`); stored values stay
+ISO, only the *display* is European (native picker widgets follow the OS locale).
 
 When a value or rule needs to be known in two places, derive it from these
 modules rather than re-stating it.
@@ -87,6 +92,13 @@ manual `order` within their day. The combined ordering lives in
 A card may carry an optional `transport?: boolean` flag marking it as a
 transportation leg (train/flight/etc.); it only changes rendering (distinct
 style), not ordering.
+
+A card may also carry an optional `size?: 'auto' | 'small' | 'half' | 'full'`
+height preset (absent = `auto` = sized from its start/end time). `half`/`full`
+are relative to the day's `dayStart`–`dayEnd` window. The height math is pure and
+unit-tested in `src/features/cards/cardHeight.ts`. Dragging an *untimed* card next
+to timed cards infers a `startTime` from the drop position (snapped to 15 min) —
+see `src/features/board/dndHandlers.ts`.
 
 ## Synced vs. per-user state
 

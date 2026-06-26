@@ -7,13 +7,25 @@ show accommodation as horizontal bars spanning the nights they cover.
 
 - Each day column is a time-scaled timeline over a configurable window (default
   06:00–21:00, set per trip in Trip settings); timed cards are sized by their
-  duration so free time stays visible. Dates display day-first (`dd.mm`).
+  duration so free time stays visible. A card's height can also be a preset
+  (small / half-day / whole-day) instead of its exact duration.
 - Any card can be flagged as a **transportation leg** (train/flight), which gives
   it a distinct style. Weekend columns are tinted.
 - Dragging a card shows an overlay that follows the cursor across days and
-  highlights the day it will land in. The narrow/mobile view shows as many day
+  highlights the day it will land in. Dragging an **untimed** card toward the
+  evening of a day with timed cards gives it a start time inferred from its
+  drop position (snapped to 15 min). The narrow/mobile view shows as many day
   columns as fit the viewport and pages by that count.
-- Two stays covering the same days are drawn side-by-side (split left/right).
+- A day's city is resolved automatically (a covering stay, else none), but each
+  day header has a city control to **pin a city manually** ("Auto" clears it).
+- The stays lane is always shown: each uncovered gap's first day carries an
+  **Add stay** button (and one sits at the right end of the lane). Two stays
+  that share only a changeover day meet mid-day on one row; genuine
+  double-bookings still stack on separate rows.
+- Dates and times **display** in European format (`dd.mm`, 24-hour). Stored
+  values stay ISO; native date/time *picker widgets* follow the OS/browser
+  locale (see [`docs/trip-schema.md`](./docs/trip-schema.md) storage note and the
+  plan's environment note).
 
 Edits persist instantly to local storage (IndexedDB) and sync in the background
 via Liveblocks + Yjs (CRDT), so two people can co-edit the same board in real
