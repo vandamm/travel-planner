@@ -14,7 +14,7 @@ import {
 } from '../../data/doc'
 import { useRoom } from '../../data/RoomProvider'
 import { useDocVersion } from '../../data/useDoc'
-import { resolveDayCity } from '../../data/cityResolution'
+import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
 import { generateDays } from '../../data/days'
 import type { Accommodation, Card } from '../../data/schema'
 import { AccommodationEditor } from '../accommodation/AccommodationEditor'
@@ -56,6 +56,17 @@ export function Board() {
     if (list) list.push(card)
     else cardsByDay.set(card.dayKey, [card])
   }
+
+  // New stay defaults to the gap button's day, else the first uncovered night,
+  // else the trip start. End mirrors start (one night) — the editor chains the
+  // last-night picker from there.
+  const createStartNight =
+    accEditor?.mode === 'create'
+      ? (accEditor.startNight ??
+        firstUncoveredDay(days, accommodations) ??
+        trip.startDate ??
+        days[0]?.key)
+      : undefined
 
   return (
     <section aria-labelledby="board-heading" className="flex flex-col gap-3">
@@ -153,16 +164,8 @@ export function Board() {
       {accEditor && (
         <AccommodationEditor
           accommodation={accEditor.mode === 'edit' ? accEditor.accommodation : undefined}
-          defaultStartNight={
-            accEditor.mode === 'create'
-              ? (accEditor.startNight ?? trip.startDate ?? days[0]?.key)
-              : undefined
-          }
-          defaultEndNight={
-            accEditor.mode === 'create'
-              ? (accEditor.startNight ?? trip.startDate ?? days[0]?.key)
-              : undefined
-          }
+          defaultStartNight={createStartNight}
+          defaultEndNight={createStartNight}
           onClose={() => setAccEditor(null)}
         />
       )}

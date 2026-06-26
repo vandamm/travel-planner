@@ -96,3 +96,33 @@ test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => 
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
   await expect(editor.getByLabel('First night')).toHaveValue('2027-05-03')
 })
+
+test('Add-stay popup preselects the first uncovered night, chains pickers, and saves', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByLabel('Trip title').fill('Italy 2027')
+  await page.getByLabel('Start date').fill('2027-05-01')
+  await page.getByLabel('Number of days').fill('5')
+
+  // Cover the first two nights; the right-end "Add stay" should preselect the
+  // first uncovered night (day 3) for both first and last night (one night).
+  await seedStays(page, [{ label: 'Hotel A', startNight: '2027-05-01', endNight: '2027-05-02' }])
+
+  await page.getByTestId('add-stay').click()
+  const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
+  const first = editor.getByLabel('First night')
+  const last = editor.getByLabel('Last night')
+  await expect(first).toHaveValue('2027-05-03')
+  await expect(last).toHaveValue('2027-05-03')
+
+  // Picking a later first night bumps the end to match and focuses the end field.
+  await first.fill('2027-05-04')
+  await expect(last).toHaveValue('2027-05-04')
+  await expect(last).toBeFocused()
+
+  // Saving persists the stay.
+  await editor.getByLabel('Accommodation label').fill('Hotel C')
+  await editor.getByRole('button', { name: 'Save stay' }).click()
+  await expect(page.getByTestId('accommodation-bar').filter({ hasText: 'Hotel C' })).toBeVisible()
+})

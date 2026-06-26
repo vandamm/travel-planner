@@ -5,7 +5,7 @@
 // is optional; clearing it removes the field (the covered days fall back to a
 // travel-day with no color unless an override pins one).
 
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import {
   addAccommodation,
   listCities,
@@ -41,9 +41,28 @@ export function AccommodationEditor({
   const [cityId, setCityId] = useState(accommodation?.cityId ?? '')
   const [startNight, setStartNight] = useState(accommodation?.startNight ?? defaultStartNight ?? '')
   const [endNight, setEndNight] = useState(accommodation?.endNight ?? defaultEndNight ?? '')
+  const endRef = useRef<HTMLInputElement>(null)
 
   const rangeInvalid = Boolean(startNight && endNight && endNight < startNight)
   const invalid = !label.trim() || !startNight || !endNight || rangeInvalid
+
+  // Picking the first night chains to the last-night picker: give the checkout a
+  // sensible default (≥ the first night), focus the field so it's testable, then
+  // open the native picker when the browser supports it (no-op/fallback if not).
+  function onStartChange(value: string) {
+    setStartNight(value)
+    if (value && (!endNight || endNight < value)) setEndNight(value)
+    const end = endRef.current
+    if (!end) return
+    end.focus()
+    if (typeof end.showPicker === 'function') {
+      try {
+        end.showPicker()
+      } catch {
+        // showPicker needs transient user activation; focus() already applied.
+      }
+    }
+  }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -119,13 +138,14 @@ export function AccommodationEditor({
                 // stays ISO. ponytail: picker format is browser-dependent.
                 lang="de"
                 value={startNight}
-                onChange={(e) => setStartNight(e.target.value)}
+                onChange={(e) => onStartChange(e.target.value)}
                 className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
               />
             </label>
             <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
               Last night
               <input
+                ref={endRef}
                 type="date"
                 lang="de"
                 value={endNight}
