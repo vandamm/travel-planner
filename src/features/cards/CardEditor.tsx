@@ -33,6 +33,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
   const [timed, setTimed] = useState(Boolean(card?.startTime))
   const [startTime, setStartTime] = useState(card?.startTime ?? '')
   const [endTime, setEndTime] = useState(card?.endTime ?? '')
+  const [transport, setTransport] = useState(Boolean(card?.transport))
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -41,6 +42,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
 
     const start = timed ? clean(startTime) : undefined
     const end = timed && start ? clean(endTime) : undefined
+    // `undefined` clears, so unchecking removes the flag rather than storing `false`.
+    const isTransport = transport ? true : undefined
 
     if (isEdit) {
       // `undefined` clears the field, so toggling time off or emptying a field removes it.
@@ -50,6 +53,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         link: clean(link),
         startTime: start,
         endTime: end,
+        transport: isTransport,
       })
     } else {
       if (!dayKey) return
@@ -60,6 +64,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         link: clean(link),
         startTime: start,
         endTime: end,
+        transport: isTransport,
       })
     }
     onClose()
@@ -131,6 +136,16 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
               className="h-4 w-4"
             />
             Set a time
+          </label>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
+            <input
+              type="checkbox"
+              checked={transport}
+              onChange={(e) => setTransport(e.target.checked)}
+              className="h-4 w-4"
+            />
+            This is transportation
           </label>
 
           {timed && (

@@ -48,7 +48,10 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
   return (
     <article
       data-testid="card"
-      className="flex flex-col gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-800 shadow-sm"
+      data-transport={card.transport ? '' : undefined}
+      className={`flex flex-col gap-1 rounded-md border px-2 py-1.5 text-sm text-slate-800 shadow-sm ${
+        card.transport ? 'border-sky-300 bg-sky-50' : 'border-slate-200 bg-slate-50'
+      }`}
     >
       <div className="flex items-baseline gap-1">
         {dragHandleProps && (
@@ -68,6 +71,11 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
           className="flex w-full items-baseline justify-between gap-2 text-left hover:text-slate-900"
         >
           <span data-testid="card-title" className="font-medium">
+            {card.transport && (
+              <span data-testid="card-transport-icon" aria-label="Transportation" className="mr-1">
+                🚆
+              </span>
+            )}
             {card.title}
           </span>
           {card.startTime && (

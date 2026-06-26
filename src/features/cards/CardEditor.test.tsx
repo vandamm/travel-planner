@@ -23,7 +23,7 @@ function CardDump() {
     <ul aria-label="card dump">
       {listCards(doc).map((c) => (
         <li key={c.id} data-testid="dump-row">
-          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note })}
+          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, transport: c.transport })}
         </li>
       ))}
     </ul>
@@ -48,6 +48,23 @@ function EditHarness() {
   const [card, setCard] = useState<Card | null>(null)
   useEffect(() => {
     setCard(addCard(doc, { dayKey: '2027-05-01', title: 'Old title', note: 'old note', startTime: '09:00' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <>
+      <CardDump />
+      {card && <CardEditor card={card} onClose={() => undefined} />}
+    </>
+  )
+}
+
+/** Edit-mode harness seeded with a transport card. */
+function TransportEditHarness() {
+  const { doc } = useRoom()
+  useDocVersion(doc)
+  const [card, setCard] = useState<Card | null>(null)
+  useEffect(() => {
+    setCard(addCard(doc, { dayKey: '2027-05-01', title: 'Flight', transport: true }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return (
@@ -94,6 +111,16 @@ describe('CardEditor — create', () => {
     expect(row).toContain('"note":"platform 4"')
   })
 
+  it('flags the card as transport when the toggle is on', () => {
+    renderInRoom(<CreateHarness />)
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Flight' } })
+    fireEvent.click(screen.getByLabelText('This is transportation'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    const row = rows().find((r) => r.includes('Flight')) ?? ''
+    expect(row).toContain('"transport":true')
+  })
+
   it('omits the time fields when the time toggle is off', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Wander' } })
@@ -131,6 +158,16 @@ describe('CardEditor — edit', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     await waitFor(() => expect(rows().some((r) => r.includes('"startTime"'))).toBe(false))
+  })
+
+  it('pre-checks the transport toggle and clears the flag when switched off', async () => {
+    renderInRoom(<TransportEditHarness />)
+    await waitFor(() => expect(screen.getByLabelText('This is transportation')).toBeChecked())
+
+    fireEvent.click(screen.getByLabelText('This is transportation'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    await waitFor(() => expect(rows().some((r) => r.includes('"transport":true'))).toBe(false))
   })
 
   it('deletes the card', async () => {

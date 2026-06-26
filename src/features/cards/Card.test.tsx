@@ -53,6 +53,18 @@ describe('Card', () => {
     expect(screen.queryByTestId('card-link')).not.toBeInTheDocument()
   })
 
+  it('renders a transport icon and accent style for a transport card', () => {
+    render(<Card card={{ ...base, transport: true }} />)
+    expect(screen.getByTestId('card-transport-icon')).toBeInTheDocument()
+    expect(screen.getByTestId('card')).toHaveAttribute('data-transport', '')
+  })
+
+  it('omits the transport icon for a normal card', () => {
+    render(<Card card={base} />)
+    expect(screen.queryByTestId('card-transport-icon')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card')).not.toHaveAttribute('data-transport')
+  })
+
   it('calls onEdit with the card when clicked', () => {
     const onEdit = vi.fn()
     render(<Card card={base} onEdit={onEdit} />)
