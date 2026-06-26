@@ -8,10 +8,19 @@
 // modules the client uses (`exportTrip`, `applyTrip`, the zod schema), so what an
 // agent reads and writes is identical to what the UI renders — they can't drift.
 //
-// Writes are CRDT-correct: we load the room's current Yjs state, capture its
-// state vector, apply the new trip as a full replace, then send only the diff
-// update (additions *and* deletions) back to Liveblocks, which merges it into the
-// live document so connected clients converge in real time.
+// Writes are a snapshot-relative full replace: we load the room's current Yjs
+// state, capture its state vector, apply the new trip (clear + rebuild), then
+// send only the diff (additions *and* deletions) back to Liveblocks, which
+// merges it into the live document so connected clients converge in real time.
+//
+// ponytail: this is a stateless REST read-modify-write, so it is NOT atomic
+// against live editors. An entity a client creates *after* our snapshot is
+// invisible to our delete set — Yjs can only delete items it has observed — so
+// it survives the merge: the result is "our payload plus anything added during
+// the window", not strictly our payload. The agent API is owner-gated and
+// low-concurrency, so we accept that; closing the window would need a
+// server-side compare-and-swap the Liveblocks ydoc PUT doesn't expose (or the
+// Worker joining as a live Yjs client), both far past what this API needs.
 
 import * as Y from 'yjs'
 import { zodToJsonSchema } from 'zod-to-json-schema'

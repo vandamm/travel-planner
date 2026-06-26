@@ -8,7 +8,10 @@ truth*: the same zod schema (`src/data/tripSchema.ts`) validates every path, and
 held to exactly the rules the schema advertises.
 
 Importing or posting a document is a **full replace**: the doc is cleared and
-rebuilt from the payload, so what you send is exactly what the board shows.
+rebuilt from the payload, so what you send is what the board shows. (The replace
+is taken against the snapshot the Worker reads; see the concurrency note under
+[Agent HTTP API](#agent-http-api) — an entity a collaborator creates *during* the
+write can survive it.)
 
 ## Shape
 
@@ -118,6 +121,15 @@ A `POST` is a **full replace**: the document is validated, applied to the room's
 Yjs doc as a wipe-and-rebuild, and the diff is pushed to Liveblocks, so connected
 clients converge live. Because the Worker validates *before* touching the room, a
 bad payload is a clean error and never mutates the doc.
+
+The replace is **snapshot-relative, not atomic against live editors**: the Worker
+reads the room, computes the wipe-and-rebuild, and pushes it as a Yjs diff. An
+entity a collaborator creates *after* that read is invisible to the diff's delete
+set (Yjs can only delete items it has observed), so it survives the merge — the
+result is your payload plus anything added during the brief read-modify-write
+window. The agent API is owner-gated and not meant for use mid-collaboration, so
+this is accepted rather than closed (which would need a server-side
+compare-and-swap Liveblocks doesn't expose).
 
 ### Status codes
 
