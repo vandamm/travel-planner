@@ -9,6 +9,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format, isWeekend, parseISO } from 'date-fns'
 import type { Card as CardType, City, Day } from '../../data/schema'
 import { SortableCard } from '../cards/Card'
+import { useIsDragOverDay } from './dndContext'
 import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
 
@@ -79,13 +80,16 @@ export function DayColumn({
   // The column body is a drop target so cards can be dropped onto an empty day
   // (or its blank space), not only onto another card.
   const { setNodeRef } = useDroppable({ id: dayDroppableId(day.key) })
+  // Highlight this column while a card is dragged over it — the "lands here" hint.
+  const dragOver = useIsDragOverDay(day.key)
 
   return (
     <section
       data-testid="day-column"
       data-day={day.key}
+      data-drag-over={dragOver ? '' : undefined}
       aria-label={`${weekday} ${dateLabel}${city ? ` — ${city.name}` : ''}`}
-      className={`flex w-56 shrink-0 flex-col rounded-lg border border-slate-200 shadow-sm ${weekend ? 'bg-rose-50' : 'bg-white'}`}
+      className={`flex w-56 shrink-0 flex-col rounded-lg border shadow-sm ${weekend ? 'bg-rose-50' : 'bg-white'} ${dragOver ? 'border-sky-400 ring-2 ring-sky-300' : 'border-slate-200'}`}
     >
       <header className="overflow-hidden rounded-t-lg">
         <div
