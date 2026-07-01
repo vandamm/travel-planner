@@ -20,9 +20,11 @@ export function selectViewport(width: number): Viewport {
   return width < LAPTOP_BREAKPOINT ? 'mobile' : 'desktop'
 }
 
-/** Day-column geometry (must match `DayColumn`'s `w-56`, the row's `gap-3`, and the pager's `px-4`). */
-const COLUMN_WIDTH_PX = 224 // w-56 = 14rem
-const COLUMN_GAP_PX = 12 // gap-3 = 0.75rem
+/** Day-column geometry (must match `DayColumn`'s `w-56`, the row's `gap-3`, and the pager's `px-4`).
+ *  The single numeric source for the column width/gap — `multiWeekNav.ts` derives
+ *  its scroll stride from these rather than restating the pixels. */
+export const COLUMN_WIDTH_PX = 224 // w-56 = 14rem
+export const COLUMN_GAP_PX = 12 // gap-3 = 0.75rem
 const CONTAINER_PADDING_PX = 16 // px-4 = 1rem each side
 
 /**

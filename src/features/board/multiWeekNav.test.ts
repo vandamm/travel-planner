@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateDays } from '../../data/days'
-import { rangeLabel, showRightFade, todayIndex, visibleRange } from './multiWeekNav'
+import { COLUMN_STRIDE_PX, rangeLabel, showRightFade, todayIndex, visibleRange } from './multiWeekNav'
 
 describe('showRightFade', () => {
   it('shows the fade when columns overflow and the left is in view', () => {
@@ -37,7 +37,7 @@ describe('todayIndex', () => {
 })
 
 describe('visibleRange', () => {
-  const stride = 236
+  const stride = COLUMN_STRIDE_PX
 
   it('is null when there are no days', () => {
     expect(visibleRange(0, { clientWidth: 1000, scrollLeft: 0 })).toBeNull()

@@ -102,8 +102,8 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   }
 
   // New stay defaults to the gap button's day, else the first uncovered night,
-  // else the trip start. End mirrors start (one night) — the editor chains the
-  // last-night picker from there.
+  // else the trip start. End mirrors start (one night) — the editor's range
+  // calendar extends it from there.
   const createStartNight =
     accEditor?.mode === 'create'
       ? (accEditor.startNight ??
