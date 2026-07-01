@@ -133,13 +133,43 @@ describe('DayColumn', () => {
     expect(screen.queryByTestId('city-override')).not.toBeInTheDocument()
   })
 
-  it('tints weekend columns and leaves weekdays white', () => {
+  it('flags weekends with a bold-vermilion weekday label, weekdays muted, no tint', () => {
     const { rerender } = render(<DayColumn day={day} cards={[]} direction="down" />)
     // 2027-05-01 is a Saturday.
-    expect(screen.getByTestId('day-column')).toHaveClass('bg-rose-50')
+    expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
+    expect(screen.getByTestId('day-label')).toHaveClass('text-city-vermilion')
 
     const monday: Day = { key: '2027-05-03', index: 2 }
     rerender(<DayColumn day={monday} cards={[]} direction="down" />)
-    expect(screen.getByTestId('day-column')).toHaveClass('bg-white')
+    expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
+    expect(screen.getByTestId('day-label')).toHaveClass('text-ink-400')
+    expect(screen.getByTestId('day-label')).not.toHaveClass('text-city-vermilion')
+  })
+
+  it('renders the city colour as a 3px header underline (not a top band)', () => {
+    render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
+    const band = screen.getByTestId('city-band')
+    expect(band).toHaveStyle({ backgroundColor: '#ef4444' })
+    expect(band).toHaveClass('h-[3px]')
+  })
+
+  it('renders a labelled NOON divider in the body', () => {
+    render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
+    const noon = within(screen.getByTestId('day-body')).getByTestId('noon-divider')
+    expect(noon).toHaveTextContent('NOON')
+  })
+
+  it('anchors the NOON divider from the top when down, the bottom when up', () => {
+    const { rerender } = render(
+      <DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />,
+    )
+    const down = screen.getByTestId('noon-divider')
+    expect(down.style.top).not.toBe('')
+    expect(down.style.bottom).toBe('')
+
+    rerender(<DayColumn day={day} cards={[]} direction="up" dayStart="06:00" dayEnd="21:00" />)
+    const up = screen.getByTestId('noon-divider')
+    expect(up.style.bottom).not.toBe('')
+    expect(up.style.top).toBe('')
   })
 })

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../../data/schema'
-import { cardHeightPx, DEFAULT_CARD_HOURS, PX_PER_HOUR, windowHeightPx } from './cardHeight'
+import {
+  cardHeightPx,
+  DEFAULT_CARD_HOURS,
+  noonFraction,
+  PX_PER_HOUR,
+  windowHeightPx,
+} from './cardHeight'
 
 const card = (over: Partial<Card>): Card => ({
   id: 'c',
@@ -66,5 +72,19 @@ describe('cardHeightPx — presets', () => {
   it('half floors to the default block for a tiny window', () => {
     // 1h window → half would be 0.5h, floored to 1h.
     expect(cardHeightPx(card({ size: 'half' }), '06:00', '07:00')).toBe(DEFAULT_CARD_HOURS * PX_PER_HOUR)
+  })
+})
+
+describe('noonFraction', () => {
+  it('is the noon position within the window (06:00–21:00 → 6/15)', () => {
+    expect(noonFraction(START, END)).toBeCloseTo(6 / 15)
+  })
+
+  it('clamps to 0 when noon precedes the window start', () => {
+    expect(noonFraction('13:00', '21:00')).toBe(0)
+  })
+
+  it('clamps to 1 when noon follows the window end', () => {
+    expect(noonFraction('06:00', '11:00')).toBe(1)
   })
 })

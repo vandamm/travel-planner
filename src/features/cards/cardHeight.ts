@@ -38,6 +38,18 @@ export function windowHeightPx(dayStart: string, dayEnd: string): number {
 }
 
 /**
+ * Fraction (0..1) of the day window at which noon (12:00) falls — drives the
+ * board's positional NOON divider. Clamped to the window, so a window that never
+ * reaches noon pins the divider to an edge rather than overflowing.
+ */
+export function noonFraction(dayStart: string, dayEnd: string): number {
+  const start = clockMinutes(dayStart)
+  const span = clockMinutes(dayEnd) - start
+  if (span <= 0) return 0.5
+  return Math.min(1, Math.max(0, (clockMinutes('12:00') - start) / span))
+}
+
+/**
  * A card's height (px). A `size` preset (other than `auto`) sets a fixed height
  * relative to the day window; otherwise the height is scaled by the card's
  * duration: end−start, with a timed card lacking an end (and any untimed card)

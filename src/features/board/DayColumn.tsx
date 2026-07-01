@@ -10,7 +10,7 @@ import { format, isWeekend, parseISO } from 'date-fns'
 import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day } from '../../data/schema'
 import { SortableCard } from '../cards/Card'
-import { cardHeightPx, windowHeightPx } from '../cards/cardHeight'
+import { cardHeightPx, noonFraction, windowHeightPx } from '../cards/cardHeight'
 import { useIsDragOverDay } from './dndContext'
 import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
@@ -59,6 +59,15 @@ export function DayColumn({
   const dateLabel = formatDay(day.key) // day-first dd.MM for the EU audience
   const weekend = isWeekend(parseISO(day.key))
 
+  // NOON hairline: a positional hint at noon's fraction of the day window,
+  // offset by the body's py-2 padding so it lands in the same coordinate space
+  // as the time scale. 'up' anchors it from the bottom (morning at the bottom).
+  const noonPx = noonFraction(dayStart, dayEnd) * windowHeightPx(dayStart, dayEnd)
+  const noonStyle =
+    direction === 'up'
+      ? { bottom: `calc(0.5rem + ${noonPx}px)` }
+      : { top: `calc(0.5rem + ${noonPx}px)` }
+
   // The column body is a drop target so cards can be dropped onto an empty day
   // (or its blank space), not only onto another card.
   const { setNodeRef } = useDroppable({ id: dayDroppableId(day.key) })
@@ -71,38 +80,28 @@ export function DayColumn({
       data-day={day.key}
       data-drag-over={dragOver ? '' : undefined}
       aria-label={`${weekday} ${dateLabel}${city ? ` — ${city.name}` : ''}`}
-      className={`flex w-56 shrink-0 flex-col rounded-lg border shadow-sm ${weekend ? 'bg-rose-50' : 'bg-white'} ${dragOver ? 'border-sky-400 ring-2 ring-sky-300' : 'border-slate-200'}`}
+      className={`flex w-56 shrink-0 flex-col rounded-frame border bg-white shadow-sm ${dragOver ? 'border-sky-400 ring-2 ring-sky-300' : 'border-edge'}`}
     >
-      <header className="overflow-hidden rounded-t-lg">
-        <div
-          data-testid="city-band"
-          style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
-          className="h-1.5 w-full"
-        />
-        <div className="flex flex-col gap-0.5 px-3 py-2">
+      <header className="rounded-t-frame">
+        <div className="flex flex-col gap-0.5 px-3 pb-2 pt-2.5">
           <span
             data-testid="day-label"
-            className="text-xs font-medium uppercase tracking-wide text-slate-400"
+            className={`text-[9.5px] font-extrabold uppercase tracking-[0.18em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
           >
             {weekday} · {dateLabel}
           </span>
           <div className="flex items-center justify-between gap-1.5">
             <span
               data-testid="city-name"
-              className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"
+              className="flex items-center gap-1 font-serif text-lg font-bold leading-tight text-ink"
             >
-              <span
-                aria-hidden
-                style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
-                className="inline-block h-2.5 w-2.5 rounded-full"
-              />
-              {city ? city.name : <span className="text-slate-400">No city</span>}
+              {city ? city.name : <span className="text-ink-300">No city</span>}
               {overrideCityId && (
                 <span
                   data-testid="override-indicator"
                   title="Manual city override"
                   aria-label="Manual city override"
-                  className="text-slate-400"
+                  className="text-ink-300"
                 >
                   📌
                 </span>
@@ -114,7 +113,7 @@ export function DayColumn({
                 aria-label={`City for ${weekday} ${dateLabel}`}
                 value={overrideCityId ?? ''}
                 onChange={(e) => onSetCity?.(day.key, e.target.value === '' ? null : e.target.value)}
-                className="max-w-[6rem] rounded border border-slate-200 bg-white px-1 py-0.5 text-xs text-slate-600"
+                className="max-w-[6rem] rounded-chip border border-edge bg-white px-1 py-0.5 text-xs text-ink-600"
               >
                 <option value="">Auto</option>
                 {cities.map((c) => (
@@ -126,6 +125,11 @@ export function DayColumn({
             )}
           </div>
         </div>
+        <div
+          data-testid="city-band"
+          style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
+          className="h-[3px] w-full"
+        />
       </header>
 
       <div
@@ -134,6 +138,21 @@ export function DayColumn({
         style={{ minHeight: windowHeightPx(dayStart, dayEnd) }}
         className="relative flex-1 px-3 py-2"
       >
+        {/* NOON hairline — a positional divider at noon's fraction of the day
+            window, respecting time-direction. Purely a visual hint. */}
+        <div
+          data-testid="noon-divider"
+          aria-hidden
+          style={noonStyle}
+          className="pointer-events-none absolute left-16 right-3 flex items-center gap-2"
+        >
+          <span className="h-px flex-1 bg-edge-100" />
+          <span className="font-sans text-[8px] font-bold uppercase tracking-[0.16em] text-ink-200">
+            NOON
+          </span>
+          <span className="h-px flex-1 bg-edge-100" />
+        </div>
+
         {/* Continuous time scale in a left gutter — kept clear of the cards
             (which sit in the padded column to its right) so labels never hide
             behind a card. */}
