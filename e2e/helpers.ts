@@ -37,6 +37,16 @@ export async function pickRange(
   await clickCalendarDay(cal, endIso)
 }
 
+/** Pick a time through the custom hour/minute wheel pop-over (card / day window). */
+export async function pickTime(scope: Page | Locator, triggerName: string, hhmm: string) {
+  const [hh, mm] = hhmm.split(':')
+  await scope.getByRole('button', { name: triggerName }).click()
+  const wheel = scope.getByRole('dialog', { name: triggerName })
+  await wheel.getByRole('option', { name: `Hour ${hh}` }).click()
+  await wheel.getByRole('option', { name: `Minute ${mm}` }).click()
+  await wheel.getByRole('button', { name: `Set ${hhmm}` }).click()
+}
+
 /** Below the 1024px `lg` breakpoint the inline Trip/Cities buttons collapse into
  *  the header ≡ menu, so the path to those editors differs by viewport. */
 function isMobile(page: Page): boolean {

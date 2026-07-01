@@ -46,16 +46,17 @@ describe('TripModal', () => {
     expect(screen.getByRole('button', { name: 'Start date' })).toHaveTextContent('01.05.2027')
   })
 
-  it('defaults and writes the day timeline window', () => {
+  it('defaults and writes the day timeline window through the wheel', async () => {
+    const user = userEvent.setup()
     renderInRoom(<TripModal onClose={() => {}} />)
-    expect(screen.getByLabelText('Day start')).toHaveValue('06:00')
-    expect(screen.getByLabelText('Day end')).toHaveValue('21:00')
+    expect(screen.getByRole('button', { name: 'Day start' })).toHaveTextContent('06:00')
+    expect(screen.getByRole('button', { name: 'Day end' })).toHaveTextContent('21:00')
 
-    fireEvent.change(screen.getByLabelText('Day start'), { target: { value: '07:30' } })
-    fireEvent.change(screen.getByLabelText('Day end'), { target: { value: '22:00' } })
-
-    expect(screen.getByLabelText('Day start')).toHaveValue('07:30')
-    expect(screen.getByLabelText('Day end')).toHaveValue('22:00')
+    await user.click(screen.getByRole('button', { name: 'Day start' }))
+    await user.click(screen.getByRole('option', { name: 'Hour 07' }))
+    await user.click(screen.getByRole('option', { name: 'Minute 30' }))
+    await user.click(screen.getByRole('button', { name: 'Set 07:30' }))
+    expect(screen.getByRole('button', { name: 'Day start' })).toHaveTextContent('07:30')
   })
 
   it('renders in a dialog with the seal + Lora "Trip details" heading, no slate skin', () => {

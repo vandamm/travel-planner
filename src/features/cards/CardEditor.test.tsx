@@ -80,6 +80,19 @@ function rows() {
   return screen.getAllByTestId('dump-row').map((n) => n.textContent ?? '')
 }
 
+/** Open a time-wheel trigger, pick hour + minute, and commit via "Set HH:mm". */
+async function setTimeViaWheel(
+  user: ReturnType<typeof userEvent.setup>,
+  trigger: string,
+  hour: string,
+  minute: string,
+) {
+  await user.click(screen.getByRole('button', { name: trigger }))
+  await user.click(screen.getByRole('option', { name: `Hour ${hour}` }))
+  await user.click(screen.getByRole('option', { name: `Minute ${minute}` }))
+  await user.click(screen.getByRole('button', { name: `Set ${hour}:${minute}` }))
+}
+
 describe('CardEditor — create', () => {
   it('adds a card with a title to the target day', () => {
     renderInRoom(<CreateHarness />)
@@ -97,13 +110,14 @@ describe('CardEditor — create', () => {
     expect(screen.queryAllByTestId('dump-row')).toHaveLength(0)
   })
 
-  it('captures note and an optional start/end time when timed', () => {
+  it('captures note and an optional start/end time when timed', async () => {
+    const user = userEvent.setup()
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Train' } })
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'platform 4' } })
     fireEvent.click(screen.getByLabelText('Set a time'))
-    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '10:00' } })
-    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '12:30' } })
+    await setTimeViaWheel(user, 'Start time', '10', '00')
+    await setTimeViaWheel(user, 'End time', '12', '30')
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Train')) ?? ''
@@ -122,11 +136,12 @@ describe('CardEditor — create', () => {
     expect(row).toContain('"link":"https://example.com"')
   })
 
-  it('drops the end time when timed but no start time is given', () => {
+  it('drops the end time when timed but no start time is given', async () => {
+    const user = userEvent.setup()
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Loose end' } })
     fireEvent.click(screen.getByLabelText('Set a time'))
-    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '12:30' } })
+    await setTimeViaWheel(user, 'End time', '12', '30')
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Loose end')) ?? ''
@@ -217,7 +232,9 @@ describe('CardEditor — edit', () => {
 
   it('clears the time when the timed toggle is switched off', async () => {
     renderInRoom(<EditHarness />)
-    await waitFor(() => expect(screen.getByLabelText('Start time')).toHaveValue('09:00'))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Start time' })).toHaveTextContent('09:00'),
+    )
 
     fireEvent.click(screen.getByLabelText('Set a time'))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
@@ -238,6 +255,20 @@ describe('CardEditor — edit', () => {
       expect(row).toContain('"category":"transit"')
       expect(row).not.toContain('"transport":true')
     })
+  })
+
+  it('untimes the card when the start time is cleared in the wheel', async () => {
+    const user = userEvent.setup()
+    renderInRoom(<EditHarness />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Start time' })).toHaveTextContent('09:00'),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Start time' }))
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    await waitFor(() => expect(rows().some((r) => r.includes('"startTime"'))).toBe(false))
   })
 
   it('deletes the card', async () => {

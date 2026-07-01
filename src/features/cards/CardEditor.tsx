@@ -6,6 +6,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
+import { TimePicker } from '../pickers/TimePicker'
 import { addCard, removeCard, updateCard } from '../../data/doc'
 import { useRoom } from '../../data/RoomProvider'
 import type { Card, CardCategory, CardSize } from '../../data/schema'
@@ -200,29 +201,29 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
 
           {timed && (
             <div className="flex items-end gap-2">
-              <label className="flex flex-1 flex-col gap-1.5">
+              <div className="flex flex-1 flex-col gap-1.5">
                 <span className={sectionLabel}>Start time</span>
-                <input
-                  type="time"
-                  // lang="de" hints the native picker toward a 24h clock; the value
-                  // stays HH:mm. ponytail: picker format is browser-dependent.
-                  lang="de"
+                <TimePicker
+                  label="Start time"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className={`${fieldInput} text-center font-serif`}
+                  onChange={setStartTime}
+                  onClear={() => setStartTime('')}
+                  placeholder="Set start"
+                  triggerClassName={`${fieldInput} text-center font-serif`}
                 />
-              </label>
+              </div>
               <span className="pb-2.5 text-ink-400">→</span>
-              <label className="flex flex-1 flex-col gap-1.5">
+              <div className="flex flex-1 flex-col gap-1.5">
                 <span className={sectionLabel}>End time</span>
-                <input
-                  type="time"
-                  lang="de"
+                <TimePicker
+                  label="End time"
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className={`${fieldInput} text-center font-serif`}
+                  onChange={setEndTime}
+                  onClear={() => setEndTime('')}
+                  placeholder="Set end"
+                  triggerClassName={`${fieldInput} text-center font-serif`}
                 />
-              </label>
+              </div>
             </div>
           )}
 

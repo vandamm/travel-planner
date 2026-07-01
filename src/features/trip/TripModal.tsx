@@ -2,10 +2,12 @@
 // scrim pop-over, opened from the header's `[✎ Trip]` button. Edits write
 // straight through the shared `setTrip` mutator — live, like every other edit —
 // so there is no Save/Cancel: a single ink `Done` (plus backdrop / Escape via
-// the shared `Modal`) closes it. Native date/number/time inputs stay.
+// the shared `Modal`) closes it. Start date + day window use the custom
+// calendar / time-wheel pickers; the day count stays a native number input.
 
 import { Modal } from '../../components/Modal'
 import { DatePicker } from '../pickers/DatePicker'
+import { TimePicker } from '../pickers/TimePicker'
 import { getTrip, setTrip } from '../../data/doc'
 import { MAX_TRIP_DAYS } from '../../data/days'
 import { useRoom } from '../../data/RoomProvider'
@@ -78,23 +80,18 @@ export function TripModal({ onClose }: TripModalProps) {
           Day window <span className="font-medium normal-case tracking-normal text-ink-300">— how tall a day feels</span>
         </span>
         <div className="flex items-center gap-2">
-          <input
-            type="time"
-            aria-label="Day start"
-            // lang="de" hints the native picker toward 24h; the value stays HH:mm.
-            lang="de"
+          <TimePicker
+            label="Day start"
             value={trip.dayStart}
-            onChange={(e) => setTrip(doc, { dayStart: e.target.value })}
-            className={`${fieldInput} flex-1 text-center font-serif`}
+            onChange={(v) => setTrip(doc, { dayStart: v })}
+            triggerClassName={`${fieldInput} flex-1 text-center font-serif`}
           />
           <span className="text-xs font-semibold text-ink-400">to</span>
-          <input
-            type="time"
-            aria-label="Day end"
-            lang="de"
+          <TimePicker
+            label="Day end"
             value={trip.dayEnd}
-            onChange={(e) => setTrip(doc, { dayEnd: e.target.value })}
-            className={`${fieldInput} flex-1 text-center font-serif`}
+            onChange={(v) => setTrip(doc, { dayEnd: v })}
+            triggerClassName={`${fieldInput} flex-1 text-center font-serif`}
           />
         </div>
       </div>

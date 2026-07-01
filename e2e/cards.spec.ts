@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { pickTime, setupTrip } from './helpers'
 
 test('create, edit, and delete an activity card on the board', async ({ page }) => {
   await page.goto('/')
@@ -14,7 +14,7 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   const editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Card title').fill('Visit Colosseum')
   await editor.getByLabel('Set a time').check()
-  await editor.getByLabel('Start time').fill('10:00')
+  await pickTime(editor, 'Start time', '10:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit Colosseum')
