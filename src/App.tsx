@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Modal } from './components/Modal'
 import { RoomProvider, useRoom } from './data/RoomProvider'
 import { getTrip, listCities } from './data/doc'
 import { useDocVersion } from './data/useDoc'
@@ -6,7 +7,15 @@ import { Board } from './features/board/Board'
 import { CityModal } from './features/cities/CityModal'
 import { TripModal } from './features/trip/TripModal'
 
-function Header({ onOpenTrip, onOpenCities }: { onOpenTrip: () => void; onOpenCities: () => void }) {
+function Header({
+  onOpenTrip,
+  onOpenCities,
+  onOpenMenu,
+}: {
+  onOpenTrip: () => void
+  onOpenCities: () => void
+  onOpenMenu: () => void
+}) {
   const { doc } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
@@ -35,7 +44,9 @@ function Header({ onOpenTrip, onOpenCities }: { onOpenTrip: () => void; onOpenCi
       >
         {meta}
       </p>
-      <div className="ml-auto flex items-center gap-2">
+      {/* Desktop: inline Trip/Cities buttons. Mobile: they collapse into the ≡
+          menu so the header isn't crowded on a phone. */}
+      <div className="ml-auto hidden items-center gap-2 lg:flex">
         <button
           type="button"
           onClick={onOpenTrip}
@@ -51,18 +62,83 @@ function Header({ onOpenTrip, onOpenCities }: { onOpenTrip: () => void; onOpenCi
           <span aria-hidden>◉</span> Cities
         </button>
       </div>
+      <button
+        type="button"
+        aria-label="Menu"
+        onClick={onOpenMenu}
+        className="ml-auto flex h-9 w-9 items-center justify-center rounded-card border border-edge-300 bg-white text-xl leading-none text-ink-600 hover:bg-surface-chip lg:hidden"
+      >
+        <span aria-hidden>≡</span>
+      </button>
     </header>
+  )
+}
+
+/** The mobile action sheet behind the header's ≡: Trip / Cities / Add stay as
+ *  large tap targets. Rendered through the shared Modal (full-screen sheet on
+ *  mobile); each choice closes the menu and opens the matching editor. */
+function MobileMenu({
+  onClose,
+  onOpenTrip,
+  onOpenCities,
+  onAddStay,
+}: {
+  onClose: () => void
+  onOpenTrip: () => void
+  onOpenCities: () => void
+  onAddStay: () => void
+}) {
+  const item =
+    'w-full rounded-card border border-edge-300 bg-white px-4 py-3 text-left font-sans text-base font-medium text-ink-600 hover:bg-surface-chip'
+  return (
+    <Modal label="Menu" onClose={onClose} className="flex w-full flex-col gap-3 lg:max-w-xs">
+      <h2 className="font-serif text-xl font-semibold text-ink">Menu</h2>
+      <button type="button" className={item} onClick={onOpenTrip}>
+        <span aria-hidden>✎</span> Trip setup
+      </button>
+      <button type="button" className={item} onClick={onOpenCities}>
+        <span aria-hidden>◉</span> Cities &amp; colours
+      </button>
+      <button type="button" className={item} onClick={onAddStay}>
+        <span aria-hidden>＋</span> Add stay
+      </button>
+    </Modal>
   )
 }
 
 function AppShell() {
   const [tripOpen, setTripOpen] = useState(false)
   const [citiesOpen, setCitiesOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  // A monotonic counter, not a boolean: repeated "Add stay" taps re-open the
+  // Board's create editor even without an intervening close.
+  const [addStayNonce, setAddStayNonce] = useState(0)
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-surface py-6 text-ink">
-      <Header onOpenTrip={() => setTripOpen(true)} onOpenCities={() => setCitiesOpen(true)} />
-      <Board />
+      <Header
+        onOpenTrip={() => setTripOpen(true)}
+        onOpenCities={() => setCitiesOpen(true)}
+        onOpenMenu={() => setMenuOpen(true)}
+      />
+      <Board addStayNonce={addStayNonce} />
+      {menuOpen && (
+        <MobileMenu
+          onClose={() => setMenuOpen(false)}
+          onOpenTrip={() => {
+            setMenuOpen(false)
+            setTripOpen(true)
+          }}
+          onOpenCities={() => {
+            setMenuOpen(false)
+            setCitiesOpen(true)
+          }}
+          onAddStay={() => {
+            setMenuOpen(false)
+            setAddStayNonce((n) => n + 1)
+          }}
+        />
+      )}
       {tripOpen && <TripModal onClose={() => setTripOpen(false)} />}
       {citiesOpen && <CityModal onClose={() => setCitiesOpen(false)} />}
     </main>

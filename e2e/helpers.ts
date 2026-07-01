@@ -1,15 +1,33 @@
 import { expect, type Page } from '@playwright/test'
 
+/** Below the 1024px `lg` breakpoint the inline Trip/Cities buttons collapse into
+ *  the header ≡ menu, so the path to those editors differs by viewport. */
+function isMobile(page: Page): boolean {
+  const size = page.viewportSize()
+  return size !== null && size.width < 1024
+}
+
+/** Open Trip / Cities, handling the mobile ≡ menu vs. the desktop inline button. */
+async function openEditor(page: Page, menuItem: 'Trip setup' | 'Cities & colours', inline: 'Trip' | 'Cities') {
+  if (isMobile(page)) {
+    await page.getByRole('button', { name: 'Menu' }).click()
+    await page.getByRole('dialog', { name: 'Menu' }).getByRole('button', { name: menuItem }).click()
+  } else {
+    await page.getByRole('button', { name: inline }).click()
+  }
+}
+
 /**
- * Open the `[✎ Trip]` header pop-over, fill the given trip fields (live writes),
- * and close it. Centralises the inline→modal churn so specs that only need a
- * set-up trip as a precondition don't each re-encode the modal flow.
+ * Open the Trip pop-over (via the ≡ menu on mobile, the inline button on
+ * desktop), fill the given trip fields (live writes), and close it. Centralises
+ * the inline→modal churn so specs that only need a set-up trip as a precondition
+ * don't each re-encode the modal flow.
  */
 export async function setupTrip(
   page: Page,
   { title, startDate, numDays }: { title?: string; startDate?: string; numDays?: number | string },
 ) {
-  await page.getByRole('button', { name: 'Trip' }).click()
+  await openEditor(page, 'Trip setup', 'Trip')
   const dialog = page.getByRole('dialog', { name: 'Trip details' })
   if (title !== undefined) await dialog.getByLabel('Trip title').fill(title)
   if (startDate !== undefined) await dialog.getByLabel('Start date').fill(startDate)
@@ -25,7 +43,7 @@ export async function setupTrip(
  * city) open it themselves.
  */
 export async function addCity(page: Page, name: string) {
-  await page.getByRole('button', { name: 'Cities' }).click()
+  await openEditor(page, 'Cities & colours', 'Cities')
   const dialog = page.getByRole('dialog', { name: 'Cities & colours' })
   await dialog.getByLabel('New city name').fill(name)
   await dialog.getByRole('button', { name: 'Add' }).click()

@@ -4,7 +4,7 @@
 // presentational <DayColumn> per day. The morning↔evening direction toggle is a
 // per-user view preference (localStorage), so it lives here, not in the doc.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   getTrip,
   listAccommodations,
@@ -36,7 +36,13 @@ type AccEditorState =
   | { mode: 'create'; startNight?: string }
   | { mode: 'edit'; accommodation: Accommodation }
 
-export function Board() {
+export interface BoardProps {
+  /** Bumped by the mobile ≡ menu's "Add stay"; each change opens the create
+   *  editor (a nonce, not a boolean, so repeated taps re-open it). */
+  addStayNonce?: number
+}
+
+export function Board({ addStayNonce = 0 }: BoardProps) {
   const { doc } = useRoom()
   useDocVersion(doc)
   const { direction, toggle } = useTimeDirection()
@@ -44,6 +50,12 @@ export function Board() {
   const columns = useColumnsThatFit()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [accEditor, setAccEditor] = useState<AccEditorState | null>(null)
+
+  // The header's ≡ menu lives above Board but the AccommodationEditor (and its
+  // board-derived night defaults) stay here, so the menu drives it via the nonce.
+  useEffect(() => {
+    if (addStayNonce > 0) setAccEditor({ mode: 'create' })
+  }, [addStayNonce])
 
   const trip = getTrip(doc)
   const days = generateDays(trip.startDate, trip.numDays)
@@ -78,17 +90,7 @@ export function Board() {
         </h2>
         <div className="flex items-center gap-2">
           {/* Desktop's "Add stay" lives at the right end of the stays lane; mobile
-              has no lane, so it keeps the header button. */}
-          {days.length > 0 && viewport === 'mobile' && (
-            <button
-              type="button"
-              aria-label="Add stay"
-              onClick={() => setAccEditor({ mode: 'create' })}
-              className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
-            >
-              Add stay
-            </button>
-          )}
+              reaches it through the header ≡ menu (lifted to AppShell via nonce). */}
           <button
             type="button"
             aria-label="Toggle time direction"
