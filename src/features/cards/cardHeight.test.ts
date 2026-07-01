@@ -87,4 +87,8 @@ describe('noonFraction', () => {
   it('clamps to 1 when noon follows the window end', () => {
     expect(noonFraction('06:00', '11:00')).toBe(1)
   })
+
+  it('falls back to the middle for a non-positive window', () => {
+    expect(noonFraction('21:00', '06:00')).toBe(0.5)
+  })
 })

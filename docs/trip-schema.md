@@ -48,7 +48,8 @@ write can survive it.)
       "order": 0,                 // integer — manual position among untimed cards in the day
       "color": "#3b82f6",         // optional
       "icon": "🎟️",                // optional
-      "transport": false,         // optional — true marks a transport leg (distinct rendering)
+      "transport": false,         // optional, legacy — true renders as the "transit" category
+      "category": "indoor",       // optional — "indoor"|"outdoor"|"transit" (supersedes transport)
       "size": "auto"              // optional — "auto"|"small"|"half"|"full" card height (absent = "auto")
     }
   ],
@@ -74,7 +75,8 @@ write can survive it.)
 | `cards[].link` | `"http(s)://…"` or `""`, optional | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected. |
 | `cards[].startTime` / `endTime` | `"HH:mm"`, optional | 24-hour; presence makes the card time-bound (auto-sorted by time). |
 | `cards[].order` | integer | Manual position among untimed cards in a day. |
-| `cards[].transport` | boolean, optional | `true` marks the card as a transportation leg (train/flight/etc.), rendered with a distinct style. |
+| `cards[].transport` | boolean, optional | Legacy transportation-leg flag. Kept valid for back-compat; `category` supersedes it and `true` is read as the `"transit"` category. |
+| `cards[].category` | `"indoor"`/`"outdoor"`/`"transit"`, optional | Activity category, shown as a colour chip. Absent = uncategorised. Takes precedence over `transport`. |
 | `cards[].size` | `"auto"`/`"small"`/`"half"`/`"full"`, optional | Card height preset. `auto` (default/absent) sizes the card from its start/end time (1h when untimed); `small` ≈ half an hour; `half`/`full` are half/all of the day's `dayStart`–`dayEnd` window. |
 
 ## Defaults

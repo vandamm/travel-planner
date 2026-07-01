@@ -159,17 +159,19 @@ describe('DayColumn', () => {
     expect(noon).toHaveTextContent('NOON')
   })
 
-  it('anchors the NOON divider from the top when down, the bottom when up', () => {
+  it('anchors the NOON divider at noon’s fraction — top when down, bottom when up', () => {
+    // 06:00–21:00 → noon at 6/15 of the 660px window = 264px, plus the py-2 (0.5rem) offset.
+    // Asserting the value (not just non-empty) catches an inverted fraction or wrong window.
     const { rerender } = render(
       <DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />,
     )
     const down = screen.getByTestId('noon-divider')
-    expect(down.style.top).not.toBe('')
+    expect(down.style.top).toBe('calc(264px + 0.5rem)')
     expect(down.style.bottom).toBe('')
 
     rerender(<DayColumn day={day} cards={[]} direction="up" dayStart="06:00" dayEnd="21:00" />)
     const up = screen.getByTestId('noon-divider')
-    expect(up.style.bottom).not.toBe('')
+    expect(up.style.bottom).toBe('calc(264px + 0.5rem)')
     expect(up.style.top).toBe('')
   })
 })
