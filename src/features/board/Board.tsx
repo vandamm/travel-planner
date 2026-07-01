@@ -4,7 +4,7 @@
 // presentational <DayColumn> per day. The morning↔evening direction toggle is a
 // per-user view preference (localStorage), so it lives here, not in the doc.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   getTrip,
   listAccommodations,
@@ -16,7 +16,8 @@ import {
 import { useRoom } from '../../data/RoomProvider'
 import { useDocVersion } from '../../data/useDoc'
 import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
-import { generateDays } from '../../data/days'
+import { generateDays, toDayKey } from '../../data/days'
+import { COLUMN_STRIDE_PX, rangeLabel, showRightFade, todayIndex } from './multiWeekNav'
 import type { Accommodation, Card } from '../../data/schema'
 import { AccommodationEditor } from '../accommodation/AccommodationEditor'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
@@ -50,6 +51,11 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   const columns = useColumnsThatFit()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [accEditor, setAccEditor] = useState<AccEditorState | null>(null)
+  // Desktop multi-week affordances (§9): a right-edge fade + a visible date-range
+  // label, both derived from the scroll container's metrics by the pure helpers.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [showFade, setShowFade] = useState(false)
+  const [rangeText, setRangeText] = useState('')
 
   // The header's ≡ menu lives above Board but the AccommodationEditor (and its
   // board-derived night defaults) stay here, so the menu drives it via the nonce.
@@ -71,6 +77,30 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
     else cardsByDay.set(card.dayKey, [card])
   }
 
+  // Recompute the fade + range label whenever the board's content or the viewport
+  // changes. Runs only when the desktop scroll container is mounted (mobile leaves
+  // scrollRef null). Mirrors MobileDayView's scroll-hint effect.
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => {
+      setShowFade(showRightFade(el))
+      setRangeText(rangeLabel(days, el))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+    // Horizontal geometry + the label depend on the days, not per-card content.
+  }, [viewport, days])
+
+  const todayIdx = todayIndex(days, toDayKey(new Date()))
+  const jumpToToday = () =>
+    scrollRef.current?.scrollTo({ left: todayIdx * COLUMN_STRIDE_PX, behavior: 'smooth' })
+  const pageBy = (dir: -1 | 1) => {
+    const el = scrollRef.current
+    if (el) el.scrollBy({ left: dir * el.clientWidth, behavior: 'smooth' })
+  }
+
   // New stay defaults to the gap button's day, else the first uncovered night,
   // else the trip start. End mirrors start (one night) — the editor chains the
   // last-night picker from there.
@@ -89,6 +119,46 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
           Board
         </h2>
         <div className="flex items-center gap-2">
+          {/* Multi-week navigation is desktop-only: the scrolling columns row lives
+              in the desktop branch; mobile pages one day at a time (pager dots). */}
+          {viewport === 'desktop' && days.length > 0 && (
+            <>
+              {todayIdx >= 0 && (
+                <button
+                  type="button"
+                  aria-label="Jump to today"
+                  onClick={jumpToToday}
+                  className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
+                >
+                  Today
+                </button>
+              )}
+              <div data-testid="range-stepper" className="flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-label="Previous days"
+                  onClick={() => pageBy(-1)}
+                  className="rounded border border-edge-300 bg-white px-2 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
+                >
+                  ‹
+                </button>
+                <span
+                  data-testid="visible-range"
+                  className="min-w-[7rem] text-center text-sm font-medium text-ink-600"
+                >
+                  {rangeText}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next days"
+                  onClick={() => pageBy(1)}
+                  className="rounded border border-edge-300 bg-white px-2 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
+                >
+                  ›
+                </button>
+              </div>
+            </>
+          )}
           {/* Desktop's "Add stay" lives at the right end of the stays lane; mobile
               reaches it through the header ≡ menu (lifted to AppShell via nonce). */}
           <button
@@ -128,37 +198,56 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
           />
         </BoardDnd>
       ) : (
-        <div className="overflow-x-auto px-6 pb-4">
-          <AccommodationLane
-            days={days}
-            accommodations={accommodations}
-            cityById={cityById}
-            onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
-            onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
-          />
-          <BoardDnd doc={doc} direction={direction}>
-            <div data-testid="board" className="flex gap-3">
-              {days.map((day) => {
-                const cityId = resolveDayCity(day.key, accommodations, overrides)
-                return (
-                  <DayColumn
-                    key={day.key}
-                    day={day}
-                    city={cityId ? cityById.get(cityId) : undefined}
-                    cards={cardsByDay.get(day.key) ?? []}
-                    direction={direction}
-                    dayStart={trip.dayStart}
-                    dayEnd={trip.dayEnd}
-                    cities={cities}
-                    overrideCityId={overrides[day.key]}
-                    onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
-                    onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
-                    onEditCard={(card) => setEditor({ mode: 'edit', card })}
-                  />
-                )
-              })}
-            </div>
-          </BoardDnd>
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            data-testid="board-scroll"
+            onScroll={(e) => {
+              setShowFade(showRightFade(e.currentTarget))
+              setRangeText(rangeLabel(days, e.currentTarget))
+            }}
+            className="overflow-x-auto px-6 pb-4"
+          >
+            <AccommodationLane
+              days={days}
+              accommodations={accommodations}
+              cityById={cityById}
+              onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
+              onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
+            />
+            <BoardDnd doc={doc} direction={direction}>
+              <div data-testid="board" className="flex gap-3">
+                {days.map((day) => {
+                  const cityId = resolveDayCity(day.key, accommodations, overrides)
+                  return (
+                    <DayColumn
+                      key={day.key}
+                      day={day}
+                      city={cityId ? cityById.get(cityId) : undefined}
+                      cards={cardsByDay.get(day.key) ?? []}
+                      direction={direction}
+                      dayStart={trip.dayStart}
+                      dayEnd={trip.dayEnd}
+                      cities={cities}
+                      overrideCityId={overrides[day.key]}
+                      onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
+                      onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
+                      onEditCard={(card) => setEditor({ mode: 'edit', card })}
+                    />
+                  )
+                })}
+              </div>
+            </BoardDnd>
+          </div>
+          {/* Right-edge fade: a decorative hint that more columns lie off-screen,
+              shown only while not scrolled fully right (mirrors the mobile fade). */}
+          {showFade && (
+            <div
+              aria-hidden
+              data-testid="board-fade"
+              className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent"
+            />
+          )}
         </div>
       )}
 
