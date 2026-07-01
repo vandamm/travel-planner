@@ -3,6 +3,13 @@
 // time (still overridable via the colour input in `CityModal`).
 
 /**
+ * Warm neutral band/bar colour for a day or stay with no resolved city (a
+ * travel day). It's a static inline `style` hex — the `ink-200` design token —
+ * shared by `DayColumn` and `AccommodationBar` so the two never drift.
+ */
+export const NO_CITY_COLOR = '#c2bba8'
+
+/**
  * Curated "ink & type" city hues. Leads with the four named design hues
  * (vermilion/pine/indigo/plum) followed by a few harmonious extras for variety.
  */

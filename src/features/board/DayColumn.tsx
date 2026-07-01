@@ -9,6 +9,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format, isWeekend, parseISO } from 'date-fns'
 import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day } from '../../data/schema'
+import { NO_CITY_COLOR } from '../cities/colors'
 import { SortableCard } from '../cards/Card'
 import { cardHeightPx, noonFraction, windowHeightPx } from '../cards/cardHeight'
 import { useIsDragOverDay } from './dndContext'
@@ -36,10 +37,6 @@ export interface DayColumnProps {
   /** Open the editor on an existing card. */
   onEditCard?: (card: CardType) => void
 }
-
-/** A warm neutral band color for days with no resolved city (travel days).
- *  ink-200; kept identical to AccommodationBar's fallback. */
-const NO_CITY_COLOR = '#c2bba8' // ink-200
 
 export function DayColumn({
   day,

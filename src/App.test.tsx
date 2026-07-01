@@ -35,6 +35,10 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Trip' }))
     expect(screen.getByRole('dialog', { name: 'Trip details' })).toBeInTheDocument()
+
+    // Escape flips AppShell's open flag back off, unmounting the modal.
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Trip details' })).not.toBeInTheDocument()
   })
 
   it('opens the Cities & colours modal from the header button', async () => {
@@ -45,5 +49,9 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cities' }))
     expect(screen.getByRole('dialog', { name: 'Cities & colours' })).toBeInTheDocument()
+
+    // Escape flips AppShell's open flag back off, unmounting the modal.
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
   })
 })

@@ -6,6 +6,7 @@
 // beyond the visible trip range.
 
 import type { Accommodation, City } from '../../data/schema'
+import { NO_CITY_COLOR } from '../cities/colors'
 
 export interface AccommodationBarProps {
   accommodation: Accommodation
@@ -18,9 +19,6 @@ export interface AccommodationBarProps {
   /** Called with the stay when the user clicks it to edit. */
   onEdit?: (accommodation: Accommodation) => void
 }
-
-/** Warm neutral for a stay with no city set (matches the day-column fallback). */
-const NO_CITY_COLOR = '#c2bba8' // ink-200
 
 export function AccommodationBar({
   accommodation,
