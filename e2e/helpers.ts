@@ -1,4 +1,41 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
+
+/**
+ * Navigate an open calendar Popover to `iso`'s month (stepping ‹/› by the month
+ * delta read off `data-month`) and click that day cell. Only in-month days carry
+ * `data-key`, so the selector is unambiguous.
+ */
+async function clickCalendarDay(cal: Locator, iso: string) {
+  const targetYear = Number(iso.slice(0, 4))
+  const targetMonth = Number(iso.slice(5, 7))
+  for (let guard = 0; guard < 120; guard++) {
+    const cur = await cal.locator('[data-month]').getAttribute('data-month')
+    if (!cur) break
+    const diff = (targetYear - Number(cur.slice(0, 4))) * 12 + (targetMonth - Number(cur.slice(5, 7)))
+    if (diff === 0) break
+    await cal.getByRole('button', { name: diff > 0 ? 'Next month' : 'Previous month' }).click()
+  }
+  await cal.locator(`[data-key="${iso}"]`).click()
+}
+
+/** Pick a single date through the custom calendar pop-over (trip start etc.). */
+export async function pickDate(scope: Page | Locator, triggerName: string, iso: string) {
+  await scope.getByRole('button', { name: triggerName }).click()
+  await clickCalendarDay(scope.getByRole('dialog', { name: triggerName }), iso)
+}
+
+/** Pick a first→last night range through the custom calendar pop-over. */
+export async function pickRange(
+  scope: Page | Locator,
+  triggerName: string,
+  startIso: string,
+  endIso: string,
+) {
+  await scope.getByRole('button', { name: triggerName }).click()
+  const cal = scope.getByRole('dialog', { name: triggerName })
+  await clickCalendarDay(cal, startIso)
+  await clickCalendarDay(cal, endIso)
+}
 
 /** Below the 1024px `lg` breakpoint the inline Trip/Cities buttons collapse into
  *  the header ≡ menu, so the path to those editors differs by viewport. */
@@ -30,7 +67,7 @@ export async function setupTrip(
   await openEditor(page, 'Trip setup', 'Trip')
   const dialog = page.getByRole('dialog', { name: 'Trip details' })
   if (title !== undefined) await dialog.getByLabel('Trip title').fill(title)
-  if (startDate !== undefined) await dialog.getByLabel('Start date').fill(startDate)
+  if (startDate !== undefined) await pickDate(dialog, 'Start date', startDate)
   if (numDays !== undefined) await dialog.getByLabel('Number of days').fill(String(numDays))
   await dialog.getByRole('button', { name: 'Done' }).click()
   await expect(dialog).toHaveCount(0)

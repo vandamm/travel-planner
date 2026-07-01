@@ -5,6 +5,7 @@
 // the shared `Modal`) closes it. Native date/number/time inputs stay.
 
 import { Modal } from '../../components/Modal'
+import { DatePicker } from '../pickers/DatePicker'
 import { getTrip, setTrip } from '../../data/doc'
 import { MAX_TRIP_DAYS } from '../../data/days'
 import { useRoom } from '../../data/RoomProvider'
@@ -48,18 +49,16 @@ export function TripModal({ onClose }: TripModalProps) {
       </label>
 
       <div className="flex gap-3">
-        <label className="flex flex-1 flex-col gap-1.5">
+        <div className="flex flex-1 flex-col gap-1.5">
           <span className={sectionLabel}>Start date</span>
-          <input
-            type="date"
-            // lang="de" hints the native picker toward dd.mm.yyyy; the value stays
-            // ISO so data is unambiguous. ponytail: picker format is browser-dependent.
-            lang="de"
+          <DatePicker
+            label="Start date"
             value={trip.startDate}
-            onChange={(e) => setTrip(doc, { startDate: e.target.value })}
-            className={`${fieldInput} font-serif`}
+            onSelect={(iso) => setTrip(doc, { startDate: iso })}
+            placeholder="Pick a start date"
+            triggerClassName={`${fieldInput} font-serif text-left`}
           />
-        </label>
+        </div>
 
         <label className="flex w-24 flex-col gap-1.5">
           <span className={sectionLabel}>Number of days</span>

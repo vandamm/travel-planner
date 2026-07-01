@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { RoomProvider } from '../../data/RoomProvider'
+import { setTrip } from '../../data/doc'
+import { RoomProvider, useRoom } from '../../data/RoomProvider'
 import { TripModal } from './TripModal'
 
 function renderInRoom(ui: ReactNode) {
@@ -13,16 +15,35 @@ function renderInRoom(ui: ReactNode) {
   )
 }
 
+/** Seeds a known start date once so the calendar opens on a deterministic month. */
+function TripWithStart() {
+  const { doc } = useRoom()
+  useState(() => setTrip(doc, { startDate: '2027-05-10' }))
+  return <TripModal onClose={() => {}} />
+}
+
 describe('TripModal', () => {
-  it('writes title, start date, and day count into the trip live', () => {
+  it('writes title and day count into the trip live', () => {
     renderInRoom(<TripModal onClose={() => {}} />)
     fireEvent.change(screen.getByLabelText('Trip title'), { target: { value: 'Italy' } })
-    fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2027-05-01' } })
     fireEvent.change(screen.getByLabelText('Number of days'), { target: { value: '12' } })
 
     expect(screen.getByLabelText('Trip title')).toHaveValue('Italy')
-    expect(screen.getByLabelText('Start date')).toHaveValue('2027-05-01')
     expect(screen.getByLabelText('Number of days')).toHaveValue(12)
+  })
+
+  it('picks the start date through the calendar and shows it European', async () => {
+    const user = userEvent.setup()
+    renderInRoom(<TripWithStart />)
+
+    // The trigger shows the seeded ISO date European (dd.MM.yyyy).
+    const trigger = screen.getByRole('button', { name: 'Start date' })
+    expect(trigger).toHaveTextContent('10.05.2027')
+
+    // Open the calendar (seeded to May 2027) and pick the 1st → live write + rerender.
+    await user.click(trigger)
+    await user.click(screen.getByRole('button', { name: '1 May 2027' }))
+    expect(screen.getByRole('button', { name: 'Start date' })).toHaveTextContent('01.05.2027')
   })
 
   it('defaults and writes the day timeline window', () => {

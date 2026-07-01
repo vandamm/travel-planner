@@ -57,8 +57,10 @@ describe('AccommodationEditor', () => {
 
     await user.type(screen.getByLabelText('Accommodation label'), 'Hotel Roma')
     await user.selectOptions(screen.getByLabelText('City'), 'rome')
-    await user.clear(screen.getByLabelText('Last night'))
-    await user.type(screen.getByLabelText('Last night'), '2027-05-03')
+    // Pick a first→last range through the calendar (seeded to May 2027).
+    await user.click(screen.getByRole('button', { name: 'Stay nights' }))
+    await user.click(screen.getByRole('button', { name: '1 May 2027' }))
+    await user.click(screen.getByRole('button', { name: '3 May 2027' }))
     await user.click(screen.getByRole('button', { name: 'Save stay' }))
 
     const stays = listAccommodations(doc)
@@ -71,19 +73,21 @@ describe('AccommodationEditor', () => {
     })
   })
 
-  it('blocks an invalid night range', async () => {
+  it('swaps a last-before-first range so start <= end', async () => {
     const user = userEvent.setup()
     renderEditor(<CreateMode />)
 
-    await user.type(screen.getByLabelText('Accommodation label'), 'Backwards')
-    await user.clear(screen.getByLabelText('First night'))
-    await user.type(screen.getByLabelText('First night'), '2027-05-05')
-    await user.clear(screen.getByLabelText('Last night'))
-    await user.type(screen.getByLabelText('Last night'), '2027-05-01')
+    await user.type(screen.getByLabelText('Accommodation label'), 'Swapped')
+    // Pick the later night first, then an earlier one — the picker swaps them.
+    await user.click(screen.getByRole('button', { name: 'Stay nights' }))
+    await user.click(screen.getByRole('button', { name: '5 May 2027' }))
+    await user.click(screen.getByRole('button', { name: '1 May 2027' }))
+    await user.click(screen.getByRole('button', { name: 'Save stay' }))
 
-    expect(screen.getByRole('alert')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save stay' })).toBeDisabled()
-    expect(listAccommodations(doc)).toHaveLength(0)
+    expect(listAccommodations(doc)[0]).toMatchObject({
+      startNight: '2027-05-01',
+      endNight: '2027-05-05',
+    })
   })
 
   it('edits an existing accommodation', async () => {

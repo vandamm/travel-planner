@@ -1,0 +1,38 @@
+import { expect, test } from '@playwright/test'
+import { pickDate, pickRange, setupTrip } from './helpers'
+
+// §10 date picker: the custom calendar pop-over replaces the native date inputs.
+
+test('picking the trip start via the calendar rebuilds the board to that date', async ({ page }) => {
+  await page.goto('/')
+  await setupTrip(page, { title: 'Cal Trip', startDate: '2027-05-01', numDays: 3 })
+
+  // Board rebuilt from the picked ISO date; headers show European dd.MM.
+  const labels = page.getByTestId('day-label')
+  await expect(labels).toHaveCount(3)
+  await expect(labels.nth(0)).toHaveText(/\b01\.05\b/)
+
+  // Re-picking a different month moves the whole board.
+  await page.getByRole('button', { name: 'Trip' }).click()
+  const trip = page.getByRole('dialog', { name: 'Trip details' })
+  await pickDate(trip, 'Start date', '2027-06-10')
+  await trip.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByTestId('day-label').nth(0)).toHaveText(/\b10\.06\b/)
+})
+
+test('a stay range highlights both endpoints and the days between', async ({ page }) => {
+  await page.goto('/')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
+
+  await page.getByTestId('add-stay').click()
+  const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
+  await pickRange(editor, 'Stay nights', '2027-05-01', '2027-05-03')
+
+  // Reopen to inspect the highlighted grid (the picker closes on a complete range).
+  await editor.getByRole('button', { name: 'Stay nights' }).click()
+  const cal = editor.getByRole('dialog', { name: 'Stay nights' })
+  await expect(cal.locator('[data-key="2027-05-01"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(cal.locator('[data-key="2027-05-03"]')).toHaveAttribute('aria-pressed', 'true')
+  // The in-between day is tinted but not an endpoint.
+  await expect(cal.locator('[data-key="2027-05-02"]')).not.toHaveAttribute('aria-pressed', 'true')
+})

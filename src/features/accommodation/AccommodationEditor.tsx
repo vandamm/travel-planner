@@ -5,8 +5,9 @@
 // is optional; clearing it removes the field (the covered days fall back to a
 // travel-day with no color unless an override pins one).
 
-import { useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
+import { DatePicker } from '../pickers/DatePicker'
 import {
   addAccommodation,
   listCities,
@@ -42,28 +43,10 @@ export function AccommodationEditor({
   const [cityId, setCityId] = useState(accommodation?.cityId ?? '')
   const [startNight, setStartNight] = useState(accommodation?.startNight ?? defaultStartNight ?? '')
   const [endNight, setEndNight] = useState(accommodation?.endNight ?? defaultEndNight ?? '')
-  const endRef = useRef<HTMLInputElement>(null)
 
-  const rangeInvalid = Boolean(startNight && endNight && endNight < startNight)
-  const invalid = !label.trim() || !startNight || !endNight || rangeInvalid
-
-  // Picking the first night chains to the last-night picker: give the checkout a
-  // sensible default (≥ the first night), focus the field so it's testable, then
-  // open the native picker when the browser supports it (no-op/fallback if not).
-  function onStartChange(value: string) {
-    setStartNight(value)
-    if (value && (!endNight || endNight < value)) setEndNight(value)
-    const end = endRef.current
-    if (!end) return
-    end.focus()
-    if (typeof end.showPicker === 'function') {
-      try {
-        end.showPicker()
-      } catch {
-        // showPicker needs transient user activation; focus() already applied.
-      }
-    }
-  }
+  // The range picker guarantees start <= end (it swaps on a before-anchor pick),
+  // so the only remaining invalid state is a missing label or an incomplete range.
+  const invalid = !label.trim() || !startNight || !endNight
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -127,38 +110,19 @@ export function AccommodationEditor({
           </select>
         </label>
 
-        <div className="flex items-end gap-2">
-          <label className="flex flex-1 flex-col gap-1.5">
-            <span className={sectionLabel}>First night</span>
-            <input
-              type="date"
-              // lang="de" hints the native picker toward dd.mm.yyyy; the value
-              // stays ISO. ponytail: picker format is browser-dependent.
-              lang="de"
-              value={startNight}
-              onChange={(e) => onStartChange(e.target.value)}
-              className={`${fieldInput} text-center font-serif`}
-            />
-          </label>
-          <span className="pb-2.5 text-ink-400">→</span>
-          <label className="flex flex-1 flex-col gap-1.5">
-            <span className={sectionLabel}>Last night</span>
-            <input
-              ref={endRef}
-              type="date"
-              lang="de"
-              value={endNight}
-              onChange={(e) => setEndNight(e.target.value)}
-              className={`${fieldInput} text-center font-serif`}
-            />
-          </label>
+        <div className="flex flex-col gap-1.5">
+          <span className={sectionLabel}>Nights (first → last)</span>
+          <DatePicker
+            label="Stay nights"
+            range={{ start: startNight || undefined, end: endNight || undefined }}
+            onRangeChange={(r) => {
+              setStartNight(r.start ?? '')
+              setEndNight(r.end ?? '')
+            }}
+            placeholder="Pick the nights"
+            triggerClassName={`${fieldInput} font-serif text-left`}
+          />
         </div>
-
-        {rangeInvalid && (
-          <p role="alert" className="text-xs font-medium text-city-vermilion">
-            The last night cannot be before the first night.
-          </p>
-        )}
 
         <div className="mt-1 flex items-center justify-between gap-2">
           {isEdit ? (

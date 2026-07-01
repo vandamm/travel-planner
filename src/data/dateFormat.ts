@@ -10,6 +10,11 @@ export function formatDay(dayKey: string): string {
   return format(parseISO(dayKey), 'dd.MM')
 }
 
+/** As {@link formatDay} but with the year — 'dd.MM.yyyy', for standalone fields. */
+export function formatDayLong(dayKey: string): string {
+  return format(parseISO(dayKey), 'dd.MM.yyyy')
+}
+
 /** A stored 'HH:mm' (already 24h); a range 'HH:mm–HH:mm' when an end is given. */
 export function formatTimeRange(start: string, end?: string): string {
   return end ? `${start}–${end}` : start

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { addCity, setupTrip } from './helpers'
+import { addCity, pickRange, setupTrip } from './helpers'
 
 interface PlannerBridge {
   doc: unknown
@@ -39,8 +39,7 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
   await editor.getByLabel('Accommodation label').fill('Hotel Roma')
   await editor.getByLabel('City').selectOption({ label: 'Rome' })
-  await editor.getByLabel('First night').fill('2027-05-01')
-  await editor.getByLabel('Last night').fill('2027-05-02')
+  await pickRange(editor, 'Stay nights', '2027-05-01', '2027-05-02')
   await editor.getByRole('button', { name: 'Save stay' }).click()
 
   // The bar shows up in the lane…
@@ -88,30 +87,25 @@ test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => 
   // Clicking the gap button opens the editor seeded with the gap's first day.
   await gapButton.click()
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
-  await expect(editor.getByLabel('First night')).toHaveValue('2027-05-03')
+  await expect(editor.getByRole('button', { name: 'Stay nights' })).toContainText('03.05')
 })
 
-test('Add-stay popup preselects the first uncovered night, chains pickers, and saves', async ({
-  page,
-}) => {
+test('Add-stay popup preselects the first uncovered night and saves a range', async ({ page }) => {
   await page.goto('/')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   // Cover the first two nights; the right-end "Add stay" should preselect the
-  // first uncovered night (day 3) for both first and last night (one night).
+  // first uncovered night (day 3) as both range endpoints (a one-night default).
   await seedStays(page, [{ label: 'Hotel A', startNight: '2027-05-01', endNight: '2027-05-02' }])
 
   await page.getByTestId('add-stay').click()
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
-  const first = editor.getByLabel('First night')
-  const last = editor.getByLabel('Last night')
-  await expect(first).toHaveValue('2027-05-03')
-  await expect(last).toHaveValue('2027-05-03')
+  const nights = editor.getByRole('button', { name: 'Stay nights' })
+  await expect(nights).toContainText('03.05 → 03.05')
 
-  // Picking a later first night bumps the end to match and focuses the end field.
-  await first.fill('2027-05-04')
-  await expect(last).toHaveValue('2027-05-04')
-  await expect(last).toBeFocused()
+  // Pick a two-night range through the calendar → the trigger reflects first→last.
+  await pickRange(editor, 'Stay nights', '2027-05-03', '2027-05-04')
+  await expect(nights).toContainText('03.05 → 04.05')
 
   // Saving persists the stay.
   await editor.getByLabel('Accommodation label').fill('Hotel C')
