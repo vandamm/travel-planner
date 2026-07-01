@@ -54,9 +54,16 @@ export default {
           from: { transform: 'translateY(100%)' },
           to: { transform: 'translateY(0)' },
         },
+        // Anchored popover reveal (date/time pickers). Guard at the call site
+        // with `motion-reduce:animate-none`.
+        'popover-in': {
+          from: { opacity: '0', transform: 'translateY(-4px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'sheet-in': 'sheet-in 150ms ease-out',
+        'popover-in': 'popover-in 120ms ease-out',
       },
     },
   },
