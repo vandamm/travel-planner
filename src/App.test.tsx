@@ -3,9 +3,21 @@ import { describe, expect, it } from 'vitest'
 import App from './App'
 
 describe('App', () => {
-  it('renders the app heading', () => {
+  it('renders the wordmark heading (falls back to Travel Planner when untitled)', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Travel Planner' })).toBeInTheDocument()
+  })
+
+  it('renders the vermilion seal', () => {
+    render(<App />)
+    const seal = screen.getByTestId('app-seal')
+    expect(seal).toHaveTextContent('I')
+  })
+
+  it('renders the meta line with day and city counts', () => {
+    render(<App />)
+    // default trip: 0 days, no cities.
+    expect(screen.getByTestId('app-meta')).toHaveTextContent('0 days · 0 cities')
   })
 
   it('does not render the on-page import/export controls', () => {

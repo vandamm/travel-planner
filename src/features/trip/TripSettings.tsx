@@ -15,25 +15,25 @@ export function TripSettings() {
   return (
     <section
       aria-labelledby="trip-settings-heading"
-      className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+      className="flex flex-col gap-3 rounded-frame border border-edge bg-white p-4"
     >
-      <h2 id="trip-settings-heading" className="text-lg font-semibold text-slate-800">
+      <h2 id="trip-settings-heading" className="font-serif text-lg font-semibold text-ink">
         Trip
       </h2>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-600">
+      <label className="flex flex-col gap-1 text-sm font-medium text-ink-600">
         Trip title
         <input
           type="text"
           value={trip.title}
           onChange={(e) => setTrip(doc, { title: e.target.value })}
           placeholder="e.g. Italy 2027"
-          className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+          className="rounded-card border border-edge px-2 py-1 text-base text-ink"
         />
       </label>
 
       <div className="flex gap-3">
-        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
+        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-ink-600">
           Start date
           <input
             type="date"
@@ -42,11 +42,11 @@ export function TripSettings() {
             lang="de"
             value={trip.startDate}
             onChange={(e) => setTrip(doc, { startDate: e.target.value })}
-            className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+            className="rounded-card border border-edge px-2 py-1 text-base text-ink"
           />
         </label>
 
-        <label className="flex w-28 flex-col gap-1 text-sm font-medium text-slate-600">
+        <label className="flex w-28 flex-col gap-1 text-sm font-medium text-ink-600">
           Number of days
           <input
             type="number"
@@ -54,13 +54,13 @@ export function TripSettings() {
             max={MAX_TRIP_DAYS}
             value={trip.numDays || ''}
             onChange={(e) => setTrip(doc, { numDays: Number(e.target.value) })}
-            className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+            className="rounded-card border border-edge px-2 py-1 text-base text-ink"
           />
         </label>
       </div>
 
       <div className="flex gap-3">
-        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
+        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-ink-600">
           Day start
           <input
             type="time"
@@ -68,18 +68,18 @@ export function TripSettings() {
             lang="de"
             value={trip.dayStart}
             onChange={(e) => setTrip(doc, { dayStart: e.target.value })}
-            className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+            className="rounded-card border border-edge px-2 py-1 text-base text-ink"
           />
         </label>
 
-        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
+        <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-ink-600">
           Day end
           <input
             type="time"
             lang="de"
             value={trip.dayEnd}
             onChange={(e) => setTrip(doc, { dayEnd: e.target.value })}
-            className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+            className="rounded-card border border-edge px-2 py-1 text-base text-ink"
           />
         </label>
       </div>

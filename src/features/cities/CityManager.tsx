@@ -29,9 +29,9 @@ export function CityManager() {
   return (
     <section
       aria-labelledby="cities-heading"
-      className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+      className="flex flex-col gap-3 rounded-frame border border-edge bg-white p-4"
     >
-      <h2 id="cities-heading" className="text-lg font-semibold text-slate-800">
+      <h2 id="cities-heading" className="font-serif text-lg font-semibold text-ink">
         Cities
       </h2>
 
@@ -44,20 +44,20 @@ export function CityManager() {
                 aria-label={`Colour for ${c.name}`}
                 value={c.color}
                 onChange={(e) => updateCity(doc, c.id, { color: e.target.value })}
-                className="h-8 w-10 cursor-pointer rounded border border-slate-300"
+                className="h-8 w-10 cursor-pointer rounded-card border border-edge"
               />
               <input
                 type="text"
                 aria-label={`Name for ${c.name}`}
                 value={c.name}
                 onChange={(e) => updateCity(doc, c.id, { name: e.target.value })}
-                className="flex-1 rounded border border-slate-300 px-2 py-1 text-slate-900"
+                className="flex-1 rounded-card border border-edge px-2 py-1 text-ink"
               />
               <button
                 type="button"
                 aria-label={`Remove ${c.name}`}
                 onClick={() => removeCity(doc, c.id)}
-                className="rounded px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 hover:text-red-600"
+                className="rounded-card px-2 py-1 text-sm text-ink-500 hover:bg-surface-chip hover:text-city-vermilion"
               >
                 Remove
               </button>
@@ -72,7 +72,7 @@ export function CityManager() {
           aria-label="New city colour"
           value={color}
           onChange={(e) => setColor(e.target.value)}
-          className="h-8 w-10 cursor-pointer rounded border border-slate-300"
+          className="h-8 w-10 cursor-pointer rounded-card border border-edge"
         />
         <input
           type="text"
@@ -80,11 +80,11 @@ export function CityManager() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Add a city…"
-          className="flex-1 rounded border border-slate-300 px-2 py-1 text-slate-900"
+          className="flex-1 rounded-card border border-edge px-2 py-1 text-ink"
         />
         <button
           type="submit"
-          className="rounded bg-slate-800 px-3 py-1 text-sm font-medium text-white hover:bg-slate-700"
+          className="rounded-card bg-ink px-3 py-1 text-sm font-medium text-white hover:bg-ink-frame"
         >
           Add city
         </button>
