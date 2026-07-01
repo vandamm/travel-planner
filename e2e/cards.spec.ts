@@ -1,12 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 test('create, edit, and delete an activity card on the board', async ({ page }) => {
   await page.goto('/')
 
   // A trip with days, so the board renders columns to drop cards into.
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('3')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from './App'
 
@@ -24,5 +25,15 @@ describe('App', () => {
     render(<App />)
     expect(screen.queryByRole('button', { name: 'Export trip' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Import / Export' })).not.toBeInTheDocument()
+  })
+
+  it('opens the Trip details modal from the header button', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    // Trip setup lives behind a modal now, not an inline section.
+    expect(screen.queryByRole('dialog', { name: 'Trip details' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Trip' }))
+    expect(screen.getByRole('dialog', { name: 'Trip details' })).toBeInTheDocument()
   })
 })

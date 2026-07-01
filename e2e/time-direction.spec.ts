@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 interface PlannerBridge {
   doc: unknown
@@ -25,9 +26,7 @@ async function seedCards(
 }
 
 async function setUpTrip(page: Page) {
-  await page.getByLabel('Trip title').fill('Japan 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('3')
+  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
 }
 
 test('toggling time direction reverses card order and persists across reload', async ({ page }) => {

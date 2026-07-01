@@ -1,13 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 // Drive the board on a phone-sized, touch-enabled viewport so it renders the
 // single-day swipe view instead of the multi-column board.
 test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true })
 
 async function setUpTrip(page: import('@playwright/test').Page) {
-  await page.getByLabel('Trip title').fill('Japan 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('3')
+  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
 }
 
 test('mobile shows one day at a time and pages with prev/next, clamping at the ends', async ({

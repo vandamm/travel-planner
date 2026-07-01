@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 /**
  * Drag dnd-kit's grab handle onto a target with explicit, stepped pointer moves
@@ -38,9 +39,7 @@ async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
 test('drag a card to another day column', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('3')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const columns = page.locator('[data-testid="day-column"]')
   const firstColumn = columns.nth(0)
@@ -66,9 +65,7 @@ test('drag a card to another day column', async ({ page }) => {
 test('dragged card follows the cursor and highlights the target day', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('3')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const columns = page.locator('[data-testid="day-column"]')
   const firstColumn = columns.nth(0)
@@ -113,9 +110,7 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
 test('reorder untimed cards within a day', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('3')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { addCity, setupTrip } from './helpers'
 
 interface PlannerBridge {
   doc: unknown
@@ -25,13 +26,8 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   await page.goto('/')
 
   // A trip with days plus a city to assign the stay to.
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('4')
-
-  await page.getByLabel('New city name').fill('Rome')
-  await page.getByRole('button', { name: 'Add city' }).click()
-  await expect(page.getByLabel('Name for Rome')).toHaveValue('Rome')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 4 })
+  await addCity(page, 'Rome')
 
   const columns = page.locator('[data-testid="day-column"]')
   const firstBand = columns.nth(0).getByTestId('city-band')
@@ -70,9 +66,7 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
 
 test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => {
   await page.goto('/')
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('5')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   // With no stays the whole trip is one gap: the right-end button is present and
   // a single gap button sits on the first day.
@@ -101,9 +95,7 @@ test('Add-stay popup preselects the first uncovered night, chains pickers, and s
   page,
 }) => {
   await page.goto('/')
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('5')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   // Cover the first two nights; the right-end "Add stay" should preselect the
   // first uncovered night (day 3) for both first and last night (one night).
@@ -129,9 +121,7 @@ test('Add-stay popup preselects the first uncovered night, chains pickers, and s
 
 test('two stays sharing a changeover day render on one row meeting mid-day', async ({ page }) => {
   await page.goto('/')
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('5')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   // A checks out 05-03; B checks in 05-03 — a pure changeover, only that day shared.
   await seedStays(page, [

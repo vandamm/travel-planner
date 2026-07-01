@@ -1,11 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 test('a card set to whole-day grows taller than a default card', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByLabel('Trip title').fill('Heights')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('1')
+  await setupTrip(page, { title: 'Heights', startDate: '2027-05-01', numDays: 1 })
 
   const column = page.locator('[data-testid="day-column"]').first()
 

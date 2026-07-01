@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 interface PlannerBridge {
   doc: unknown
@@ -28,9 +29,7 @@ async function seed(page: Page) {
 
 test('per-day city override recolors the header and Auto reverts it', async ({ page }) => {
   await page.goto('/')
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('2')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 2 })
   await seed(page)
 
   const first = page.locator('[data-testid="day-column"]').nth(0)

@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 /** Same stepped-pointer drag the dnd spec uses (the high-level dragTo is unreliable). */
 async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
@@ -25,9 +26,7 @@ async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
 test('dragging an untimed card toward the evening gives it an evening time', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('1')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 1 })
 
   // Seed a morning + evening timed card and one untimed card via the dev bridge.
   await page.evaluate(() => {

@@ -1,12 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { setupTrip } from './helpers'
 
 // #1: displayed dates are European day-first (dd.MM), never month-name / US order.
 // (Native picker *widgets* still follow the OS locale — see the plan's Post-Completion.)
 test('day-column labels render day-first dd.MM', async ({ page }) => {
   await page.goto('/')
-  await page.getByLabel('Trip title').fill('Italy 2027')
-  await page.getByLabel('Start date').fill('2027-05-01')
-  await page.getByLabel('Number of days').fill('3')
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const labels = page.getByTestId('day-label')
   await expect(labels).toHaveCount(3)
