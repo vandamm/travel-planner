@@ -61,6 +61,23 @@ describe('tripDocumentSchema', () => {
     if (result.success) expect(result.data.cards[0].transport).toBe(true)
   })
 
+  it('accepts a card category enum and rejects a bad value', () => {
+    for (const category of ['indoor', 'outdoor', 'transit']) {
+      const ok = tripDocumentSchema.safeParse({
+        ...VALID,
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, category }],
+      })
+      expect(ok.success).toBe(true)
+      if (ok.success) expect(ok.data.cards[0].category).toBe(category)
+    }
+
+    const bad = tripDocumentSchema.safeParse({
+      ...VALID,
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, category: 'museum' }],
+    })
+    expect(bad.success).toBe(false)
+  })
+
   it('rejects a card with a malformed date and points at the offending path', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,

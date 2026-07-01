@@ -49,6 +49,9 @@ export interface Day {
  */
 export type CardSize = 'auto' | 'small' | 'half' | 'full'
 
+/** Activity category — drives the card's colour chip. */
+export type CardCategory = 'indoor' | 'outdoor' | 'transit'
+
 /** An activity card living in a single day column. */
 export interface Card {
   id: string
@@ -64,8 +67,14 @@ export interface Card {
   order: number
   color?: string
   icon?: string
-  /** Marks the card as a transportation leg (distinct rendering). */
+  /**
+   * Legacy transportation-leg flag. Kept valid for back-compat with older
+   * synced docs; `category` supersedes it and `cardCategory()` derives
+   * `transport: true` as `'transit'` at read time.
+   */
   transport?: boolean
+  /** Activity category (see `cardCategory`); absent = uncategorised. */
+  category?: CardCategory
   /** Height preset; absent = `auto` (height from duration). */
   size?: CardSize
 }

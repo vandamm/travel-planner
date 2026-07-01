@@ -209,6 +209,16 @@ describe('cards', () => {
     expect(getCard(doc, card.id)?.transport).toBeUndefined()
   })
 
+  it('stores the category and can clear it', () => {
+    const doc = freshDoc()
+    const card = addCard(doc, { dayKey: '2027-05-01', title: 'Museum', category: 'indoor' })
+    expect(getCard(doc, card.id)?.category).toBe('indoor')
+    updateCard(doc, card.id, { category: 'outdoor' })
+    expect(getCard(doc, card.id)?.category).toBe('outdoor')
+    updateCard(doc, card.id, { category: undefined })
+    expect(getCard(doc, card.id)?.category).toBeUndefined()
+  })
+
   it('reads a single card by id', () => {
     const doc = freshDoc()
     const card = addCard(doc, { dayKey: '2027-05-01', title: 'lookup' })

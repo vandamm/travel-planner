@@ -87,6 +87,7 @@ export const cardSchema = z.object({
   color: z.string().optional(),
   icon: z.string().optional(),
   transport: z.boolean().optional(),
+  category: z.enum(['indoor', 'outdoor', 'transit']).optional(),
   size: z.enum(['auto', 'small', 'half', 'full']).optional(),
 })
 

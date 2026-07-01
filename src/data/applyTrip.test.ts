@@ -54,6 +54,15 @@ describe('applyTrip', () => {
     expect(listCards(doc).map((c) => c.id)).toEqual(['card-1', 'card-2'])
   })
 
+  it('round-trips a card category through the mutators', () => {
+    const doc = new Y.Doc()
+    applyTrip(doc, {
+      ...TRIP,
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Museum', order: 0, category: 'indoor' }],
+    })
+    expect(listCards(doc)[0]).toMatchObject({ category: 'indoor' })
+  })
+
   it('throws on invalid input rather than corrupting the doc', () => {
     const doc = new Y.Doc()
     expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', numDays: 1 } })).toThrow()
