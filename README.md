@@ -6,7 +6,8 @@ by city, host activity cards on a continuous, time-proportional timeline, and
 show accommodation as horizontal bars spanning the nights they cover.
 
 - Each day column is a time-scaled timeline over a configurable window (default
-  06:00–21:00, set per trip in Trip settings); timed cards are sized by their
+  06:00–21:00, set per trip in the Trip modal opened from the header `[✎ Trip]`
+  button); timed cards are sized by their
   duration so free time stays visible. A card's height can also be a preset
   (small / half-day / whole-day) instead of its exact duration.
 - Any card can be given a **category** (indoor / outdoor / transit), shown as a
