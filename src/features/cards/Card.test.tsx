@@ -53,16 +53,27 @@ describe('Card', () => {
     expect(screen.queryByTestId('card-link')).not.toBeInTheDocument()
   })
 
-  it('renders a transport icon and accent style for a transport card', () => {
+  it.each(['indoor', 'outdoor', 'transit'] as const)(
+    'renders a %s category chip reflecting the card category',
+    (category) => {
+      render(<Card card={{ ...base, category }} />)
+      const chip = screen.getByTestId('card-category')
+      expect(chip).toHaveTextContent(category)
+      expect(screen.getByTestId('card')).toHaveAttribute('data-category', category)
+    },
+  )
+
+  it('shows the transit chip for a legacy transport card', () => {
     render(<Card card={{ ...base, transport: true }} />)
-    expect(screen.getByTestId('card-transport-icon')).toBeInTheDocument()
-    expect(screen.getByTestId('card')).toHaveAttribute('data-transport', '')
+    const chip = screen.getByTestId('card-category')
+    expect(chip).toHaveTextContent('transit')
+    expect(screen.getByTestId('card')).toHaveAttribute('data-category', 'transit')
   })
 
-  it('omits the transport icon for a normal card', () => {
+  it('omits the category chip for an uncategorised card', () => {
     render(<Card card={base} />)
-    expect(screen.queryByTestId('card-transport-icon')).not.toBeInTheDocument()
-    expect(screen.getByTestId('card')).not.toHaveAttribute('data-transport')
+    expect(screen.queryByTestId('card-category')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card')).not.toHaveAttribute('data-category')
   })
 
   it('calls onEdit with the card when clicked', () => {

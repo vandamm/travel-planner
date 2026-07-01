@@ -7,7 +7,15 @@
 import { useSortable } from '@dnd-kit/sortable'
 import type { CSSProperties, HTMLAttributes } from 'react'
 import { formatTimeRange } from '../../data/dateFormat'
-import type { Card as CardType } from '../../data/schema'
+import type { Card as CardType, CardCategory } from '../../data/schema'
+import { cardCategory } from './cardCategory'
+
+/** Chip-triad token classes (text / bg / border) per category. */
+const CATEGORY_CHIP: Record<CardCategory, string> = {
+  indoor: 'text-indoor bg-indoor-bg border-indoor-border',
+  outdoor: 'text-outdoor bg-outdoor-bg border-outdoor-border',
+  transit: 'text-transit bg-transit-bg border-transit-border',
+}
 
 export interface CardProps {
   card: CardType
@@ -46,20 +54,19 @@ function isSafeHref(link: string): boolean {
 }
 
 export function Card({ card, onEdit, dragHandleProps }: CardProps) {
+  const category = cardCategory(card)
   return (
     <article
       data-testid="card"
-      data-transport={card.transport ? '' : undefined}
-      className={`flex flex-col gap-1 rounded-md border px-2 py-1.5 text-sm text-slate-800 shadow-sm ${
-        card.transport ? 'border-sky-300 bg-sky-50' : 'border-slate-200 bg-slate-50'
-      }`}
+      data-category={category}
+      className="flex flex-col gap-1.5 rounded-card border border-edge-100 bg-surface px-2.5 py-2 text-sm text-ink shadow-sm"
     >
       <div className="flex items-baseline gap-1">
         {dragHandleProps && (
           <button
             type="button"
             aria-label={`Drag ${card.title}`}
-            className="shrink-0 cursor-grab touch-none px-0.5 text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+            className="shrink-0 cursor-grab touch-none px-0.5 text-ink-300 hover:text-ink-500 active:cursor-grabbing"
             {...dragHandleProps}
           >
             ⠿
@@ -69,18 +76,19 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
           type="button"
           aria-label={`Edit ${card.title}`}
           onClick={() => onEdit?.(card)}
-          className="flex w-full items-baseline justify-between gap-2 text-left hover:text-slate-900"
+          className="flex w-full items-baseline justify-between gap-2 text-left hover:text-ink"
         >
-          <span data-testid="card-title" className="font-medium">
-            {card.transport && (
-              <span data-testid="card-transport-icon" aria-label="Transportation" className="mr-1">
-                🚆
-              </span>
-            )}
+          <span
+            data-testid="card-title"
+            className="font-serif text-[15px] font-semibold leading-tight text-ink"
+          >
             {card.title}
           </span>
           {card.startTime && (
-            <span data-testid="card-time" className="shrink-0 text-xs text-slate-500">
+            <span
+              data-testid="card-time"
+              className="shrink-0 text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
+            >
               {formatTimeRange(card.startTime, card.endTime)}
             </span>
           )}
@@ -88,9 +96,20 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
       </div>
 
       {card.note && (
-        <p data-testid="card-note" className="whitespace-pre-wrap text-xs text-slate-500">
+        <p data-testid="card-note" className="whitespace-pre-wrap text-[11px] font-medium text-ink-500">
           {card.note}
         </p>
+      )}
+
+      {category && (
+        <div>
+          <span
+            data-testid="card-category"
+            className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
+          >
+            {category}
+          </span>
+        </div>
       )}
 
       {card.link &&
@@ -100,14 +119,14 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
             href={card.link}
             target="_blank"
             rel="noreferrer noopener"
-            className="truncate text-xs font-medium text-blue-600 hover:underline"
+            className="truncate text-[11px] font-semibold text-city-indigo hover:underline"
           >
             {linkLabel(card.link)}
           </a>
         ) : (
           // Not an http(s) URL — show it as inert text rather than a clickable
           // anchor so a dangerous scheme can't run.
-          <span data-testid="card-link" className="truncate text-xs text-slate-400">
+          <span data-testid="card-link" className="truncate text-[11px] text-ink-400">
             {card.link}
           </span>
         ))}
