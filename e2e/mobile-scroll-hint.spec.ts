@@ -28,6 +28,28 @@ test('a tall day shows the scroll hint, which clears at the bottom', async ({ pa
   await expect(fade).toHaveCount(0)
 })
 
+test('paging to another day resets the scroll position to the top', async ({ page }) => {
+  await page.goto('/')
+  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 2 })
+
+  // Both days overflow so day 2 is also tall enough to hold a non-zero offset.
+  await page.evaluate(() => {
+    const p = window.__planner!
+    for (const day of ['2027-05-01', '2027-05-02'])
+      for (let i = 0; i < 5; i++)
+        p.addCard(p.doc, { dayKey: day, title: `Card ${i}`, size: 'full' })
+  })
+
+  const scroll = page.getByTestId('mobile-day-scroll')
+  await scroll.evaluate((el) => el.scrollTo(0, el.scrollHeight))
+  expect(await scroll.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+
+  // Page to day 2 → the container returns to the top rather than keeping day 1's offset.
+  await page.getByRole('button', { name: 'Next day' }).click()
+  await expect(page.getByTestId('mobile-day-position')).toHaveText('Day 2 of 2')
+  expect(await scroll.evaluate((el) => el.scrollTop)).toBe(0)
+})
+
 test('a short day that fits never shows the hint', async ({ page }) => {
   await page.goto('/')
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 1 })

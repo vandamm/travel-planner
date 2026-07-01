@@ -72,6 +72,18 @@ export function MobileDayView({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showHint, setShowHint] = useState(false)
 
+  // The trip can shrink (fewer days) under us, so clamp on every render rather
+  // than trusting the stored index.
+  const safeIndex = clampDayIndex(index, days.length)
+
+  // Reset the scroll container to the top whenever the visible day changes
+  // (prev/next, a pager dot, or a trip that shrank under us — all route through
+  // `index`), so a new day opens at its header instead of inheriting the prior
+  // day's offset. Runs before the hint effect so the recompute sees scrollTop 0.
+  useLayoutEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+  }, [safeIndex])
+
   // Recompute the hint when the visible content or the viewport changes (paging,
   // card edits, the dvh-based cap on rotate/resize). `scrollRef.current` exposes
   // the three metrics `showScrollHint` needs.
@@ -87,9 +99,6 @@ export function MobileDayView({
   if (days.length === 0) return null
 
   const perPage = Math.max(1, columns)
-  // The trip can shrink (fewer days) under us, so clamp on every render rather
-  // than trusting the stored index.
-  const safeIndex = clampDayIndex(index, days.length)
   const visible = days.slice(safeIndex, safeIndex + perPage)
   const firstPos = safeIndex + 1
   const lastPos = safeIndex + visible.length
