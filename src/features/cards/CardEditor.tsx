@@ -115,8 +115,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         <h2 className="font-serif text-xl font-semibold text-ink">{isEdit ? 'Edit activity' : 'Add activity'}</h2>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <label className={`flex flex-col gap-1.5 ${sectionLabel}`}>
-            Card title
+          <label className="flex flex-col gap-1.5">
+            <span className={sectionLabel}>Card title</span>
             <input
               type="text"
               autoFocus
@@ -127,8 +127,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
             />
           </label>
 
-          <label className={`flex flex-col gap-1.5 ${sectionLabel}`}>
-            Note
+          <label className="flex flex-col gap-1.5">
+            <span className={sectionLabel}>Note</span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -137,8 +137,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
             />
           </label>
 
-          <label className={`flex flex-col gap-1.5 ${sectionLabel}`}>
-            Link
+          <label className="flex flex-col gap-1.5">
+            <span className={sectionLabel}>Link</span>
             <input
               type="url"
               // `type="url"` still accepts ftp:/mailto:/javascript: schemes; restrict
@@ -209,8 +209,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
 
           {timed && (
             <div className="flex items-end gap-2">
-              <label className={`flex flex-1 flex-col gap-1.5 ${sectionLabel}`}>
-                Start time
+              <label className="flex flex-1 flex-col gap-1.5">
+                <span className={sectionLabel}>Start time</span>
                 <input
                   type="time"
                   // lang="de" hints the native picker toward a 24h clock; the value
@@ -222,8 +222,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                 />
               </label>
               <span className="pb-2.5 text-ink-400">→</span>
-              <label className={`flex flex-1 flex-col gap-1.5 ${sectionLabel}`}>
-                End time
+              <label className="flex flex-1 flex-col gap-1.5">
+                <span className={sectionLabel}>End time</span>
                 <input
                   type="time"
                   lang="de"
