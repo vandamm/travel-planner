@@ -130,4 +130,32 @@ describe('MobileDayView', () => {
     await user.click(screen.getByRole('button', { name: 'Previous day' }))
     expect(visibleDays()).toEqual(['2027-05-01', '2027-05-02'])
   })
+
+  it('renders one pager dot per day and marks the current one', async () => {
+    const user = userEvent.setup()
+    renderView()
+    const dots = screen.getAllByTestId('mobile-day-dot')
+    expect(dots).toHaveLength(3)
+    expect(dots[0]).toHaveAttribute('aria-current', 'true')
+    expect(dots[1]).not.toHaveAttribute('aria-current')
+
+    await user.click(dots[2])
+    expect(currentDay()).toBe('2027-05-03')
+    expect(screen.getAllByTestId('mobile-day-dot')[2]).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('renders one pager dot per page when multiple columns fit', () => {
+    renderView({ columns: 2 })
+    // Three days, window of two → two pages, two dots.
+    expect(screen.getAllByTestId('mobile-day-dot')).toHaveLength(2)
+  })
+
+  it('fills the active dot with the day city colour', () => {
+    renderView({
+      overrides: { '2027-05-01': 'kyoto' },
+      cityById: new Map<string, City>([['kyoto', { id: 'kyoto', name: 'Kyoto', color: '#5f6f44' }]]),
+    })
+    const [active] = screen.getAllByTestId('mobile-day-dot')
+    expect(active).toHaveStyle({ backgroundColor: '#5f6f44' })
+  })
 })

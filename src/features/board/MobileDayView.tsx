@@ -10,6 +10,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { resolveDayCity } from '../../data/cityResolution'
 import type { Accommodation, Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
+import { dayDotColor } from './pagerDot'
 import { showScrollHint } from './scrollHint'
 import type { TimeDirection } from './timeDirection'
 
@@ -100,6 +101,13 @@ export function MobileDayView({
   const go = (delta: number) =>
     setIndex((i) => clampDayIndex(clampDayIndex(i, days.length) + delta * perPage, days.length))
 
+  // One dot per page (a page = `perPage` days); active dot carries the day's city
+  // colour, the rest are muted. `floor(safeIndex / perPage)` == `ceil(n/p) - 1`
+  // even on the clamped trailing page, so it never exceeds the last dot.
+  const pageCount = Math.ceil(days.length / perPage)
+  const activePage = Math.floor(safeIndex / perPage)
+  const activeColor = dayDotColor(days[safeIndex].key, accommodations, overrides, cityById)
+
   function onTouchStart(event: React.TouchEvent) {
     const t = event.touches[0]
     touchStart.current = t ? { x: t.clientX, y: t.clientY ?? 0 } : null
@@ -148,6 +156,30 @@ export function MobileDayView({
         >
           Next ›
         </button>
+      </div>
+
+      <div
+        data-testid="mobile-day-dots"
+        className="mb-2 flex items-center justify-center gap-2"
+      >
+        {Array.from({ length: pageCount }, (_, page) => {
+          const isActive = page === activePage
+          const dayNo = page * perPage + 1
+          return (
+            <button
+              key={page}
+              type="button"
+              aria-label={`Go to day ${dayNo}`}
+              aria-current={isActive ? 'true' : undefined}
+              data-testid="mobile-day-dot"
+              onClick={() => setIndex(clampDayIndex(page * perPage, days.length))}
+              // Inline colour only for the active dot — the sanctioned exception
+              // for a city's own hue (matches DayColumn's band).
+              style={isActive ? { backgroundColor: activeColor } : undefined}
+              className={`h-2.5 w-2.5 rounded-full transition-colors ${isActive ? '' : 'bg-edge-300'}`}
+            />
+          )
+        })}
       </div>
 
       <div className="relative">
