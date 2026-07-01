@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { useEffect, useState, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { addCard, listCards } from '../../data/doc'
@@ -190,6 +191,15 @@ describe('CardEditor — create', () => {
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Museum' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
     expect(screen.queryByRole('button', { name: 'Save card' })).not.toBeInTheDocument()
+  })
+
+  it('renders an aria-labelled dialog and closes on Escape', async () => {
+    const user = userEvent.setup()
+    renderInRoom(<CreateHarness />)
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', 'Card editor')
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
 
