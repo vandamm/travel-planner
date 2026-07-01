@@ -9,8 +9,9 @@ show accommodation as horizontal bars spanning the nights they cover.
   06:00–21:00, set per trip in Trip settings); timed cards are sized by their
   duration so free time stays visible. A card's height can also be a preset
   (small / half-day / whole-day) instead of its exact duration.
-- Any card can be flagged as a **transportation leg** (train/flight), which gives
-  it a distinct style. Weekend columns are tinted.
+- Any card can be given a **category** (indoor / outdoor / transit), shown as a
+  colour chip (a legacy transport flag renders as the transit category). Weekend
+  columns mark the weekday label in vermilion rather than tinting the column.
 - Dragging a card shows an overlay that follows the cursor across days and
   highlights the day it will land in. Dragging an **untimed** card toward the
   evening of a day with timed cards gives it a start time inferred from its
@@ -80,9 +81,12 @@ conventions.
 
 ## Tech stack
 
-- **Client:** Vite + React + TypeScript, Tailwind CSS, `@dnd-kit` (drag/drop),
-  Yjs + `@liveblocks/client`/`@liveblocks/yjs` (sync), `y-indexeddb` (local
-  persistence), `zod` (schema), `date-fns` (date math).
+- **Client:** Vite + React + TypeScript, Tailwind CSS (the "ink & type" design
+  tokens — Lora/Manrope fonts, city hues, radii — live in `tailwind.config.js`;
+  fonts are self-hosted via `@fontsource` so the local-first app renders
+  offline), `@dnd-kit` (drag/drop), Yjs + `@liveblocks/client`/`@liveblocks/yjs`
+  (sync), `y-indexeddb` (local persistence), `zod` (schema), `date-fns` (date
+  math).
 - **Worker:** a single Cloudflare Worker using Liveblocks REST + the secret key,
   configured and deployed with Wrangler. `zod-to-json-schema` publishes the trip
   JSON Schema at `GET /api/schema`.

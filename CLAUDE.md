@@ -89,9 +89,14 @@ Time-bound cards (those with a `startTime`) sort by time; untimed cards keep a
 manual `order` within their day. The combined ordering lives in
 `src/features/cards/cardSort.ts`.
 
-A card may carry an optional `transport?: boolean` flag marking it as a
-transportation leg (train/flight/etc.); it only changes rendering (distinct
-style), not ordering.
+A card may carry an optional `category?: 'indoor' | 'outdoor' | 'transit'`
+(drives the colour chip on the card and the Type segmented control in the
+editor). It only changes rendering, not ordering. The legacy `transport?:
+boolean` flag is kept valid for back-compat with older synced docs; `category`
+supersedes it. Read the effective category through `cardCategory(card)` in
+`src/features/cards/cardCategory.ts` — it returns `category`, else derives
+`transport: true` as `'transit'` at read time (no bulk CRDT migration; the
+editor rewrites to `category` and drops `transport` on the card's next save).
 
 A card may also carry an optional `size?: 'auto' | 'small' | 'half' | 'full'`
 height preset (absent = `auto` = sized from its start/end time). `half`/`full`
@@ -110,6 +115,24 @@ in every day. See `src/features/board/timeDirection.ts`.
 
 Rule of thumb: trip content is synced (doc); per-viewer display preferences are
 local (localStorage).
+
+## Styling / design tokens
+
+Styling is inline Tailwind classes (no CSS modules). The "ink & type" design
+tokens — the `serif` (Lora) / `sans` (Manrope) font families, the ink-neutral,
+surface, border, city-hue and category-chip colours, and the frame/card/chip
+radii — live in `tailwind.config.js` `theme.extend`. Components reference these
+token class names; don't re-state hexes inline (the one exception is the dynamic
+`style={{ backgroundColor: city.color }}` for a city's own colour).
+
+Fonts are **self-hosted** via `@fontsource/lora` + `@fontsource/manrope`,
+imported per-weight in `src/main.tsx` — not a Google Fonts `<link>`, because the
+app is local-first and must render offline. `src/index.css` sets the base body
+font (Manrope) and ink text colour.
+
+The curated city palette (`CITY_PALETTE` in `src/features/cities/colors.ts`)
+leads with the four named design hues (vermilion/pine/indigo/plum) plus a few
+harmonious extras; `randomCityColor` still prefers an unused hue.
 
 ## Auth / room-creation model
 
