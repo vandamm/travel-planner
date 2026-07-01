@@ -37,8 +37,9 @@ export interface DayColumnProps {
   onEditCard?: (card: CardType) => void
 }
 
-/** A neutral band color for days with no resolved city (travel days). */
-const NO_CITY_COLOR = '#cbd5e1' // slate-300
+/** A warm neutral band color for days with no resolved city (travel days).
+ *  ink-200; kept identical to AccommodationBar's fallback. */
+const NO_CITY_COLOR = '#c2bba8' // ink-200
 
 export function DayColumn({
   day,
@@ -165,7 +166,7 @@ export function DayColumn({
             <li
               key={label}
               data-testid="scale-label"
-              className="flex flex-1 items-start whitespace-nowrap px-2 text-[10px] font-medium uppercase tracking-wide text-slate-300"
+              className="flex flex-1 items-start whitespace-nowrap px-2 text-[10px] font-medium uppercase tracking-wide text-ink-300"
             >
               {label}
             </li>
@@ -188,7 +189,7 @@ export function DayColumn({
           type="button"
           aria-label={`Add card to ${weekday} ${dateLabel}`}
           onClick={() => onAddCard?.(day.key)}
-          className="w-full rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-500 hover:border-slate-400 hover:text-slate-700"
+          className="w-full rounded border border-dashed border-edge-300 px-2 py-1 text-xs font-medium text-ink-500 hover:border-ink-300 hover:text-ink-600"
         >
           + Add card
         </button>

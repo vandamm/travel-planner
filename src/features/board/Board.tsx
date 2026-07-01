@@ -73,7 +73,7 @@ export function Board() {
   return (
     <section aria-labelledby="board-heading" className="flex flex-col gap-3">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6">
-        <h2 id="board-heading" className="text-lg font-semibold text-slate-800">
+        <h2 id="board-heading" className="text-lg font-semibold text-ink">
           Board
         </h2>
         <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export function Board() {
               type="button"
               aria-label="Add stay"
               onClick={() => setAccEditor({ mode: 'create' })}
-              className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
             >
               Add stay
             </button>
@@ -94,7 +94,7 @@ export function Board() {
             aria-label="Toggle time direction"
             aria-pressed={direction === 'up'}
             onClick={toggle}
-            className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
           >
             {direction === 'down' ? 'Morning → Evening' : 'Evening → Morning'}
           </button>
@@ -102,7 +102,7 @@ export function Board() {
       </div>
 
       {days.length === 0 ? (
-        <p data-testid="board-empty" className="px-6 text-slate-500">
+        <p data-testid="board-empty" className="px-6 text-ink-500">
           Set a start date and number of days to build the board.
         </p>
       ) : viewport === 'mobile' ? (

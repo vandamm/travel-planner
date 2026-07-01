@@ -114,11 +114,11 @@ export function MobileDayView({
           aria-label="Previous day"
           disabled={atFirst}
           onClick={() => go(-1)}
-          className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
         >
           ‹ Prev
         </button>
-        <span data-testid="mobile-day-position" className="text-sm font-medium text-slate-600">
+        <span data-testid="mobile-day-position" className="text-sm font-medium text-ink-600">
           {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of {days.length}
         </span>
         <button
@@ -126,7 +126,7 @@ export function MobileDayView({
           aria-label="Next day"
           disabled={atLast}
           onClick={() => go(1)}
-          className="rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next ›
         </button>

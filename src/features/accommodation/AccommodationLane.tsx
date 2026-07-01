@@ -110,7 +110,7 @@ export function AccommodationLane({
             aria-label={`New stay starting ${gap[0]}`}
             onClick={() => onAddStay?.(gap[0])}
             style={{ gridColumn: (dayIndex.get(gap[0]) ?? 0) + 1, gridRow: 1 }}
-            className="flex h-7 w-full items-center justify-center rounded-md border border-dashed border-slate-300 text-xs font-medium text-slate-500 hover:border-slate-400 hover:bg-slate-50"
+            className="flex h-7 w-full items-center justify-center rounded-md border border-dashed border-edge-300 text-xs font-medium text-ink-500 hover:border-ink-300 hover:bg-surface-chip"
           >
             + Add stay
           </button>
@@ -122,7 +122,7 @@ export function AccommodationLane({
         data-testid="add-stay"
         aria-label="Add stay"
         onClick={() => onAddStay?.()}
-        className="shrink-0 rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        className="shrink-0 rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
       >
         Add stay
       </button>

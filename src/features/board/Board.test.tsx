@@ -115,6 +115,15 @@ describe('Board', () => {
     expect(screen.getByRole('dialog', { name: 'Accommodation editor' })).toBeInTheDocument()
   })
 
+  it('tints the toolbar buttons with ink/edge tokens, not slate', () => {
+    renderBoard(<Board />)
+    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 1 }))
+    const toggle = screen.getByRole('button', { name: 'Toggle time direction' })
+    expect(toggle).toHaveClass('border-edge-300', 'text-ink-600', 'hover:bg-surface-chip')
+    expect(toggle.className).not.toMatch(/slate-/)
+    expect(screen.getByRole('heading', { name: 'Board' }).className).not.toMatch(/slate-/)
+  })
+
   it('reverses every card in every day when the direction is toggled', () => {
     renderBoard(<Board />)
     act(() => {

@@ -36,7 +36,7 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   const columns = page.locator('[data-testid="day-column"]')
   const firstBand = columns.nth(0).getByTestId('city-band')
   // No covering stay yet → neutral band color.
-  await expect(firstBand).toHaveCSS('background-color', 'rgb(203, 213, 225)') // slate-300
+  await expect(firstBand).toHaveCSS('background-color', 'rgb(194, 187, 168)') // ink-200 warm neutral
 
   // Add a stay covering the first two nights, in Rome.
   await page.getByRole('button', { name: 'Add stay' }).click()
@@ -55,10 +55,10 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   // color is random, so compare the covered days against the actually applied
   // color rather than a hard-coded value.
   const stayColor = await firstBand.evaluate((el) => getComputedStyle(el).backgroundColor)
-  expect(stayColor).not.toBe('rgb(203, 213, 225)') // a real city color, not the neutral fallback
+  expect(stayColor).not.toBe('rgb(194, 187, 168)') // a real city color, not the neutral fallback
   await expect(columns.nth(0).getByTestId('city-name')).toHaveText('Rome')
   await expect(columns.nth(1).getByTestId('city-band')).toHaveCSS('background-color', stayColor)
-  await expect(columns.nth(2).getByTestId('city-band')).toHaveCSS('background-color', 'rgb(203, 213, 225)')
+  await expect(columns.nth(2).getByTestId('city-band')).toHaveCSS('background-color', 'rgb(194, 187, 168)')
 
   // Editing the stay from its bar updates the label live.
   await page.getByTestId('accommodation-bar').click()

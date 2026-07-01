@@ -19,8 +19,8 @@ export interface AccommodationBarProps {
   onEdit?: (accommodation: Accommodation) => void
 }
 
-/** Neutral color for a stay with no city set (matches the day-column fallback). */
-const NO_CITY_COLOR = '#64748b' // slate-500
+/** Warm neutral for a stay with no city set (matches the day-column fallback). */
+const NO_CITY_COLOR = '#c2bba8' // ink-200
 
 export function AccommodationBar({
   accommodation,

@@ -153,6 +153,17 @@ describe('DayColumn', () => {
     expect(band).toHaveClass('h-[3px]')
   })
 
+  it('tints the scale labels and add-card button with ink/edge tokens, not slate', () => {
+    render(<DayColumn day={day} cards={cards} direction="down" />)
+    for (const label of screen.getAllByTestId('scale-label')) {
+      expect(label).toHaveClass('text-ink-300')
+      expect(label.className).not.toMatch(/slate-/)
+    }
+    const addCard = screen.getByRole('button', { name: /Add card/ })
+    expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
+    expect(addCard.className).not.toMatch(/slate-/)
+  })
+
   it('renders a labelled NOON divider in the body', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const noon = within(screen.getByTestId('day-body')).getByTestId('noon-divider')
