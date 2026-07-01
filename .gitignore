@@ -24,3 +24,6 @@ worker/.dev.vars
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# Design
+design_handoff_travel_planner
