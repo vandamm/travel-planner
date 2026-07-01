@@ -68,8 +68,11 @@ of browser- or Worker-only APIs:
 the stay-coverage helpers — `uncoveredDays`, `firstUncoveredDay`, `uncoveredGaps`
 (contiguous gap ranges) — that drive the lane's per-gap "Add stay" buttons and the
 preselected start date. `dateFormat.ts` holds the European display formatters
-(`formatDay` → `dd.MM`, `formatTimeRange` → 24-hour `HH:mm`); stored values stay
-ISO, only the *display* is European (native picker widgets follow the OS locale).
+(`formatDay` → `dd.MM`, `formatDayLong` → `dd.MM.yyyy`, `formatTimeRange` →
+24-hour `HH:mm`); stored values stay ISO, only the *display* is European. Date and
+time entry uses the app's own pickers (see Styling), so display is European
+everywhere — there are no native `<input type="date/time">` widgets that would
+follow the OS locale.
 
 When a value or rule needs to be known in two places, derive it from these
 modules rather than re-stating it.
@@ -151,6 +154,36 @@ Trip-setup and Cities are **not** inline sections: on desktop the header carries
 (monotonic counter, so repeat taps re-open) passed to `Board`, which owns the
 `AccommodationEditor`. All modals write **live** through the doc mutators (no
 buffered save/cancel — consistent with the local-first CRDT model).
+
+Field pop-overs (the date/time pickers) use a **different** shell,
+`src/components/Popover.tsx` — an *anchored* floating panel pinned just below its
+trigger (pure `popoverPosition` helper measuring rects; **no positioning
+library**), with click-outside/Escape close and `role="dialog"`. On the mobile
+viewport it falls back to the shared `Modal` sheet (reuse, not a second sheet).
+`Modal` is centered/full-screen — for a field dropdown you want `Popover`.
+
+Date and time entry is **custom, not native** (no `<input type="date/time">`):
+- `src/features/pickers/DatePicker.tsx` — a calendar pop-over. Single-date mode
+  (trip start in `TripModal`) and first→last **range** mode (a stay's nights in
+  `AccommodationEditor`, one control replacing the two night inputs). Grid + range
+  math is pure in `src/features/pickers/calendar.ts` (`monthGrid`, `nextRange`
+  swap-reducer, `inRange`/`isEndpoint`); weeks start Sunday; ISO-string compare is
+  chronological so no `Date` parsing is needed.
+- `src/features/pickers/TimePicker.tsx` — an hour/minute wheel pop-over
+  (`TripModal` day window, `CardEditor` start/end). Value lists + parse/format/snap
+  are pure in `src/features/pickers/timeWheel.ts`. A `Clear` control (shown only
+  when an `onClear` is passed — required trip-window fields have none) untimes a
+  card by committing empty → the consumer patches `undefined` (doc.ts
+  clear-semantics).
+Both keep storage ISO (`YYYY-MM-DD`) / `HH:mm` and write through the doc mutators.
+
+The desktop multi-week board carries navigation affordances in
+`src/features/board/multiWeekNav.ts` (pure, unit-tested): a right-edge white fade
+shown only while columns lie off-screen right (`showRightFade`), a **Jump to
+today** button (`todayIndex`; absent when today is outside the trip), and a
+date-range stepper (`visibleRange`/`rangeLabel`, European `dd.MM`) that pages the
+horizontal scroll by a viewport width. These are desktop-only; the mobile
+single-day view and `useViewport.ts` are unchanged.
 
 ## Auth / room-creation model
 

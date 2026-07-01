@@ -9,7 +9,11 @@ show accommodation as horizontal bars spanning the nights they cover.
   06:00–21:00, set per trip in the Trip modal opened from the header `[✎ Trip]`
   button); timed cards are sized by their
   duration so free time stays visible. A card's height can also be a preset
-  (small / half-day / whole-day) instead of its exact duration.
+  (small / half-day / whole-day) instead of its exact duration. A long
+  (multi-week) trip scrolls horizontally on desktop: a right-edge fade signals
+  more days off-screen, a **Jump to today** button scrolls today's column into
+  view, and a date-range stepper (`‹ dd.mm – dd.mm ›`) pages the scroll a screen
+  at a time.
 - Any card can be given a **category** (indoor / outdoor / transit), shown as a
   colour chip (a legacy transport flag renders as the transit category). Weekend
   columns mark the weekday label in vermilion rather than tinting the column.
@@ -32,9 +36,12 @@ show accommodation as horizontal bars spanning the nights they cover.
   that share only a changeover day meet mid-day on one row; genuine
   double-bookings still stack on separate rows.
 - Dates and times **display** in European format (`dd.mm`, 24-hour). Stored
-  values stay ISO; native date/time *picker widgets* follow the OS/browser
-  locale (see [`docs/trip-schema.md`](./docs/trip-schema.md) storage note and the
-  plan's environment note).
+  values stay ISO. Date and time entry uses the app's **own pickers** — a calendar
+  pop-over (single date for the trip start; a first→last night **range** for a
+  stay) and an hour/minute wheel — anchored below their field on desktop and
+  presented as full-screen sheets on mobile; there are no native `<input>`
+  widgets, so the European display is consistent everywhere (see
+  [`docs/trip-schema.md`](./docs/trip-schema.md) storage note).
 
 Edits persist instantly to local storage (IndexedDB) and sync in the background
 via Liveblocks + Yjs (CRDT), so two people can co-edit the same board in real
