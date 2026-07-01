@@ -33,6 +33,17 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('caps its height to the viewport and scrolls a long body', () => {
+    render(
+      <Modal label="Test dialog" onClose={() => {}}>
+        <p>Body</p>
+      </Modal>,
+    )
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveClass('max-h-full')
+    expect(dialog).toHaveClass('overflow-y-auto')
+  })
+
   it('closes on Escape', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

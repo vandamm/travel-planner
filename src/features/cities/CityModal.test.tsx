@@ -83,16 +83,19 @@ describe('CityModal', () => {
     expect(screen.getByRole('heading', { name: 'Cities & colours' })).toHaveClass('font-serif')
   })
 
-  it('closes via Escape and backdrop click', async () => {
+  it('closes via the Done button, Escape, and backdrop click', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     renderInRoom(<CityModal onClose={onClose} />)
 
-    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
     expect(onClose).toHaveBeenCalledTimes(1)
+
+    await user.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(2)
 
     // The backdrop is the dialog's parent element.
     await user.click(screen.getByRole('dialog').parentElement!)
-    expect(onClose).toHaveBeenCalledTimes(2)
+    expect(onClose).toHaveBeenCalledTimes(3)
   })
 })

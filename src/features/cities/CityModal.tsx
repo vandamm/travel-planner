@@ -2,7 +2,8 @@
 // header's `[◉ Cities]` button. Cities colour-code the days they cover via
 // accommodation/override resolution (see `cityResolution.ts`). Every edit writes
 // straight through the shared city mutators — live, like every other edit — so
-// there is no Save/Cancel: backdrop / Escape (via the shared `Modal`) closes it.
+// there is no Save/Cancel: a single ink `Done` (plus backdrop / Escape via the
+// shared `Modal`) closes it.
 
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
@@ -115,6 +116,16 @@ export function CityModal({ onClose }: CityModalProps) {
         <p className="mt-2.5 font-sans text-[11px] font-medium leading-relaxed text-ink-400">
           A colour is picked for you — click the dot to choose another.
         </p>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-card bg-ink px-5 py-2 text-sm font-semibold text-white hover:bg-ink-frame"
+        >
+          Done
+        </button>
       </div>
     </Modal>
   )

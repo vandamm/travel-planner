@@ -33,7 +33,7 @@ export function Modal({ label, onClose, children, className = '' }: ModalProps) 
         aria-modal="true"
         aria-label={label}
         onClick={(e) => e.stopPropagation()}
-        className={`rounded-frame border border-ink-frame bg-white p-6 shadow-xl ${className}`}
+        className={`max-h-full overflow-y-auto rounded-frame border border-ink-frame bg-white p-6 shadow-xl ${className}`}
       >
         {children}
       </div>
