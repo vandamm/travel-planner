@@ -3,10 +3,10 @@ import { RoomProvider, useRoom } from './data/RoomProvider'
 import { getTrip, listCities } from './data/doc'
 import { useDocVersion } from './data/useDoc'
 import { Board } from './features/board/Board'
-import { CityManager } from './features/cities/CityManager'
+import { CityModal } from './features/cities/CityModal'
 import { TripModal } from './features/trip/TripModal'
 
-function Header({ onOpenTrip }: { onOpenTrip: () => void }) {
+function Header({ onOpenTrip, onOpenCities }: { onOpenTrip: () => void; onOpenCities: () => void }) {
   const { doc } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
@@ -35,28 +35,36 @@ function Header({ onOpenTrip }: { onOpenTrip: () => void }) {
       >
         {meta}
       </p>
-      <button
-        type="button"
-        onClick={onOpenTrip}
-        className="ml-auto rounded-card border border-edge-300 bg-white px-3 py-1.5 font-sans text-sm font-medium text-ink-600 hover:bg-surface-chip"
-      >
-        <span aria-hidden>✎</span> Trip
-      </button>
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onOpenTrip}
+          className="rounded-card border border-edge-300 bg-white px-3 py-1.5 font-sans text-sm font-medium text-ink-600 hover:bg-surface-chip"
+        >
+          <span aria-hidden>✎</span> Trip
+        </button>
+        <button
+          type="button"
+          onClick={onOpenCities}
+          className="rounded-card border border-edge-300 bg-white px-3 py-1.5 font-sans text-sm font-medium text-ink-600 hover:bg-surface-chip"
+        >
+          <span aria-hidden>◉</span> Cities
+        </button>
+      </div>
     </header>
   )
 }
 
 function AppShell() {
   const [tripOpen, setTripOpen] = useState(false)
+  const [citiesOpen, setCitiesOpen] = useState(false)
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-surface py-6 text-ink">
-      <Header onOpenTrip={() => setTripOpen(true)} />
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6">
-        <CityManager />
-      </div>
+      <Header onOpenTrip={() => setTripOpen(true)} onOpenCities={() => setCitiesOpen(true)} />
       <Board />
       {tripOpen && <TripModal onClose={() => setTripOpen(false)} />}
+      {citiesOpen && <CityModal onClose={() => setCitiesOpen(false)} />}
     </main>
   )
 }

@@ -36,4 +36,14 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Trip' }))
     expect(screen.getByRole('dialog', { name: 'Trip details' })).toBeInTheDocument()
   })
+
+  it('opens the Cities & colours modal from the header button', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    // Cities live behind a modal now, not an inline section.
+    expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cities' }))
+    expect(screen.getByRole('dialog', { name: 'Cities & colours' })).toBeInTheDocument()
+  })
 })

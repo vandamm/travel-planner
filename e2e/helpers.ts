@@ -19,12 +19,17 @@ export async function setupTrip(
 }
 
 /**
- * Add a city and wait for its row to appear. Cities are still an inline section
- * in Phase-2 Task 3; Task 4 moves them behind a `[◉ Cities]` modal — update the
- * open/close here then, and every caller stays unchanged.
+ * Open the `[◉ Cities]` header pop-over, add a city, wait for its row, then close
+ * — so the board underneath stays interactable for the caller. Centralises the
+ * inline→modal churn; specs that need to keep the modal open (e.g. to remove a
+ * city) open it themselves.
  */
 export async function addCity(page: Page, name: string) {
-  await page.getByLabel('New city name').fill(name)
-  await page.getByRole('button', { name: 'Add city' }).click()
-  await expect(page.getByLabel(`Name for ${name}`)).toHaveValue(name)
+  await page.getByRole('button', { name: 'Cities' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Cities & colours' })
+  await dialog.getByLabel('New city name').fill(name)
+  await dialog.getByRole('button', { name: 'Add' }).click()
+  await expect(dialog.getByLabel(`Name for ${name}`)).toHaveValue(name)
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
 }

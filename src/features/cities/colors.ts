@@ -1,6 +1,6 @@
 // A small palette of visually distinct city colours and a picker that prefers
 // an unused one, so a freshly added city doesn't default to the same blue every
-// time (still overridable via the colour input in `CityManager`).
+// time (still overridable via the colour input in `CityModal`).
 
 /**
  * Curated "ink & type" city hues. Leads with the four named design hues
