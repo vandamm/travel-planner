@@ -6,10 +6,11 @@
 // presentational: it receives the board's already-computed data as props and is
 // wrapped in <BoardDnd> by <Board> so within-day reordering still works.
 
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { resolveDayCity } from '../../data/cityResolution'
 import type { Accommodation, Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
+import { showScrollHint } from './scrollHint'
 import type { TimeDirection } from './timeDirection'
 
 /** Minimum horizontal travel (px) for a touch gesture to count as a swipe. */
@@ -64,6 +65,23 @@ export function MobileDayView({
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
+  // A full day timeline (06:00–21:00 ≈ 660px) is taller than a phone, so the day
+  // column(s) live in a bounded scroll container; a fade + hint appear only while
+  // there is more below. Hint visibility is derived by the pure `showScrollHint`.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [showHint, setShowHint] = useState(false)
+
+  // Recompute the hint when the visible content or the viewport changes (paging,
+  // card edits, the dvh-based cap on rotate/resize). `scrollRef.current` exposes
+  // the three metrics `showScrollHint` needs.
+  useLayoutEffect(() => {
+    const update = () => {
+      if (scrollRef.current) setShowHint(showScrollHint(scrollRef.current))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [index, columns, days, cardsByDay, dayStart, dayEnd, direction])
 
   if (days.length === 0) return null
 
@@ -132,26 +150,48 @@ export function MobileDayView({
         </button>
       </div>
 
-      <div className="flex justify-center gap-3">
-        {visible.map((day) => {
-          const cityId = resolveDayCity(day.key, accommodations, overrides)
-          return (
-            <DayColumn
-              key={day.key}
-              day={day}
-              city={cityId ? cityById.get(cityId) : undefined}
-              cards={cardsByDay.get(day.key) ?? []}
-              direction={direction}
-              dayStart={dayStart}
-              dayEnd={dayEnd}
-              cities={cities}
-              overrideCityId={overrides[day.key]}
-              onSetCity={onSetCity}
-              onAddCard={onAddCard}
-              onEditCard={onEditCard}
+      <div className="relative">
+        <div
+          ref={scrollRef}
+          data-testid="mobile-day-scroll"
+          onScroll={(e) => setShowHint(showScrollHint(e.currentTarget))}
+          className="flex max-h-[calc(100dvh-12rem)] justify-center gap-3 overflow-y-auto"
+        >
+          {visible.map((day) => {
+            const cityId = resolveDayCity(day.key, accommodations, overrides)
+            return (
+              <DayColumn
+                key={day.key}
+                day={day}
+                city={cityId ? cityById.get(cityId) : undefined}
+                cards={cardsByDay.get(day.key) ?? []}
+                direction={direction}
+                dayStart={dayStart}
+                dayEnd={dayEnd}
+                cities={cities}
+                overrideCityId={overrides[day.key]}
+                onSetCity={onSetCity}
+                onAddCard={onAddCard}
+                onEditCard={onEditCard}
+              />
+            )
+          })}
+        </div>
+        {showHint && (
+          <>
+            <div
+              aria-hidden
+              data-testid="scroll-fade"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent"
             />
-          )
-        })}
+            <span
+              data-testid="scroll-hint"
+              className="pointer-events-none absolute inset-x-0 bottom-1 text-center font-sans text-xs font-medium text-ink-400"
+            >
+              scroll for more ↓
+            </span>
+          </>
+        )}
       </div>
     </div>
   )
