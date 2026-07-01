@@ -44,6 +44,19 @@ describe('Modal', () => {
     expect(dialog).toHaveClass('overflow-y-auto')
   })
 
+  it('renders a mobile "Close" control that calls onClose', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <Modal label="Test dialog" onClose={onClose}>
+        <p>Body</p>
+      </Modal>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('closes on Escape', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

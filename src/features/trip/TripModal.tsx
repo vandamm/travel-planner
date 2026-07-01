@@ -23,7 +23,7 @@ export function TripModal({ onClose }: TripModalProps) {
   const fieldInput = 'rounded-card border border-edge px-3 py-2 text-base text-ink'
 
   return (
-    <Modal label="Trip details" onClose={onClose} className="flex w-full max-w-md flex-col gap-4">
+    <Modal label="Trip details" onClose={onClose} className="flex w-full flex-col gap-4 lg:max-w-md">
       <div className="flex items-center gap-3 border-b border-edge pb-3">
         {/* Vermilion seal — mirrors the header mark, per the mock. */}
         <div

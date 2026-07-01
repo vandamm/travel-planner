@@ -102,7 +102,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
   const fieldInput = 'rounded-card border border-edge px-3 py-2 text-base text-ink'
 
   return (
-    <Modal label="Card editor" onClose={onClose} className="flex w-full max-w-md flex-col gap-4">
+    <Modal label="Card editor" onClose={onClose} className="flex w-full flex-col gap-4 lg:max-w-md">
       <h2 className="font-serif text-xl font-semibold text-ink">{isEdit ? 'Edit activity' : 'Add activity'}</h2>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">

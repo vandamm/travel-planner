@@ -47,6 +47,17 @@ export default {
         card: '4px',
         chip: '3px',
       },
+      // Mobile sheet slide-up. Guard motion at the call site with
+      // `motion-reduce:animate-none` — do not drop that guard.
+      keyframes: {
+        'sheet-in': {
+          from: { transform: 'translateY(100%)' },
+          to: { transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'sheet-in': 'sheet-in 150ms ease-out',
+      },
     },
   },
   plugins: [],
