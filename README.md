@@ -17,7 +17,10 @@ show accommodation as horizontal bars spanning the nights they cover.
   highlights the day it will land in. Dragging an **untimed** card toward the
   evening of a day with timed cards gives it a start time inferred from its
   drop position (snapped to 15 min). The narrow/mobile view shows as many day
-  columns as fit the viewport and pages by that count.
+  columns as fit the viewport and pages by that count, with city-coloured pager
+  dots to jump between pages and a scroll hint when a day's timeline overflows;
+  editors open as full-screen sheets and the header controls collapse into a
+  `≡` menu (Trip / Cities / Add stay).
 - A day's city is resolved automatically (a covering stay, else none), but each
   day header has a city control to **pin a city manually** ("Auto" clears it).
   Cities are added, renamed, recolored, and removed in the **Cities** modal

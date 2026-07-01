@@ -135,13 +135,22 @@ leads with the four named design hues (vermilion/pine/indigo/plum) plus a few
 harmonious extras; `randomCityColor` still prefers an unused hue.
 
 All editor pop-overs share one shell, `src/components/Modal.tsx` — the ink-scrim
-backdrop + centered card + backdrop/Escape close + `role=dialog`/`aria-modal`/
-`aria-label`. Its consumers (`CardEditor`, `AccommodationEditor`, `TripModal`,
-`CityModal`) render their form body inside it rather than restating the scrim.
-Trip-setup and Cities are **not** inline sections: the header carries `[✎ Trip]`
-and `[◉ Cities]` buttons that open `TripModal` / `CityModal` (local `useState`
-open flags in `App`'s `AppShell`). All modals write **live** through the doc
-mutators (no buffered save/cancel — consistent with the local-first CRDT model).
+backdrop + card + backdrop/Escape close + `role=dialog`/`aria-modal`/
+`aria-label`. It is **viewport-responsive via Tailwind `lg:` classes, not a JS
+branch** (`LAPTOP_BREAKPOINT` 1024 == `lg`): base = a full-screen mobile **sheet**
+(`h-full w-full rounded-none`, `sheet-in` slide-up, a mobile-only sticky `‹`
+close control); `lg:` restores the desktop centered scrim card. Its consumers
+(`CardEditor`, `AccommodationEditor`, `TripModal`, `CityModal`) render their form
+body inside it and keep their in-body `<h2>` title; each caps width with
+`w-full lg:max-w-md` so desktop width is unchanged.
+Trip-setup and Cities are **not** inline sections: on desktop the header carries
+`[✎ Trip]` and `[◉ Cities]` buttons; on mobile these collapse into a `≡` menu
+(`MobileMenu`, itself rendered through `Modal`) whose items open `TripModal` /
+`CityModal` (`tripOpen`/`citiesOpen` flags in `App`'s `AppShell`) or trigger
+"Add stay" — the create trigger is lifted into `AppShell` as an `addStayNonce`
+(monotonic counter, so repeat taps re-open) passed to `Board`, which owns the
+`AccommodationEditor`. All modals write **live** through the doc mutators (no
+buffered save/cancel — consistent with the local-first CRDT model).
 
 ## Auth / room-creation model
 
