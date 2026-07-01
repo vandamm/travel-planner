@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Modal } from './Modal'
 import { useViewport } from '../features/board/useViewport'
 import { popoverPosition } from './popoverPosition'
+import { pushEscapeHandler } from './escapeStack'
 
 interface PopoverProps {
   /** Accessible name for the popover dialog. */
@@ -68,20 +69,19 @@ export function Popover({
   }, [open, isMobile])
 
   // Escape + outside-click close (desktop; the Modal owns these on mobile).
+  // Escape routes through the shared stack so it dismisses this panel without
+  // also closing the editor Modal behind it.
   useEffect(() => {
     if (!open || isMobile) return
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') close()
-    }
+    const removeEscapeHandler = pushEscapeHandler(close)
     function onPointerDown(e: Event) {
       const target = e.target as Node
       if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return
       close()
     }
-    window.addEventListener('keydown', onKeyDown)
     window.addEventListener('pointerdown', onPointerDown, true)
     return () => {
-      window.removeEventListener('keydown', onKeyDown)
+      removeEscapeHandler()
       window.removeEventListener('pointerdown', onPointerDown, true)
     }
   }, [open, isMobile])

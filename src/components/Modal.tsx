@@ -9,6 +9,7 @@
 // CSS — no `useViewport` branch, no SSR/hydration mismatch.
 
 import { useEffect, type ReactNode } from 'react'
+import { pushEscapeHandler } from './escapeStack'
 
 export interface ModalProps {
   /** Accessible name for the dialog. */
@@ -20,13 +21,9 @@ export interface ModalProps {
 }
 
 export function Modal({ label, onClose, children, className = '' }: ModalProps) {
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  // Escape close goes through the shared stack so only the top-most overlay
+  // reacts (a picker Popover open over this modal wins Escape, not this modal).
+  useEffect(() => pushEscapeHandler(onClose), [onClose])
 
   return (
     <div

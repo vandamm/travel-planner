@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Popover } from './Popover'
+import { Modal } from './Modal'
 
 // jsdom reports window.innerWidth = 1024 (>= LAPTOP_BREAKPOINT), so these
 // exercise the desktop anchored-panel path. The mobile Modal-sheet fallback is
@@ -48,6 +49,30 @@ describe('Popover', () => {
     await user.click(screen.getByRole('button', { name: 'Open me' }))
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('Escape over an open popover closes only the popover, not the modal behind it', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <Modal label="Editor" onClose={onClose}>
+        <Popover label="Test picker" trigger="Open me">
+          {() => <p>Body</p>}
+        </Popover>
+      </Modal>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Open me' }))
+    expect(screen.getByRole('dialog', { name: 'Test picker' })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    // Popover gone; editor Modal's onClose was NOT called (it stays open).
+    expect(screen.queryByRole('dialog', { name: 'Test picker' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'Editor' })).toBeInTheDocument()
+
+    // A second Escape now closes the editor Modal.
+    await user.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('closes on an outside click but not on a click inside', async () => {
