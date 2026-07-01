@@ -115,6 +115,30 @@ describe('Board', () => {
     expect(screen.getByRole('dialog', { name: 'Accommodation editor' })).toBeInTheDocument()
   })
 
+  it('opens the editor when the Add stay nonce bumps, not on mount, and re-opens on repeat', () => {
+    const wrap = (nonce: number) => (
+      <RoomProvider workerUrl="" roomId={null} enableSync={false}>
+        <Capture />
+        <Board addStayNonce={nonce} />
+      </RoomProvider>
+    )
+    const dialog = () => screen.queryByRole('dialog', { name: 'Accommodation editor' })
+    const { rerender } = render(wrap(0))
+    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 2 }))
+    // Nonce 0 on mount must not open the editor (the `> 0` guard).
+    expect(dialog()).not.toBeInTheDocument()
+
+    // A bump opens it.
+    rerender(wrap(1))
+    expect(dialog()).toBeInTheDocument()
+
+    // Close it, then a repeat bump re-opens — the reason it's a nonce, not a boolean.
+    act(() => fireEvent.keyDown(window, { key: 'Escape' }))
+    expect(dialog()).not.toBeInTheDocument()
+    rerender(wrap(2))
+    expect(dialog()).toBeInTheDocument()
+  })
+
   it('tints the toolbar buttons with ink/edge tokens, not slate', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 1 }))

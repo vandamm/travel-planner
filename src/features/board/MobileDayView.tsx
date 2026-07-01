@@ -160,7 +160,9 @@ export function MobileDayView({
 
       <div
         data-testid="mobile-day-dots"
-        className="mb-2 flex items-center justify-center gap-2"
+        // flex-wrap so a long trip's dots wrap to more rows instead of
+        // overflowing the phone width horizontally.
+        className="mb-2 flex flex-wrap items-center justify-center gap-2"
       >
         {Array.from({ length: pageCount }, (_, page) => {
           const isActive = page === activePage
