@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useState, type ReactNode } from 'react'
 import * as Y from 'yjs'
 import { addAccommodation, addCity, listAccommodations } from '../../data/doc'
@@ -106,5 +106,25 @@ describe('AccommodationEditor', () => {
     expect(listAccommodations(doc)).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Delete stay' }))
     expect(listAccommodations(doc)).toHaveLength(0)
+  })
+
+  it('uses ink/type tokens, not the old slate skin', () => {
+    renderEditor(<CreateMode />)
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.outerHTML).not.toMatch(/slate-/)
+    // Heading is Lora (serif) per the ink & type mock.
+    expect(screen.getByRole('heading', { name: 'Add stay' })).toHaveClass('font-serif')
+  })
+
+  it('closes on Escape', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <RoomProvider workerUrl="" roomId={null} enableSync={false}>
+        <AccommodationEditor onClose={onClose} />
+      </RoomProvider>,
+    )
+    await user.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
