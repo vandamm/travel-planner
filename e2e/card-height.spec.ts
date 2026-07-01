@@ -19,7 +19,7 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   await column.getByRole('button', { name: /Add card/ }).click()
   editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Card title').fill('All day tour')
-  await editor.getByLabel('Height').selectOption('full')
+  await editor.getByRole('button', { name: 'Whole day' }).click()
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   const defaultCard = column.locator('[data-testid="card-list"] > li', { hasText: 'Quick stop' })

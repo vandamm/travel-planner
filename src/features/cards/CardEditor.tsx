@@ -7,7 +7,23 @@
 import { useState, type FormEvent } from 'react'
 import { addCard, removeCard, updateCard } from '../../data/doc'
 import { useRoom } from '../../data/RoomProvider'
-import type { Card, CardSize } from '../../data/schema'
+import type { Card, CardCategory, CardSize } from '../../data/schema'
+import { cardCategory } from './cardCategory'
+
+/** Type segments: category value + the triad classes shown when selected. */
+const CATEGORIES: { value: CardCategory; label: string; selected: string }[] = [
+  { value: 'indoor', label: 'Indoor', selected: 'border-indoor bg-indoor-bg text-indoor' },
+  { value: 'outdoor', label: 'Outdoor', selected: 'border-outdoor bg-outdoor-bg text-outdoor' },
+  { value: 'transit', label: 'Transit', selected: 'border-transit bg-transit-bg text-transit' },
+]
+
+/** Card-size segments. `auto` (ink fill when selected) = height from times. */
+const SIZES: { value: CardSize; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'small', label: 'Small' },
+  { value: 'half', label: 'Half day' },
+  { value: 'full', label: 'Whole day' },
+]
 
 export interface CardEditorProps {
   /** The card being edited; omit for create mode. */
@@ -33,7 +49,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
   const [timed, setTimed] = useState(Boolean(card?.startTime))
   const [startTime, setStartTime] = useState(card?.startTime ?? '')
   const [endTime, setEndTime] = useState(card?.endTime ?? '')
-  const [transport, setTransport] = useState(Boolean(card?.transport))
+  // Legacy `transport: true` is derived to `'transit'` so an old card pre-selects it.
+  const [category, setCategory] = useState<CardCategory | undefined>(card ? cardCategory(card) : undefined)
   const [size, setSize] = useState<CardSize>(card?.size ?? 'auto')
 
   function onSubmit(e: FormEvent) {
@@ -43,20 +60,20 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
 
     const start = timed ? clean(startTime) : undefined
     const end = timed && start ? clean(endTime) : undefined
-    // `undefined` clears, so unchecking removes the flag rather than storing `false`.
-    const isTransport = transport ? true : undefined
     // `auto` is the default — store `undefined` so it clears rather than persisting.
     const cardSize = size === 'auto' ? undefined : size
 
     if (isEdit) {
       // `undefined` clears the field, so toggling time off or emptying a field removes it.
+      // `category` supersedes the legacy `transport` flag: always clear the latter on save.
       updateCard(doc, card.id, {
         title: trimmedTitle,
         note: clean(note),
         link: clean(link),
         startTime: start,
         endTime: end,
-        transport: isTransport,
+        transport: undefined,
+        category,
         size: cardSize,
       })
     } else {
@@ -68,7 +85,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         link: clean(link),
         startTime: start,
         endTime: end,
-        transport: isTransport,
+        category,
         size: cardSize,
       })
     }
@@ -80,9 +97,12 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
     onClose()
   }
 
+  const sectionLabel = 'text-[10px] font-bold uppercase tracking-[0.06em] text-ink-400'
+  const fieldInput = 'rounded-card border border-edge px-3 py-2 text-base text-ink'
+
   return (
     <div
-      className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-10 flex items-center justify-center bg-ink/40 p-4"
       onClick={onClose}
     >
       <div
@@ -90,12 +110,12 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         aria-modal="true"
         aria-label="Card editor"
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full max-w-md flex-col gap-4 rounded-lg bg-white p-5 shadow-xl"
+        className="flex w-full max-w-md flex-col gap-4 rounded-frame border border-ink-frame bg-white p-6 shadow-xl"
       >
-        <h2 className="text-lg font-semibold text-slate-800">{isEdit ? 'Edit card' : 'Add card'}</h2>
+        <h2 className="font-serif text-xl font-semibold text-ink">{isEdit ? 'Edit activity' : 'Add activity'}</h2>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-600">
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+          <label className={`flex flex-col gap-1.5 ${sectionLabel}`}>
             Card title
             <input
               type="text"
@@ -103,21 +123,21 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Visit the Colosseum"
-              className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+              className={`${fieldInput} font-serif`}
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-600">
+          <label className={`flex flex-col gap-1.5 ${sectionLabel}`}>
             Note
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+              className={fieldInput}
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-600">
+          <label className={`flex flex-col gap-1.5 ${sectionLabel}`}>
             Link
             <input
               type="url"
@@ -129,11 +149,55 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
               value={link}
               onChange={(e) => setLink(e.target.value)}
               placeholder="https://…"
-              className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+              className={fieldInput}
             />
           </label>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
+          <div className="flex flex-col gap-1.5">
+            <span className={sectionLabel}>Type</span>
+            <div role="group" aria-label="Type" className="flex gap-2">
+              {CATEGORIES.map((c) => {
+                const active = category === c.value
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setCategory(active ? undefined : c.value)}
+                    className={`flex-1 rounded-card border px-1 py-2 text-center font-sans text-xs font-bold uppercase tracking-[0.04em] ${
+                      active ? c.selected : 'border-edge text-ink-500'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className={sectionLabel}>Card size</span>
+            <div role="group" aria-label="Card size" className="flex gap-1.5">
+              {SIZES.map((s) => {
+                const active = size === s.value
+                return (
+                  <button
+                    key={s.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setSize(s.value)}
+                    className={`flex-1 rounded-card border px-1 py-1.5 text-center font-sans text-[11.5px] font-semibold ${
+                      active ? 'border-ink bg-ink text-white' : 'border-edge text-ink-600'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-ink-600">
             <input
               type="checkbox"
               checked={timed}
@@ -143,33 +207,9 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
             Set a time
           </label>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
-            <input
-              type="checkbox"
-              checked={transport}
-              onChange={(e) => setTransport(e.target.checked)}
-              className="h-4 w-4"
-            />
-            This is transportation
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-600">
-            Height
-            <select
-              value={size}
-              onChange={(e) => setSize(e.target.value as CardSize)}
-              className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
-            >
-              <option value="auto">Exact duration</option>
-              <option value="small">Small</option>
-              <option value="half">Half day</option>
-              <option value="full">Whole day</option>
-            </select>
-          </label>
-
           {timed && (
-            <div className="flex gap-3">
-              <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
+            <div className="flex items-end gap-2">
+              <label className={`flex flex-1 flex-col gap-1.5 ${sectionLabel}`}>
                 Start time
                 <input
                   type="time"
@@ -178,17 +218,18 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                   lang="de"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+                  className={`${fieldInput} text-center font-serif`}
                 />
               </label>
-              <label className="flex flex-1 flex-col gap-1 text-sm font-medium text-slate-600">
+              <span className="pb-2.5 text-ink-400">→</span>
+              <label className={`flex flex-1 flex-col gap-1.5 ${sectionLabel}`}>
                 End time
                 <input
                   type="time"
                   lang="de"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="rounded border border-slate-300 px-2 py-1 text-base text-slate-900"
+                  className={`${fieldInput} text-center font-serif`}
                 />
               </label>
             </div>
@@ -199,7 +240,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
               <button
                 type="button"
                 onClick={onDelete}
-                className="rounded px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-50"
+                className="rounded-card border border-transit-border px-4 py-2 text-sm font-semibold text-city-vermilion hover:bg-transit-bg"
               >
                 Delete card
               </button>
@@ -211,13 +252,13 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                className="rounded-card px-3 py-2 text-sm font-medium text-ink-600 hover:bg-surface-chip"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="rounded bg-slate-800 px-3 py-1 text-sm font-medium text-white hover:bg-slate-700"
+                className="rounded-card bg-ink px-5 py-2 text-sm font-semibold text-white hover:bg-ink-frame"
               >
                 Save card
               </button>

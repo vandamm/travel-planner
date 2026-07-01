@@ -23,7 +23,7 @@ function CardDump() {
     <ul aria-label="card dump">
       {listCards(doc).map((c) => (
         <li key={c.id} data-testid="dump-row">
-          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, link: c.link, transport: c.transport, size: c.size })}
+          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, link: c.link, transport: c.transport, category: c.category, size: c.size })}
         </li>
       ))}
     </ul>
@@ -133,20 +133,34 @@ describe('CardEditor — create', () => {
     expect(row).not.toContain('"endTime":"')
   })
 
-  it('flags the card as transport when the toggle is on', () => {
+  it('saves the category chosen from the Type control', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Flight' } })
-    fireEvent.click(screen.getByLabelText('This is transportation'))
+    fireEvent.click(screen.getByRole('button', { name: 'Transit' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Flight')) ?? ''
-    expect(row).toContain('"transport":true')
+    expect(row).toContain('"category":"transit"')
   })
 
-  it('stores a height preset chosen from the selector', () => {
+  it('toggles a Type segment off when reclicked, storing no category', () => {
+    renderInRoom(<CreateHarness />)
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Park' } })
+    const outdoor = screen.getByRole('button', { name: 'Outdoor' })
+    fireEvent.click(outdoor)
+    expect(outdoor).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(outdoor)
+    expect(outdoor).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+
+    const row = rows().find((r) => r.includes('Park')) ?? ''
+    expect(row).not.toContain('"category":"')
+  })
+
+  it('stores a size preset chosen from the Card size control', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'All day' } })
-    fireEvent.change(screen.getByLabelText('Height'), { target: { value: 'full' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Whole day' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('All day')) ?? ''
@@ -201,14 +215,19 @@ describe('CardEditor — edit', () => {
     await waitFor(() => expect(rows().some((r) => r.includes('"startTime"'))).toBe(false))
   })
 
-  it('pre-checks the transport toggle and clears the flag when switched off', async () => {
+  it('pre-selects Transit for a legacy transport card and rewrites it to category on save', async () => {
     renderInRoom(<TransportEditHarness />)
-    await waitFor(() => expect(screen.getByLabelText('This is transportation')).toBeChecked())
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Transit' })).toHaveAttribute('aria-pressed', 'true'),
+    )
 
-    fireEvent.click(screen.getByLabelText('This is transportation'))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
-    await waitFor(() => expect(rows().some((r) => r.includes('"transport":true'))).toBe(false))
+    await waitFor(() => {
+      const row = rows().find((r) => r.includes('Flight')) ?? ''
+      expect(row).toContain('"category":"transit"')
+      expect(row).not.toContain('"transport":true')
+    })
   })
 
   it('deletes the card', async () => {
