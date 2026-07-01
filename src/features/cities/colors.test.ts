@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { CITY_PALETTE, randomCityColor } from './colors'
 
+describe('CITY_PALETTE', () => {
+  it('leads with the four design hues (vermilion/pine/indigo/plum)', () => {
+    expect(CITY_PALETTE.slice(0, 4)).toEqual([
+      '#c0392b', // vermilion
+      '#5f6f44', // pine
+      '#3a4a5c', // indigo
+      '#8a5a78', // plum
+    ])
+  })
+})
+
 describe('randomCityColor', () => {
   it('returns a palette colour when nothing is used', () => {
     expect(CITY_PALETTE).toContain(randomCityColor([]))

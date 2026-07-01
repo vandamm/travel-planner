@@ -2,20 +2,19 @@
 // an unused one, so a freshly added city doesn't default to the same blue every
 // time (still overridable via the colour input in `CityManager`).
 
-/** ~12 distinct, legible hex colours for city colour-coding. */
+/**
+ * Curated "ink & type" city hues. Leads with the four named design hues
+ * (vermilion/pine/indigo/plum) followed by a few harmonious extras for variety.
+ */
 export const CITY_PALETTE = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#22c55e', // green
-  '#f59e0b', // amber
-  '#a855f7', // purple
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f97316', // orange
-  '#6366f1', // indigo
-  '#84cc16', // lime
-  '#06b6d4', // cyan
-  '#eab308', // yellow
+  '#c0392b', // vermilion
+  '#5f6f44', // pine
+  '#3a4a5c', // indigo
+  '#8a5a78', // plum
+  '#b07d3f', // ochre
+  '#4f7c74', // teal-green
+  '#6b5b8a', // muted violet
+  '#a85c3a', // terracotta
 ] as const
 
 /**
