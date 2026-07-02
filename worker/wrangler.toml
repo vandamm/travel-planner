@@ -30,7 +30,7 @@ workers_dev = true
 # then paste the printed id below (and under [env.production] for prod).
 [[kv_namespaces]]
 binding = "SNAPSHOTS"
-id = "replace_with_kv_namespace_id"
+id = "1ac8c7b50e2443a3b48d37ff401bd07b"
 
 # ── Production ──────────────────────────────────────────────────────────────
 # Deploy with `npm run deploy:worker:prod` (= `wrangler deploy --env production`).
@@ -41,12 +41,12 @@ workers_dev = true
 # Bind the (separately created) production KV namespace for snapshot history.
 [[env.production.kv_namespaces]]
 binding = "SNAPSHOTS"
-id = "replace_with_prod_kv_namespace_id"
+id = "bdadc38e2576411c9b91160631307d7d"
 
 [env.production.vars]
 # Lock CORS to the deployed SPA origin so only the Cloudflare Pages app can call
 # the Worker. Change this to your actual Pages URL (or custom domain).
-ALLOWED_ORIGIN = "https://travel-planner.pages.dev"
+ALLOWED_ORIGIN = "https://travel-planner-86b.pages.dev"
 
 # To serve the Worker from your own domain instead of *.workers.dev, attach a
 # route (requires the zone to live on your Cloudflare account) and set
