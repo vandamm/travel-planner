@@ -21,8 +21,13 @@ export interface TripModalProps {
   onClose: () => void
 }
 
+interface VersionMeta {
+  id: string
+  timestamp: number
+}
+
 export function TripModal({ onClose }: TripModalProps) {
-  const { doc } = useRoom()
+  const { doc, roomId, workerUrl } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
 
@@ -31,23 +36,62 @@ export function TripModal({ onClose }: TripModalProps) {
   const [applyError, setApplyError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
+  // "Recent versions" — pre-write snapshots the Worker records on each AI/owner
+  // write. Link-gated (knowing the room id is the capability), so no secret here.
+  const [versions, setVersions] = useState<VersionMeta[]>([])
+  const [versionsError, setVersionsError] = useState<string | null>(null)
+
+  function versionsBase(): string {
+    return `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId ?? '')}`
+  }
+
   function handleCopy() {
     void navigator.clipboard?.writeText(exportTripJSON(doc))
     setCopied(true)
   }
 
-  function handleApply() {
-    const result = parseTripText(pasteText)
+  // Full replace — a native confirm is enough of a guard for a personal planner.
+  // ponytail: window.confirm, a bespoke confirm modal is deferred polish.
+  // Shared by paste-apply and version-restore so both run the same validate +
+  // confirm + full-replace path.
+  function applyJsonText(text: string): void {
+    const result = parseTripText(text)
     if (!result.ok) {
       setApplyError(result.error)
       return
     }
-    // Full replace — a native confirm is enough of a guard for a personal planner.
-    // ponytail: window.confirm, a bespoke confirm modal is deferred polish.
     if (!window.confirm('Replace the whole trip with this JSON? This overwrites every city, stay, and card.')) return
     applyTrip(doc, result.data)
     setApplyError(null)
     setPasteText('')
+  }
+
+  function handleApply() {
+    applyJsonText(pasteText)
+  }
+
+  async function loadVersions() {
+    if (!roomId) return
+    setVersionsError(null)
+    try {
+      const res = await fetch(versionsBase())
+      if (!res.ok) throw new Error(String(res.status))
+      const body = (await res.json()) as { versions?: VersionMeta[] }
+      setVersions(body.versions ?? [])
+    } catch {
+      setVersionsError('Could not load version history.')
+    }
+  }
+
+  async function restoreVersion(id: string) {
+    setVersionsError(null)
+    try {
+      const res = await fetch(`${versionsBase()}/${encodeURIComponent(id)}`)
+      if (!res.ok) throw new Error(String(res.status))
+      applyJsonText(await res.text())
+    } catch {
+      setVersionsError('Could not load that version.')
+    }
   }
 
   const sectionLabel = 'text-[10px] font-bold uppercase tracking-[0.06em] text-ink-400'
@@ -178,6 +222,45 @@ export function TripModal({ onClose }: TripModalProps) {
               </button>
             </div>
           </div>
+
+          {/* Restore a pre-write snapshot — one-click revert of a bad AI edit.
+              Only meaningful in a synced room (that's where snapshots exist). */}
+          {roomId && (
+            <details
+              className="rounded-card border border-edge"
+              onToggle={(e) => {
+                if (e.currentTarget.open) void loadVersions()
+              }}
+            >
+              <summary className="cursor-pointer select-none px-2 py-1.5 text-xs font-semibold text-ink-400">
+                Recent versions
+              </summary>
+              <div className="flex flex-col gap-1.5 border-t border-edge p-2">
+                {versionsError && (
+                  <p role="alert" className="text-xs text-city-vermilion">
+                    {versionsError}
+                  </p>
+                )}
+                {!versionsError && versions.length === 0 && (
+                  <p className="text-xs text-ink-300">No saved versions yet.</p>
+                )}
+                {versions.map((v) => (
+                  <div key={v.id} className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-ink-600">
+                      {new Date(v.timestamp).toLocaleString()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void restoreVersion(v.id)}
+                      className="rounded-card border border-edge px-2 py-1 text-xs font-semibold text-ink hover:bg-surface"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
       </details>
 

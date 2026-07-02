@@ -7,6 +7,8 @@
 //   GET  /api/schema        → JSON Schema for the trip document (owner-gated)
 //   GET  /api/trip/:room    → read the room's trip as JSON (owner-gated)
 //   POST /api/trip/:room    → write trip JSON into the room (owner-gated)
+//   GET  /api/versions/:room       → list a room's snapshots (link-gated)
+//   GET  /api/versions/:room/:id   → read one snapshot's trip JSON (link-gated)
 //   POST /mcp               → MCP-over-HTTP tools endpoint (MCP_API_KEY-gated)
 //
 // The handlers depend on the `LiveblocksApi` abstraction; production builds the
@@ -14,7 +16,13 @@
 
 import { handleAuth } from './auth'
 import { handleCreateRoom } from './rooms'
-import { handleGetSchema, handleGetTrip, handlePostTrip } from './trip'
+import {
+  handleGetSchema,
+  handleGetTrip,
+  handleGetVersion,
+  handleListVersions,
+  handlePostTrip,
+} from './trip'
 import { handleMcp } from './mcp'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
@@ -78,6 +86,26 @@ export async function handleRequest(
         request.method === 'POST'
           ? await handleMcp(request, env, api)
           : json({ error: 'method not allowed' }, 405)
+    } else if (pathname.startsWith('/api/versions/')) {
+      if (request.method !== 'GET') {
+        res = json({ error: 'method not allowed' }, 405)
+      } else {
+        let parts: string[]
+        try {
+          parts = pathname.slice('/api/versions/'.length).split('/').map(decodeURIComponent)
+        } catch {
+          return withCors(json({ error: 'invalid room id' }, 400), cors)
+        }
+        const roomId = parts[0]
+        const versionId = parts[1]
+        if (!roomId) {
+          res = json({ error: 'missing room id' }, 400)
+        } else if (!versionId) {
+          res = await handleListVersions(env, api, roomId)
+        } else {
+          res = await handleGetVersion(env, api, roomId, versionId)
+        }
+      }
     } else if (pathname.startsWith('/api/trip/')) {
       let roomId: string
       try {

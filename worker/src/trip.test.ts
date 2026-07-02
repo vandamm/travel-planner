@@ -1,9 +1,15 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
 import * as Y from 'yjs'
-import { handleGetSchema, handleGetTrip, handlePostTrip } from './trip'
+import {
+  handleGetSchema,
+  handleGetTrip,
+  handleGetVersion,
+  handleListVersions,
+  handlePostTrip,
+} from './trip'
 import type { Env, LiveblocksApi } from './liveblocks'
-import type { SnapshotKv } from './snapshots'
+import { recordSnapshot, type SnapshotKv } from './snapshots'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 
 const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw' }
@@ -232,5 +238,73 @@ describe('handlePostTrip', () => {
     )
     expect(res.status).toBe(400)
     expect(kv.store.size).toBe(0)
+  })
+})
+
+describe('version history (link-gated)', () => {
+  it('lists a room’s snapshots newest first — no owner secret needed', async () => {
+    const kv = makeKv()
+    await recordSnapshot(kv, 'room1', '{"trip":{"title":"v1"}}', 1000)
+    await recordSnapshot(kv, 'room1', '{"trip":{"title":"v2"}}', 2000)
+
+    const res = await handleListVersions({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { versions: Array<{ id: string; timestamp: number }> }
+    expect(body.versions.map((v) => v.timestamp)).toEqual([2000, 1000])
+  })
+
+  it('returns an empty list when KV is not bound', async () => {
+    const res = await handleListVersions(env, makeApi(), 'room1')
+    expect(res.status).toBe(200)
+    expect((await res.json()) as { versions: unknown[] }).toEqual({ versions: [] })
+  })
+
+  it('404s the list for a room that does not exist', async () => {
+    const kv = makeKv()
+    const api = makeApi(undefined, { roomExists: async () => false })
+    const res = await handleListVersions({ ...env, SNAPSHOTS: kv }, api, 'room1')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns a single snapshot’s trip JSON verbatim', async () => {
+    const kv = makeKv()
+    await recordSnapshot(kv, 'room1', '{"trip":{"title":"Snapshotted"}}', 1000)
+
+    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1', '1000')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('application/json')
+    expect((await res.json()) as { trip: { title: string } }).toEqual({ trip: { title: 'Snapshotted' } })
+  })
+
+  it('404s an unknown snapshot id', async () => {
+    const kv = makeKv()
+    await recordSnapshot(kv, 'room1', '{"trip":{}}', 1000)
+    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1', '9999')
+    expect(res.status).toBe(404)
+  })
+
+  it('404s a snapshot fetch for a room that does not exist', async () => {
+    const kv = makeKv()
+    await recordSnapshot(kv, 'room1', '{"trip":{}}', 1000)
+    const api = makeApi(undefined, { roomExists: async () => false })
+    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, api, 'room1', '1000')
+    expect(res.status).toBe(404)
+  })
+
+  it('round-trips a real pre-write snapshot: POST then restore its listed version', async () => {
+    const kv = makeKv()
+    const api = makeApi(seededDoc())
+    // A write snapshots the seed ("Seed Trip") before replacing it with validTrip.
+    await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+
+    const list = (await (await handleListVersions({ ...env, SNAPSHOTS: kv }, api, 'room1')).json()) as {
+      versions: Array<{ id: string }>
+    }
+    expect(list.versions).toHaveLength(1)
+
+    const snap = (await (
+      await handleGetVersion({ ...env, SNAPSHOTS: kv }, api, 'room1', list.versions[0].id)
+    ).json()) as { trip: { title: string } }
+    expect(snap.trip.title).toBe('Seed Trip')
   })
 })

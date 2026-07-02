@@ -11,6 +11,8 @@ export interface RoomContextValue {
   doc: Y.Doc
   roomId: string | null
   status: SyncStatus
+  /** Worker base URL (may be '' — then Worker-backed features fetch relative). */
+  workerUrl: string
 }
 
 const RoomContext = createContext<RoomContextValue | null>(null)
@@ -70,8 +72,8 @@ export function RoomProvider({
   }, [connection])
 
   const value = useMemo<RoomContextValue>(
-    () => ({ doc: connection.doc, roomId, status }),
-    [connection, roomId, status],
+    () => ({ doc: connection.doc, roomId, status, workerUrl: workerBase }),
+    [connection, roomId, status, workerBase],
   )
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>

@@ -28,7 +28,7 @@ import type { Env, LiveblocksApi } from './liveblocks'
 import { exportTrip } from '../../src/data/exportTrip'
 import { applyTrip } from '../../src/data/applyTrip'
 import { formatTripErrors, tripDocumentSchema, type TripDocument } from '../../src/data/tripSchema'
-import { recordSnapshot } from './snapshots'
+import { getSnapshot, listSnapshots, recordSnapshot } from './snapshots'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -99,6 +99,35 @@ export async function handleGetTrip(
   // where to fetch the full shape.
   const schemaUrl = new URL('/api/schema', request.url).toString()
   return json({ $schema: schemaUrl, ...exportTrip(doc) }, 200)
+}
+
+/**
+ * Version history is **link-gated**, not owner-gated: knowing the room id is the
+ * capability (same model as `/api/auth`), so anyone with the secret link can list
+ * and restore snapshots — no owner secret. Unknown room → 404 (mirrors the trip
+ * handlers). When KV isn't bound there's simply no history: list is empty.
+ */
+export async function handleListVersions(
+  env: Env,
+  api: LiveblocksApi,
+  roomId: string,
+): Promise<Response> {
+  if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
+  const versions = env.SNAPSHOTS ? await listSnapshots(env.SNAPSHOTS, roomId) : []
+  return json({ versions }, 200)
+}
+
+/** Return a single snapshot's trip JSON verbatim (it is already a trip document). */
+export async function handleGetVersion(
+  env: Env,
+  api: LiveblocksApi,
+  roomId: string,
+  id: string,
+): Promise<Response> {
+  if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
+  const snapshot = env.SNAPSHOTS ? await getSnapshot(env.SNAPSHOTS, roomId, id) : null
+  if (snapshot === null) return json({ error: 'version not found' }, 404)
+  return new Response(snapshot, { status: 200, headers: { 'content-type': 'application/json' } })
 }
 
 export async function handlePostTrip(
