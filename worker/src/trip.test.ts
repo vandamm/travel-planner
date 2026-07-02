@@ -240,6 +240,23 @@ describe('handlePostTrip', () => {
     expect(res.status).toBe(400)
     expect(kv.store.size).toBe(0)
   })
+
+  it('still writes (skipping the snapshot) when the current state is unserializable', async () => {
+    // Simulate the post-merge dangling reference a concurrent remove-city can
+    // leave: a dayOverride pointing at a city that no longer exists, which makes
+    // `exportTrip` throw. The corrective write must still land.
+    const seed = seededDoc()
+    seed.getMap('dayOverrides').set('2027-01-01', 'ghost-city')
+    const kv = makeKv()
+    const api = makeApi(seed) as LiveblocksApi & { sentCount(): number }
+
+    const res = await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+
+    expect(res.status).toBe(200)
+    expect(api.sentCount()).toBe(1)
+    // The unserializable snapshot was skipped, not thrown.
+    expect(kv.store.size).toBe(0)
+  })
 })
 
 describe('version history (link-gated)', () => {

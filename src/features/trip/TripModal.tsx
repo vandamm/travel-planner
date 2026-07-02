@@ -31,6 +31,17 @@ export function TripModal({ onClose }: TripModalProps) {
   useDocVersion(doc)
   const trip = getTrip(doc)
 
+  // `exportTrip` re-validates the live doc and throws on an inconsistent state
+  // (e.g. a dangling cityId a concurrent remove-city merge can leave). Guard so
+  // an unserializable board shows a message rather than throwing here in render
+  // — this runs on every doc change (useDocVersion) — and white-screening.
+  let currentJson: string | null
+  try {
+    currentJson = exportTripJSON(doc)
+  } catch {
+    currentJson = null
+  }
+
   // "Trip JSON (for AI)" panel state — copy the current board, paste an updated one.
   const [pasteText, setPasteText] = useState('')
   const [applyError, setApplyError] = useState<string | null>(null)
@@ -46,7 +57,8 @@ export function TripModal({ onClose }: TripModalProps) {
   }
 
   function handleCopy() {
-    void navigator.clipboard?.writeText(exportTripJSON(doc))
+    if (currentJson === null) return
+    void navigator.clipboard?.writeText(currentJson)
     setCopied(true)
   }
 
@@ -181,7 +193,8 @@ export function TripModal({ onClose }: TripModalProps) {
               <button
                 type="button"
                 onClick={handleCopy}
-                className="rounded-card border border-edge px-2 py-1 text-xs font-semibold text-ink hover:bg-surface"
+                disabled={currentJson === null}
+                className="rounded-card border border-edge px-2 py-1 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
               >
                 {copied ? 'Copied' : 'Copy'}
               </button>
@@ -189,7 +202,10 @@ export function TripModal({ onClose }: TripModalProps) {
             <textarea
               readOnly
               aria-label="Current trip JSON"
-              value={exportTripJSON(doc)}
+              value={
+                currentJson ??
+                "This board can't be serialized right now — a city may have been removed while a stay or day still points at it. Fix that reference to export."
+              }
               className="h-28 w-full resize-y rounded-card border border-edge bg-surface p-2 font-mono text-[11px] text-ink-600"
             />
           </div>
