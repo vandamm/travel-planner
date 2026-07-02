@@ -12,26 +12,17 @@
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 
+// `roomIdFromHash` lives in the environment-agnostic `roomLink` module so the
+// Worker's MCP tools parse the pasted link with the same logic. Re-exported
+// here so client callers (and their tests) keep importing it from `provider`.
+export { roomIdFromHash } from './roomLink'
+
 /** Sync lifecycle as the UI cares about it. */
 export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error'
 
 /** Strip a trailing slash so we can safely append `/api/...`. */
 function trimSlash(url: string): string {
   return url.replace(/\/+$/, '')
-}
-
-/**
- * Extract the room id from a URL hash. Supports both `#room=<id>` and a bare
- * `#<id>`. Returns null when there is no usable room id.
- */
-export function roomIdFromHash(hash: string): string | null {
-  const raw = hash.replace(/^#/, '').trim()
-  if (!raw) return null
-  if (raw.includes('=')) {
-    const room = new URLSearchParams(raw).get('room')?.trim()
-    return room || null
-  }
-  return raw
 }
 
 /** Build the shareable secret-link hash for a room id. */

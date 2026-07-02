@@ -11,6 +11,8 @@ export interface Env {
   LIVEBLOCKS_SECRET_KEY: string
   /** Owner secret that gates new-room creation (and, later, the agent API). */
   OWNER_SECRET: string
+  /** API key gating the MCP endpoint (`/mcp`); presented as `Authorization: Bearer`. */
+  MCP_API_KEY?: string
   /** Optional CORS allow-list origin; defaults to reflecting/`*` when unset. */
   ALLOWED_ORIGIN?: string
 }

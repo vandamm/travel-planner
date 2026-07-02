@@ -43,7 +43,7 @@ function ownerAuthorized(request: Request, env: Env): boolean {
 }
 
 /** Reconstruct the room's current `Y.Doc` from its binary Liveblocks state. */
-async function loadRoomDoc(api: LiveblocksApi, roomId: string): Promise<Y.Doc> {
+export async function loadRoomDoc(api: LiveblocksApi, roomId: string): Promise<Y.Doc> {
   const doc = new Y.Doc()
   const update = await api.getYUpdate(roomId)
   if (update.byteLength > 0) Y.applyUpdate(doc, update)

@@ -7,6 +7,7 @@
 //   GET  /api/schema        → JSON Schema for the trip document (owner-gated)
 //   GET  /api/trip/:room    → read the room's trip as JSON (owner-gated)
 //   POST /api/trip/:room    → write trip JSON into the room (owner-gated)
+//   POST /mcp               → MCP-over-HTTP tools endpoint (MCP_API_KEY-gated)
 //
 // The handlers depend on the `LiveblocksApi` abstraction; production builds the
 // REST-backed implementation, while tests call `handleRequest` with a fake.
@@ -14,6 +15,7 @@
 import { handleAuth } from './auth'
 import { handleCreateRoom } from './rooms'
 import { handleGetSchema, handleGetTrip, handlePostTrip } from './trip'
+import { handleMcp } from './mcp'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -70,6 +72,11 @@ export async function handleRequest(
       res =
         request.method === 'GET'
           ? await handleGetSchema(request, env)
+          : json({ error: 'method not allowed' }, 405)
+    } else if (pathname === '/mcp') {
+      res =
+        request.method === 'POST'
+          ? await handleMcp(request, env, api)
           : json({ error: 'method not allowed' }, 405)
     } else if (pathname.startsWith('/api/trip/')) {
       let roomId: string

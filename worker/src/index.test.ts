@@ -97,6 +97,23 @@ describe('handleRequest (router + CORS)', () => {
     expect(res.status).toBe(405)
   })
 
+  it('routes POST /mcp to the MCP handler (401 without the MCP key)', async () => {
+    const req = new Request('https://worker.test/mcp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'https://app.example' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+    })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(401)
+    expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
+  })
+
+  it('returns 405 for GET /mcp (POST only)', async () => {
+    const req = new Request('https://worker.test/mcp', { method: 'GET' })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(405)
+  })
+
   it('returns 404 for an unknown route', async () => {
     const req = new Request('https://worker.test/api/nope', { method: 'POST' })
     const res = await handleRequest(req, env, makeApi())
