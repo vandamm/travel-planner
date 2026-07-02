@@ -3,7 +3,7 @@
 // and mutate it through the `doc.ts` mutators.
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type * as Y from 'yjs'
+import * as Y from 'yjs'
 import { installDevBridge } from './devBridge'
 import { connectRoom, roomIdFromHash, type SyncStatus } from './provider'
 
@@ -49,31 +49,39 @@ export function RoomProvider({
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ''
   const roomId = roomIdProp !== undefined ? roomIdProp : roomIdFromHash(currentHash())
 
-  const connection = useMemo(
-    () =>
-      connectRoom({
-        roomId: roomId ?? 'local',
-        workerUrl: workerBase,
-        enableSync: enableSync ?? Boolean(roomId && workerBase),
-      }),
-    [roomId, workerBase, enableSync],
-  )
-
-  const [status, setStatus] = useState<SyncStatus>(() => connection.getStatus())
+  // The Y.Doc is cheap and owns no external resources, so it can live in useMemo
+  // and be available synchronously for the first render. The *connection*
+  // (IndexedDB + Liveblocks providers) is an external resource with a one-way
+  // destroy(), so it is created AND torn down inside the effect: StrictMode's
+  // mount→unmount→remount then rebuilds it on the same doc, instead of leaving
+  // the app wired to a destroyed connection (which silently kills background sync).
+  //
+  // The deps are intentional cache keys, not values the factory reads: a change
+  // of room identity (or transport) yields a clean doc, matching the pre-fix
+  // behaviour where connectRoom minted the doc under these same deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const doc = useMemo(() => new Y.Doc(), [roomId, workerBase, enableSync])
+  const [status, setStatus] = useState<SyncStatus>('local')
 
   useEffect(() => {
+    const connection = connectRoom({
+      roomId: roomId ?? 'local',
+      workerUrl: workerBase,
+      enableSync: enableSync ?? Boolean(roomId && workerBase),
+      doc,
+    })
+    installDevBridge(doc)
     setStatus(connection.getStatus())
-    installDevBridge(connection.doc)
     const unsubscribe = connection.onStatus(setStatus)
     return () => {
       unsubscribe()
       connection.destroy()
     }
-  }, [connection])
+  }, [doc, roomId, workerBase, enableSync])
 
   const value = useMemo<RoomContextValue>(
-    () => ({ doc: connection.doc, roomId, status, workerUrl: workerBase }),
-    [connection, roomId, status, workerBase],
+    () => ({ doc, roomId, status, workerUrl: workerBase }),
+    [doc, roomId, status, workerBase],
   )
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>

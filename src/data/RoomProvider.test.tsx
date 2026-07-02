@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import * as provider from './provider'
 import { RoomProvider, useRoom } from './RoomProvider'
 import { addCity, listCities } from './doc'
 
@@ -26,6 +27,31 @@ describe('RoomProvider', () => {
     expect(screen.getByTestId('status')).toHaveTextContent('local')
     expect(screen.getByTestId('room')).toHaveTextContent('none')
     expect(screen.getByTestId('cities')).toHaveTextContent('Rome')
+  })
+
+  it('builds the connection inside an effect, not during render (StrictMode-safe)', () => {
+    // The connection is an external resource with a one-way destroy(). If it is
+    // built in render/useMemo, StrictMode's mount→unmount→remount destroys it on
+    // the fake unmount and never rebuilds it (the effect re-run reuses the dead,
+    // memoized connection) — leaving the app wired to a torn-down connection with
+    // no sync. Building it in the effect keeps create/destroy symmetric, so a
+    // remount rebuilds it. Guard: connectRoom must not run during render.
+    const spy = vi.spyOn(provider, 'connectRoom')
+    let callsDuringRender = -1
+    function Probe() {
+      // Renders after RoomProvider's render (incl. its useMemo) but before effects
+      // flush, so a render-built connection would already be counted here.
+      if (callsDuringRender === -1) callsDuringRender = spy.mock.calls.length
+      return null
+    }
+    render(
+      <RoomProvider workerUrl="" roomId={null} enableSync={false}>
+        <Probe />
+      </RoomProvider>,
+    )
+    expect(callsDuringRender).toBe(0)
+    expect(spy).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
   })
 
   it('throws when useRoom is used outside a provider', () => {
