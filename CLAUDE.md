@@ -60,8 +60,18 @@ of browser- or Worker-only APIs:
   JSON *and* the agent API (`GET /api/schema` publishes it as JSON Schema).
   Validation lives here (`parseTripText`, `formatTripErrors`).
 - `applyTrip.ts` — validated trip JSON → doc mutations (a full replace: clear,
-  then re-add via the mutators). Used by `POST /api/trip/:room`.
-- `exportTrip.ts` — doc → validated JSON. Used by `GET /api/trip/:room`.
+  then re-add via the mutators). Used by `POST /api/trip/:room`, the MCP
+  `write_board` tool, and the Trip-settings JSON panel. Runs its `doc.transact`
+  under the exported **`APPLY_TRIP_ORIGIN`** string origin (not the null origin the
+  keystroke mutators use) so `Y.UndoManager` can exclude full-replace/restore from
+  the keystroke undo stack (see below).
+- `exportTrip.ts` — doc → validated JSON. Used by `GET /api/trip/:room`, MCP
+  `read_board`, and the panel's "show current JSON".
+- `roomLink.ts` — pure room-id parsing shared by client and Worker:
+  `roomIdFromHash` (extracted out of `provider.ts`, which has browser-only imports,
+  and re-exported there so the client is unchanged) and `roomIdFromLink` (parses a
+  full share link containing `#room=…`). The MCP tools parse the pasted link with
+  the *same* logic the client uses.
 
 `days.ts` (day generation) and `cityResolution.ts` are also pure shared logic.
 `cityResolution.ts` resolves a day's city/color (`resolveDayCity`) *and* exposes
@@ -119,6 +129,16 @@ in every day. See `src/features/board/timeDirection.ts`.
 Rule of thumb: trip content is synced (doc); per-viewer display preferences are
 local (localStorage).
 
+**Undo/redo** is likewise per-viewer and *in-memory only* (not synced, not
+durable). `src/features/board/undoManager.ts` (`createTripUndoManager` +
+`useUndoManager`, wired in `Board.tsx`) scopes a `Y.UndoManager` to the five
+top-level types and keeps the default `trackedOrigins` of `{null}` — so only the
+local keystroke mutators (null origin) are undoable; remote sync (Liveblocks'
+origin) and full-replace/restore (`APPLY_TRIP_ORIGIN`) are excluded by
+construction. Cmd/Ctrl+Z / Shift+Cmd/Ctrl+Z and the ↶/↷ toolbar buttons drive it;
+the keydown listener skips text fields so native input-undo still works. The
+*durable* history is the Worker's snapshot log (below), not this stack.
+
 ## Styling / design tokens
 
 Styling is inline Tailwind classes (no CSS modules). The "ink & type" design
@@ -154,6 +174,11 @@ Trip-setup and Cities are **not** inline sections: on desktop the header carries
 (monotonic counter, so repeat taps re-open) passed to `Board`, which owns the
 `AccommodationEditor`. All modals write **live** through the doc mutators (no
 buffered save/cancel — consistent with the local-first CRDT model).
+`TripModal` also carries a low-prominence, collapsible **"Trip JSON (for AI)"**
+panel: it shows pretty-printed `exportTrip(doc)` with a Copy button, a paste
+textarea whose Apply runs `parseTripText` → `applyTrip` behind a "replace the whole
+trip?" confirm (invalid input renders `formatTripErrors`), and — when a room id is
+present — a "Recent versions" restore list backed by the version endpoints above.
 
 Field pop-overs (the date/time pickers) use a **different** shell,
 `src/components/Popover.tsx` — an *anchored* floating panel pinned just below its
@@ -196,9 +221,29 @@ single-day view and `useViewport.ts` are unchanged.
 - The agent API (`GET`/`POST /api/trip/:room` and `GET /api/schema`, which
   publishes the JSON Schema derived from `tripDocumentSchema`) is **owner-gated**
   too — as privileged as room creation.
-- `LIVEBLOCKS_SECRET_KEY` and `OWNER_SECRET` live **only on the Worker**. The
-  client's only configured secret-adjacent value is `VITE_WORKER_URL`, a public
-  URL baked into the bundle.
+- The **MCP endpoint** (`POST /mcp`, `worker/src/mcp.ts`) exposes the same read/write
+  surface to an MCP client (e.g. Perplexity Pro) as three tools — `get_schema`,
+  `read_board(link)`, `write_board(link, trip)` — over a hand-rolled JSON-RPC 2.0
+  handshake (no `@modelcontextprotocol/sdk`; its Streamable-HTTP *server* transport
+  targets Node http, not the Workers Fetch runtime). It's gated by **`MCP_API_KEY`**
+  (presented as `Authorization: Bearer …`) — effectively owner-level over rooms. The
+  tools take the share link *as a string argument* (the room id is in the hash, never
+  sent to a server), reuse `roomIdFromLink` + `loadRoomDoc`/`exportTrip`/`applyTrip`,
+  and share the write path (`applyTripToRoom` in `trip.ts`) with the owner `POST`.
+- **Snapshot history & restore** (`worker/src/snapshots.ts`, Cloudflare **KV**
+  binding `SNAPSHOTS`): every Worker-mediated write (owner `POST /api/trip` and MCP
+  `write_board`, both via `applyTripToRoom`) records the room's current trip JSON
+  *before* mutating, keyed by room + timestamp, **keep-all**. Snapshotting is guarded
+  on the KV binding being present, so handlers still work unbound. Two **link-gated**
+  endpoints (room-id-as-capability, mirroring `/api/auth` — no owner secret) expose
+  the log: `GET /api/versions/:room` (list `{id, timestamp}`) and
+  `GET /api/versions/:room/:id` (that snapshot's JSON). The Trip-settings panel lists
+  recent versions and restores one by feeding its JSON through the same paste-apply
+  path (a restore is itself snapshotted on the next write). `UndoManager` is the
+  session-local undo; this KV log is the durable history.
+- `LIVEBLOCKS_SECRET_KEY`, `OWNER_SECRET`, and `MCP_API_KEY` live **only on the
+  Worker**. The client's only configured secret-adjacent value is `VITE_WORKER_URL`,
+  a public URL baked into the bundle.
 
 ## Testing conventions
 

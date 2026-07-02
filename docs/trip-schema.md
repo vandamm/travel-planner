@@ -114,6 +114,14 @@ from the secret link.
 | `GET` | `/api/trip/:room` | — | the room's current trip as the JSON document above |
 | `POST` | `/api/trip/:room` | a trip document (above) | the validated, default-filled document |
 
+The same read/write surface is also reachable via the **MCP endpoint**
+(`POST /mcp`, gated by `MCP_API_KEY`) as the `get_schema` / `read_board` /
+`write_board` tools, for MCP clients like Perplexity Pro. Every write here and via
+`POST` above snapshots the prior trip to KV first; the **link-gated** version
+endpoints (`GET /api/versions/:room` and `…/:room/:id`) list and read those
+snapshots for restore. See the [README](../README.md#agent-api) for the connector
+setup and version-history overview.
+
 `GET /api/schema` returns the JSON Schema generated from `tripDocumentSchema` —
 the *same* schema `POST` validates against, so the published shape can never
 drift from what the endpoint accepts. The `GET /api/trip/:room` response also

@@ -131,7 +131,8 @@ cp .env.example .env
 | --- | --- | --- |
 | `VITE_WORKER_URL` | client (`.env`) | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret. |
 | `LIVEBLOCKS_SECRET_KEY` | Worker secret | Liveblocks project secret key (`sk_...`). Never shipped to the client. |
-| `OWNER_SECRET` | Worker secret | Gates `POST /api/rooms` and the agent API. Any long random string. |
+| `OWNER_SECRET` | Worker secret | Gates `POST /api/rooms` and the owner agent API. Any long random string. |
+| `MCP_API_KEY` | Worker secret | Gates the MCP endpoint (`POST /mcp`), presented as `Authorization: Bearer <key>`. Any long random string. |
 | `ALLOWED_ORIGIN` | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset. |
 
 For local Worker dev, copy `worker/.dev.vars.example` to `worker/.dev.vars`
@@ -182,3 +183,27 @@ and writes (there is no in-app import/export). The zod schema in
 publishes the matching JSON Schema. See
 [`docs/trip-schema.md`](./docs/trip-schema.md) for the schema and the agent API
 (`GET`/`POST /api/trip/:room`, `GET /api/schema`, owner token, example payloads).
+
+There are three ways to drive a board with an agent:
+
+- **Owner HTTP API** — `GET`/`POST /api/trip/:room`, gated by the owner secret
+  (`x-owner-secret`). The scripting path; see `docs/trip-schema.md`.
+- **MCP connector** (`POST /mcp`) — for an MCP client such as **Perplexity Pro**.
+  Add the connector with the Worker's `/mcp` URL and the `MCP_API_KEY` as a bearer
+  token, then paste a board's share link into the chat. It exposes three tools:
+  `get_schema`, `read_board(link)`, and `write_board(link, trip)` — the link is
+  passed as a string, so the room id in the URL hash travels fine. `write_board`
+  snapshots the current board before replacing it, so any AI edit is revertible.
+- **Trip JSON panel** — zero-setup manual loop for any AI: open the Trip modal,
+  copy the current board JSON, paste it into a chat, and paste the AI's reply back
+  into the panel to Apply (guarded by a replace confirm).
+
+**Version history & restore.** Every Worker-mediated write (owner `POST` and MCP
+`write_board`) records the room's prior trip JSON to Cloudflare **KV** first
+(keep-all, keyed by room + timestamp). The Trip panel's "Recent versions" list
+restores any earlier version — link-gated (`GET /api/versions/:room` and
+`…/:room/:id`), the same room-id-as-capability model as `/api/auth`. For live
+hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within the
+session; agent writes and restores are kept off that keystroke stack. Provision
+the `SNAPSHOTS` KV namespace and set `MCP_API_KEY` per the notes in
+`worker/wrangler.toml` and `worker/.dev.vars.example`.

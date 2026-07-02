@@ -4,12 +4,14 @@ compatibility_date = "2026-06-25"
 
 # Secrets (NOT stored here — they are encrypted Worker secrets, set per environment):
 #   LIVEBLOCKS_SECRET_KEY  — Liveblocks project secret key (never shipped to the client)
-#   OWNER_SECRET           — gates POST /api/rooms and the agent API (/api/trip/:room)
+#   OWNER_SECRET           — gates POST /api/rooms and the owner agent API (/api/trip/:room)
+#   MCP_API_KEY            — gates the MCP endpoint (POST /mcp), sent as `Authorization: Bearer …`
 #
 # Set them locally for `wrangler dev` via worker/.dev.vars (gitignored), and for a
 # deployed Worker with:
 #   wrangler secret put LIVEBLOCKS_SECRET_KEY --config worker/wrangler.toml --env production
 #   wrangler secret put OWNER_SECRET          --config worker/wrangler.toml --env production
+#   wrangler secret put MCP_API_KEY           --config worker/wrangler.toml --env production
 #
 # Plain var:
 #   ALLOWED_ORIGIN — CORS allow-list origin. When unset the Worker reflects the
