@@ -5,11 +5,15 @@
 // the shared `Modal`) closes it. Start date + day window use the custom
 // calendar / time-wheel pickers; the day count stays a native number input.
 
+import { useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { DatePicker } from '../pickers/DatePicker'
 import { TimePicker } from '../pickers/TimePicker'
 import { getTrip, setTrip } from '../../data/doc'
 import { MAX_TRIP_DAYS } from '../../data/days'
+import { applyTrip } from '../../data/applyTrip'
+import { exportTripJSON } from '../../data/exportTrip'
+import { parseTripText } from '../../data/tripSchema'
 import { useRoom } from '../../data/RoomProvider'
 import { useDocVersion } from '../../data/useDoc'
 
@@ -21,6 +25,30 @@ export function TripModal({ onClose }: TripModalProps) {
   const { doc } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
+
+  // "Trip JSON (for AI)" panel state — copy the current board, paste an updated one.
+  const [pasteText, setPasteText] = useState('')
+  const [applyError, setApplyError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    void navigator.clipboard?.writeText(exportTripJSON(doc))
+    setCopied(true)
+  }
+
+  function handleApply() {
+    const result = parseTripText(pasteText)
+    if (!result.ok) {
+      setApplyError(result.error)
+      return
+    }
+    // Full replace — a native confirm is enough of a guard for a personal planner.
+    // ponytail: window.confirm, a bespoke confirm modal is deferred polish.
+    if (!window.confirm('Replace the whole trip with this JSON? This overwrites every city, stay, and card.')) return
+    applyTrip(doc, result.data)
+    setApplyError(null)
+    setPasteText('')
+  }
 
   const sectionLabel = 'text-[10px] font-bold uppercase tracking-[0.06em] text-ink-400'
   const fieldInput = 'rounded-card border border-edge px-3 py-2 text-base text-ink'
@@ -95,6 +123,63 @@ export function TripModal({ onClose }: TripModalProps) {
           />
         </div>
       </div>
+
+      {/* Low-prominence: copy the board as JSON for an AI, or paste an AI's
+          updated JSON back in (full replace). */}
+      <details className="rounded-card border border-edge text-ink-600">
+        <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-ink-400">
+          Trip JSON (for AI)
+        </summary>
+        <div className="flex flex-col gap-3 border-t border-edge p-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className={sectionLabel}>Current trip</span>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="rounded-card border border-edge px-2 py-1 text-xs font-semibold text-ink hover:bg-surface"
+              >
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <textarea
+              readOnly
+              aria-label="Current trip JSON"
+              value={exportTripJSON(doc)}
+              className="h-28 w-full resize-y rounded-card border border-edge bg-surface p-2 font-mono text-[11px] text-ink-600"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className={sectionLabel}>Paste updated JSON</span>
+            <textarea
+              aria-label="Paste updated trip JSON"
+              value={pasteText}
+              onChange={(e) => {
+                setPasteText(e.target.value)
+                setApplyError(null)
+              }}
+              placeholder="Paste the AI's updated trip JSON here…"
+              className="h-28 w-full resize-y rounded-card border border-edge p-2 font-mono text-[11px] text-ink"
+            />
+            {applyError && (
+              <p role="alert" className="text-xs text-city-vermilion">
+                {applyError}
+              </p>
+            )}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleApply}
+                disabled={pasteText.trim() === ''}
+                className="rounded-card bg-ink px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-frame disabled:opacity-40"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      </details>
 
       <div className="mt-1 flex justify-end">
         <button

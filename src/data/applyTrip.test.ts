@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
-import { applyTrip } from './applyTrip'
+import { APPLY_TRIP_ORIGIN, applyTrip } from './applyTrip'
 import {
   addCard,
   addCity,
@@ -66,5 +66,25 @@ describe('applyTrip', () => {
   it('throws on invalid input rather than corrupting the doc', () => {
     const doc = new Y.Doc()
     expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', numDays: 1 } })).toThrow()
+  })
+
+  it('leaves an existing doc untouched when the input is invalid', () => {
+    const doc = new Y.Doc()
+    applyTrip(doc, TRIP)
+    expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', numDays: 1 } })).toThrow()
+    // Validation fails before the transaction, so the prior trip survives intact.
+    expect(getTrip(doc)).toEqual(TRIP.trip)
+    expect(listCities(doc)).toEqual(TRIP.cities)
+    expect(listCards(doc)).toEqual(TRIP.cards)
+  })
+
+  it('runs its transaction under APPLY_TRIP_ORIGIN (so UndoManager can exclude it)', () => {
+    const doc = new Y.Doc()
+    let seenOrigin: unknown = 'unset'
+    doc.on('afterTransaction', (tr: Y.Transaction) => {
+      seenOrigin = tr.origin
+    })
+    applyTrip(doc, TRIP)
+    expect(seenOrigin).toBe(APPLY_TRIP_ORIGIN)
   })
 })
