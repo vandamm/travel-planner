@@ -20,11 +20,26 @@ compatibility_date = "2026-06-25"
 # for quick test deploys: `npm run deploy:worker` (no --env).
 workers_dev = true
 
+# ── KV: trip snapshot history ────────────────────────────────────────────────
+# Every Worker-mediated write (owner POST /api/trip and the MCP write_board tool)
+# snapshots the room's current trip here first, so a bad edit is revertible.
+# `wrangler dev` simulates this locally; deploys need a real namespace:
+#   wrangler kv namespace create SNAPSHOTS --config worker/wrangler.toml
+# then paste the printed id below (and under [env.production] for prod).
+[[kv_namespaces]]
+binding = "SNAPSHOTS"
+id = "replace_with_kv_namespace_id"
+
 # ── Production ──────────────────────────────────────────────────────────────
 # Deploy with `npm run deploy:worker:prod` (= `wrangler deploy --env production`).
 # This publishes a separate Worker named `travel-planner-worker-production`.
 [env.production]
 workers_dev = true
+
+# Bind the (separately created) production KV namespace for snapshot history.
+[[env.production.kv_namespaces]]
+binding = "SNAPSHOTS"
+id = "replace_with_prod_kv_namespace_id"
 
 [env.production.vars]
 # Lock CORS to the deployed SPA origin so only the Cloudflare Pages app can call

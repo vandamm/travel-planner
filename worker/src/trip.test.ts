@@ -3,9 +3,25 @@ import { describe, it, expect } from 'vitest'
 import * as Y from 'yjs'
 import { handleGetSchema, handleGetTrip, handlePostTrip } from './trip'
 import type { Env, LiveblocksApi } from './liveblocks'
+import type { SnapshotKv } from './snapshots'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 
 const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw' }
+
+/** In-memory KV fake — the small slice `snapshots.ts` uses. */
+function makeKv(): SnapshotKv & { store: Map<string, string> } {
+  const store = new Map<string, string>()
+  return {
+    store,
+    get: async (key) => store.get(key) ?? null,
+    put: async (key, value) => {
+      store.set(key, value)
+    },
+    list: async ({ prefix }) => ({
+      keys: [...store.keys()].filter((n) => n.startsWith(prefix)).map((name) => ({ name })),
+    }),
+  }
+}
 
 /**
  * A fake Liveblocks backend that keeps the room's Yjs state in memory. `getYUpdate`
@@ -192,5 +208,29 @@ describe('handlePostTrip', () => {
     const res = await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), env, api, 'room1')
     expect(res.status).toBe(404)
     expect(api.sentCount()).toBe(0)
+  })
+
+  it('records a pre-write snapshot of the current trip before applying', async () => {
+    const kv = makeKv()
+    const api = makeApi(seededDoc())
+    await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+
+    const snapshots = [...kv.store.values()]
+    expect(snapshots).toHaveLength(1)
+    // The snapshot captures the state *before* the write (the seed), not the new trip.
+    expect((JSON.parse(snapshots[0]) as { trip: { title: string } }).trip.title).toBe('Seed Trip')
+  })
+
+  it('records no snapshot when the payload fails validation', async () => {
+    const kv = makeKv()
+    const api = makeApi(seededDoc())
+    const res = await handlePostTrip(
+      tripRequest('POST', { trip: { title: 'x', startDate: 'nope', numDays: -1 } }, 'owner-pw'),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+    )
+    expect(res.status).toBe(400)
+    expect(kv.store.size).toBe(0)
   })
 })

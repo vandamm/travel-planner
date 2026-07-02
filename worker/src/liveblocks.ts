@@ -5,6 +5,8 @@
 // handlers depend only on the `LiveblocksApi` interface, so tests inject a fake
 // and never hit the network.
 
+import type { SnapshotKv } from './snapshots'
+
 /** Worker environment bindings. Secrets are provided via `wrangler secret`/`.dev.vars`. */
 export interface Env {
   /** Liveblocks project secret key — never shipped to the client. */
@@ -15,6 +17,12 @@ export interface Env {
   MCP_API_KEY?: string
   /** Optional CORS allow-list origin; defaults to reflecting/`*` when unset. */
   ALLOWED_ORIGIN?: string
+  /**
+   * KV namespace holding pre-write trip snapshots (version history). Optional so
+   * the handlers still work if it isn't bound — writes just skip history then.
+   * The real `KVNamespace` binding structurally satisfies `SnapshotKv`.
+   */
+  SNAPSHOTS?: SnapshotKv
 }
 
 /** The slice of Liveblocks we need. Real impl uses REST; tests inject a fake. */

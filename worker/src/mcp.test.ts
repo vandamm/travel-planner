@@ -3,20 +3,53 @@ import { describe, it, expect } from 'vitest'
 import * as Y from 'yjs'
 import { handleMcp } from './mcp'
 import type { Env, LiveblocksApi } from './liveblocks'
+import type { SnapshotKv } from './snapshots'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
+import { exportTrip } from '../../src/data/exportTrip'
 
 const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw', MCP_API_KEY: 'mcp-key' }
 
-/** In-memory Liveblocks fake — same shape as the trip handler tests. */
-function makeApi(seed?: Y.Doc, overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
-  const state: Uint8Array = seed ? Y.encodeStateAsUpdate(seed) : new Uint8Array()
+type TestApi = LiveblocksApi & { sentCount(): number; lastUpdate(): Uint8Array | null }
+
+/**
+ * In-memory Liveblocks fake that merges sent updates back into its state (so a
+ * read after a write reflects it) and records the last update + send count.
+ */
+function makeApi(seed?: Y.Doc, overrides: Partial<LiveblocksApi> = {}): TestApi {
+  let state: Uint8Array = seed ? Y.encodeStateAsUpdate(seed) : new Uint8Array()
+  let sent = 0
+  let last: Uint8Array | null = null
   return {
     roomExists: async () => true,
     createRoom: async (id) => ({ id }),
     mintAccessToken: async (room) => `tok-${room}`,
     getYUpdate: async () => state,
-    sendYUpdate: async () => {},
+    sendYUpdate: async (_room, update) => {
+      sent += 1
+      last = update
+      const doc = new Y.Doc()
+      if (state.byteLength > 0) Y.applyUpdate(doc, state)
+      Y.applyUpdate(doc, update)
+      state = Y.encodeStateAsUpdate(doc)
+    },
+    sentCount: () => sent,
+    lastUpdate: () => last,
     ...overrides,
+  }
+}
+
+/** In-memory KV fake — the small slice `snapshots.ts` uses. */
+function makeKv(): SnapshotKv & { store: Map<string, string> } {
+  const store = new Map<string, string>()
+  return {
+    store,
+    get: async (key) => store.get(key) ?? null,
+    put: async (key, value) => {
+      store.set(key, value)
+    },
+    list: async ({ prefix }) => ({
+      keys: [...store.keys()].filter((n) => n.startsWith(prefix)).map((name) => ({ name })),
+    }),
   }
 }
 
@@ -98,11 +131,11 @@ describe('handleMcp — auth', () => {
 })
 
 describe('handleMcp — tools/list', () => {
-  it('advertises get_schema and read_board with input schemas', async () => {
+  it('advertises get_schema, read_board and write_board with input schemas', async () => {
     const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 2, method: 'tools/list' }), env, makeApi())
     const body = (await res.json()) as RpcResponse
     const tools = (body.result as { tools: Array<{ name: string; inputSchema: unknown }> }).tools
-    expect(tools.map((t) => t.name).sort()).toEqual(['get_schema', 'read_board'])
+    expect(tools.map((t) => t.name).sort()).toEqual(['get_schema', 'read_board', 'write_board'])
     expect(tools.every((t) => t.inputSchema)).toBe(true)
   })
 })
@@ -161,5 +194,99 @@ describe('handleMcp — read_board', () => {
     const tool = ((await res.json()) as RpcResponse).result as ToolResult
     expect(tool.isError).toBe(true)
     expect(tool.content[0].text).toMatch(/no board found/i)
+  })
+})
+
+const validTrip = {
+  trip: { title: 'Italy', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
+  cities: [{ id: 'c2', name: 'Rome', color: '#ff0000' }],
+  accommodations: [],
+  cards: [{ id: 'k2', dayKey: '2027-05-01', title: 'Colosseum', order: 0 }],
+  dayOverrides: {},
+}
+
+describe('handleMcp — write_board', () => {
+  function callWrite(link: string, trip: unknown, api: TestApi = makeApi(seededDoc()), useEnv: Env = env) {
+    return handleMcp(
+      mcpRequest({
+        jsonrpc: '2.0',
+        id: 5,
+        method: 'tools/call',
+        params: { name: 'write_board', arguments: { link, trip } },
+      }),
+      useEnv,
+      api,
+    )
+  }
+
+  async function toolOf(res: Response): Promise<ToolResult> {
+    return ((await res.json()) as RpcResponse).result as ToolResult
+  }
+
+  it('writes a valid trip, reports success, and the update merges into a second doc', async () => {
+    const seed = seededDoc()
+    const api = makeApi(seed)
+    const res = await callWrite('https://app/#room=room1', validTrip, api)
+
+    const tool = await toolOf(res)
+    expect(tool.isError).toBeFalsy()
+    expect(tool.content[0].text).toMatch(/updated/i)
+    expect(api.sentCount()).toBe(1)
+
+    // Two-doc integration: a second client at the seed state applies the diff and converges.
+    const docB = new Y.Doc()
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(seed))
+    Y.applyUpdate(docB, api.lastUpdate()!)
+    const merged = exportTrip(docB)
+    expect(merged.trip.title).toBe('Italy')
+    expect(merged.cities.map((c) => c.id)).toEqual(['c2'])
+    expect(merged.cards.map((c) => c.id)).toEqual(['k2'])
+  })
+
+  it('snapshots the pre-write trip before applying', async () => {
+    const kv = makeKv()
+    const api = makeApi(seededDoc())
+    await callWrite('https://app/#room=room1', validTrip, api, { ...env, SNAPSHOTS: kv })
+
+    const snapshots = [...kv.store.values()]
+    expect(snapshots).toHaveLength(1)
+    // The captured snapshot is the state *before* the write (the seed), not the new trip.
+    const snap = JSON.parse(snapshots[0]) as { trip: { title: string } }
+    expect(snap.trip.title).toBe('Seed Trip')
+  })
+
+  it('rejects an invalid trip with isError, mutating nothing and recording no snapshot', async () => {
+    const kv = makeKv()
+    const api = makeApi(seededDoc())
+    const res = await callWrite(
+      'https://app/#room=room1',
+      { trip: { title: 'x', startDate: 'nope', numDays: -1 } },
+      api,
+      { ...env, SNAPSHOTS: kv },
+    )
+
+    const tool = await toolOf(res)
+    expect(tool.isError).toBe(true)
+    expect(tool.content[0].text).toMatch(/invalid/i)
+    expect(api.sentCount()).toBe(0)
+    expect(kv.store.size).toBe(0)
+  })
+
+  it('returns an isError result when the room does not exist, without writing', async () => {
+    const api = makeApi(seededDoc(), { roomExists: async () => false })
+    const res = await callWrite('https://app/#room=ghost', validTrip, api)
+    const tool = await toolOf(res)
+    expect(tool.isError).toBe(true)
+    expect(tool.content[0].text).toMatch(/no board found/i)
+    expect(api.sentCount()).toBe(0)
+  })
+
+  it('returns an isError result when the link carries no room id', async () => {
+    const api = makeApi(seededDoc())
+    const res = await callWrite('https://travel-planner.pages.dev/', validTrip, api)
+    const tool = await toolOf(res)
+    expect(tool.isError).toBe(true)
+    expect(tool.content[0].text).toMatch(/room id/i)
+    expect(api.sentCount()).toBe(0)
   })
 })

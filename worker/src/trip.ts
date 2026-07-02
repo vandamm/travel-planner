@@ -27,7 +27,8 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { exportTrip } from '../../src/data/exportTrip'
 import { applyTrip } from '../../src/data/applyTrip'
-import { formatTripErrors, tripDocumentSchema } from '../../src/data/tripSchema'
+import { formatTripErrors, tripDocumentSchema, type TripDocument } from '../../src/data/tripSchema'
+import { recordSnapshot } from './snapshots'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -48,6 +49,29 @@ export async function loadRoomDoc(api: LiveblocksApi, roomId: string): Promise<Y
   const update = await api.getYUpdate(roomId)
   if (update.byteLength > 0) Y.applyUpdate(doc, update)
   return doc
+}
+
+/**
+ * The shared write path for both Worker-mediated writers (owner `POST` and the
+ * MCP `write_board` tool): load the room, **snapshot its current trip first**
+ * (so any write is revertible), then full-replace with `trip` and push the diff
+ * — additions *and* deletions — back to Liveblocks. The caller validates `trip`
+ * against the schema before calling, so a bad payload never reaches here.
+ */
+export async function applyTripToRoom(
+  env: Env,
+  api: LiveblocksApi,
+  roomId: string,
+  trip: TripDocument,
+): Promise<TripDocument> {
+  const doc = await loadRoomDoc(api, roomId)
+  // Record history before mutating. Skipped only if KV isn't bound.
+  if (env.SNAPSHOTS) await recordSnapshot(env.SNAPSHOTS, roomId, JSON.stringify(exportTrip(doc)))
+  const before = Y.encodeStateVector(doc)
+  const data = applyTrip(doc, trip)
+  const update = Y.encodeStateAsUpdate(doc, before)
+  await api.sendYUpdate(roomId, update)
+  return data
 }
 
 /**
@@ -94,17 +118,11 @@ export async function handlePostTrip(
   }
 
   // Validate before touching the room so a bad payload is a clean 400 and never
-  // mutates the doc; `formatTripErrors` makes the failure legible to the agent.
+  // mutates the doc (nor records a snapshot); `formatTripErrors` makes the
+  // failure legible to the agent.
   const parsed = tripDocumentSchema.safeParse(input)
   if (!parsed.success) return json({ error: formatTripErrors(parsed.error) }, 400)
 
-  const doc = await loadRoomDoc(api, roomId)
-  const before = Y.encodeStateVector(doc)
-  const data = applyTrip(doc, parsed.data)
-  // Diff against the pre-apply state vector so the update carries the deletions
-  // from the full-replace too, not just the new entities.
-  const update = Y.encodeStateAsUpdate(doc, before)
-  await api.sendYUpdate(roomId, update)
-
+  const data = await applyTripToRoom(env, api, roomId, parsed.data)
   return json(data, 200)
 }

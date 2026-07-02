@@ -1,6 +1,6 @@
 // MCP-over-HTTP endpoint for the Worker — lets an MCP client (e.g. Perplexity
-// Pro) discover tools and read a room's trip from a pasted share link. Writes
-// arrive in a later task; this task covers `get_schema` + `read_board`.
+// Pro) discover tools, read a room's trip from a pasted share link, and write an
+// updated trip back. Tools: `get_schema`, `read_board`, `write_board`.
 //
 // ponytail: hand-rolled JSON-RPC 2.0 dispatch instead of `@modelcontextprotocol/sdk`.
 // The SDK's Streamable-HTTP *server* transport is built on Node's http req/res
@@ -13,9 +13,9 @@
 
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { Env, LiveblocksApi } from './liveblocks'
-import { loadRoomDoc } from './trip'
+import { applyTripToRoom, loadRoomDoc } from './trip'
 import { exportTrip } from '../../src/data/exportTrip'
-import { tripDocumentSchema } from '../../src/data/tripSchema'
+import { formatTripErrors, tripDocumentSchema } from '../../src/data/tripSchema'
 import { roomIdFromLink } from '../../src/data/roomLink'
 
 const PROTOCOL_VERSION = '2025-06-18'
@@ -39,6 +39,23 @@ const LINK_SCHEMA = {
   additionalProperties: false,
 } as const
 
+const WRITE_SCHEMA = {
+  type: 'object',
+  properties: {
+    link: {
+      type: 'string',
+      description: 'The full board share link (contains #room=...), pasted verbatim.',
+    },
+    trip: {
+      type: 'object',
+      description:
+        'The full replacement trip document. Call get_schema first for its exact shape — write_board replaces the entire board.',
+    },
+  },
+  required: ['link', 'trip'],
+  additionalProperties: false,
+} as const
+
 const TOOLS = [
   {
     name: 'get_schema',
@@ -51,6 +68,12 @@ const TOOLS = [
     description:
       "Read a travel board's current trip as JSON. Pass the board's share link (the one containing #room=...).",
     inputSchema: LINK_SCHEMA,
+  },
+  {
+    name: 'write_board',
+    description:
+      "Replace a travel board's trip with an updated document. Pass the board's share link and the full trip JSON (call get_schema first). The previous version is snapshotted, so the change can be reverted.",
+    inputSchema: WRITE_SCHEMA,
   },
 ] as const
 
@@ -92,23 +115,60 @@ function mcpAuthorized(request: Request, env: Env): boolean {
   return bearer === env.MCP_API_KEY
 }
 
-async function readBoard(api: LiveblocksApi, link: string): Promise<ToolResult> {
+/** Resolve a pasted link to an existing room id, or a user-facing error result. */
+async function resolveRoom(
+  api: LiveblocksApi,
+  link: string,
+): Promise<{ roomId: string } | { error: ToolResult }> {
   const roomId = roomIdFromLink(link)
   if (!roomId) {
-    return toolError(
-      'Could not find a room id in that link. Paste the full board link — it contains "#room=...".',
-    )
+    return {
+      error: toolError(
+        'Could not find a room id in that link. Paste the full board link — it contains "#room=...".',
+      ),
+    }
   }
   if (!(await api.roomExists(roomId))) {
-    return toolError(`No board found for room "${roomId}". Check the link is current.`)
+    return { error: toolError(`No board found for room "${roomId}". Check the link is current.`) }
   }
-  const doc = await loadRoomDoc(api, roomId)
+  return { roomId }
+}
+
+async function readBoard(api: LiveblocksApi, link: string): Promise<ToolResult> {
+  const room = await resolveRoom(api, link)
+  if ('error' in room) return room.error
+  const doc = await loadRoomDoc(api, room.roomId)
   return toolText(JSON.stringify(exportTrip(doc), null, 2))
+}
+
+async function writeBoard(
+  env: Env,
+  api: LiveblocksApi,
+  link: string,
+  trip: unknown,
+): Promise<ToolResult> {
+  const room = await resolveRoom(api, link)
+  if ('error' in room) return room.error
+
+  // Validate before touching the room so a bad payload never mutates the doc (nor
+  // records a snapshot); the same schema the UI and REST API use.
+  const parsed = tripDocumentSchema.safeParse(trip)
+  if (!parsed.success) {
+    return toolError(`The trip JSON is invalid:\n${formatTripErrors(parsed.error)}`)
+  }
+
+  const data = await applyTripToRoom(env, api, room.roomId, parsed.data)
+  return toolText(
+    `Board updated: "${data.trip.title || '(untitled)'}" — ${data.cities.length} ` +
+      `cities, ${data.cards.length} cards, ${data.accommodations.length} accommodations. ` +
+      'The previous version was snapshotted and can be restored.',
+  )
 }
 
 async function handleToolCall(
   id: JsonRpcId,
   params: unknown,
+  env: Env,
   api: LiveblocksApi,
 ): Promise<Response> {
   const p = (params ?? {}) as { name?: unknown; arguments?: unknown }
@@ -120,6 +180,10 @@ async function handleToolCall(
   if (p.name === 'read_board') {
     const link = typeof args.link === 'string' ? args.link : ''
     return rpcResult(id, await readBoard(api, link))
+  }
+  if (p.name === 'write_board') {
+    const link = typeof args.link === 'string' ? args.link : ''
+    return rpcResult(id, await writeBoard(env, api, link, args.trip))
   }
   return rpcError(id, -32602, `Unknown tool: ${String(p.name)}`)
 }
@@ -166,7 +230,7 @@ export async function handleMcp(
     case 'tools/list':
       return rpcResult(id, { tools: TOOLS })
     case 'tools/call':
-      return await handleToolCall(id, body.params, api)
+      return await handleToolCall(id, body.params, env, api)
     default:
       return rpcError(id, -32601, `Method not found: ${method}`)
   }
