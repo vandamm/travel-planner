@@ -138,7 +138,18 @@ async function readBoard(api: LiveblocksApi, link: string): Promise<ToolResult> 
   const room = await resolveRoom(api, link)
   if ('error' in room) return room.error
   const doc = await loadRoomDoc(api, room.roomId)
-  return toolText(JSON.stringify(exportTrip(doc), null, 2))
+  // `exportTrip` re-validates and throws on an inconsistent doc (e.g. a dangling
+  // cityId a concurrent remove-city + add-referencing-it merge can leave) — the
+  // same class of state `applyTripToRoom` and the client panel already handle.
+  // Surface it as a tool error, not an uncaught throw that becomes a bare 502.
+  try {
+    return toolText(JSON.stringify(exportTrip(doc), null, 2))
+  } catch {
+    return toolError(
+      'The board could not be read as a valid trip — it is in an inconsistent state. ' +
+        'Use write_board to replace it with a valid trip document.',
+    )
+  }
 }
 
 async function writeBoard(
@@ -157,11 +168,12 @@ async function writeBoard(
     return toolError(`The trip JSON is invalid:\n${formatTripErrors(parsed.error)}`)
   }
 
-  const data = await applyTripToRoom(env, api, room.roomId, parsed.data)
-  return toolText(
+  const { data, snapshotted } = await applyTripToRoom(env, api, room.roomId, parsed.data)
+  const summary =
     `Board updated: "${data.trip.title || '(untitled)'}" — ${data.cities.length} ` +
-      `cities, ${data.cards.length} cards, ${data.accommodations.length} accommodations. ` +
-      'The previous version was snapshotted and can be restored.',
+    `cities, ${data.cards.length} cards, ${data.accommodations.length} accommodations.`
+  return toolText(
+    snapshotted ? `${summary} The previous version was snapshotted and can be restored.` : summary,
   )
 }
 

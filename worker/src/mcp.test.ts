@@ -228,6 +228,19 @@ describe('handleMcp — read_board', () => {
     expect(tool.isError).toBe(true)
     expect(tool.content[0].text).toMatch(/no board found/i)
   })
+
+  it('returns an isError result (not an uncaught 502) when the doc is inconsistent', async () => {
+    // A post-merge dangling reference makes `exportTrip` throw; read_board must
+    // surface that as a tool error, not let it escape as a bare Worker 502.
+    const seed = seededDoc()
+    seed.getMap('dayOverrides').set('2027-01-01', 'ghost-city')
+    const res = await callRead('https://app/#room=room1', makeApi(seed))
+    const body = (await res.json()) as RpcResponse
+    const tool = body.result as ToolResult
+    expect(body.error).toBeUndefined()
+    expect(tool.isError).toBe(true)
+    expect(tool.content[0].text).toMatch(/inconsistent state/i)
+  })
 })
 
 const validTrip = {
@@ -286,6 +299,17 @@ describe('handleMcp — write_board', () => {
     // The captured snapshot is the state *before* the write (the seed), not the new trip.
     const snap = JSON.parse(snapshots[0]) as { trip: { title: string } }
     expect(snap.trip.title).toBe('Seed Trip')
+  })
+
+  it('does not promise a restorable version when no snapshot was recorded', async () => {
+    // KV unbound → applyTripToRoom takes no snapshot; the success text must not
+    // claim the previous version was snapshotted (there is nothing to restore).
+    const api = makeApi(seededDoc())
+    const res = await callWrite('https://app/#room=room1', validTrip, api, { ...env, SNAPSHOTS: undefined })
+    const tool = await toolOf(res)
+    expect(tool.isError).toBeFalsy()
+    expect(tool.content[0].text).toMatch(/updated/i)
+    expect(tool.content[0].text).not.toMatch(/snapshot|restore/i)
   })
 
   it('rejects an invalid trip with isError, mutating nothing and recording no snapshot', async () => {

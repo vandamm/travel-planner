@@ -27,14 +27,26 @@ describe('snapshot store', () => {
 
   it('lists a room’s snapshots newest first with ids and timestamps', async () => {
     const kv = makeKv()
-    await recordSnapshot(kv, 'room1', 'v1', 1000)
+    const v1 = await recordSnapshot(kv, 'room1', 'v1', 1000)
     await recordSnapshot(kv, 'room1', 'v2', 2000)
     await recordSnapshot(kv, 'room1', 'v3', 3000)
 
     const list = await listSnapshots(kv, 'room1')
     expect(list.map((s) => s.timestamp)).toEqual([3000, 2000, 1000])
-    expect(list.map((s) => s.id)).toEqual(['3000', '2000', '1000'])
-    expect(await getSnapshot(kv, 'room1', list[2].id)).toBe('v1')
+    // Each id carries its ms timestamp as a prefix (plus a uniqueness suffix).
+    expect(list.every((s) => s.id.startsWith(`${s.timestamp}-`))).toBe(true)
+    expect(await getSnapshot(kv, 'room1', v1.id)).toBe('v1')
+  })
+
+  it('keeps both snapshots when two writes land in the same millisecond', async () => {
+    const kv = makeKv()
+    const a = await recordSnapshot(kv, 'room1', 'first', 1000)
+    const b = await recordSnapshot(kv, 'room1', 'second', 1000)
+    // Distinct keys → neither overwrites the other; both rollback points survive.
+    expect(a.id).not.toBe(b.id)
+    expect(await getSnapshot(kv, 'room1', a.id)).toBe('first')
+    expect(await getSnapshot(kv, 'room1', b.id)).toBe('second')
+    expect((await listSnapshots(kv, 'room1')).length).toBe(2)
   })
 
   it('returns null for an unknown snapshot id', async () => {
@@ -45,11 +57,11 @@ describe('snapshot store', () => {
 
   it('isolates rooms — one room’s list never bleeds into another', async () => {
     const kv = makeKv()
-    await recordSnapshot(kv, 'room1', 'a', 1000)
+    const a = await recordSnapshot(kv, 'room1', 'a', 1000)
     await recordSnapshot(kv, 'room2', 'b', 1000)
     expect((await listSnapshots(kv, 'room1')).length).toBe(1)
     expect((await listSnapshots(kv, 'room2')).length).toBe(1)
-    expect(await getSnapshot(kv, 'room1', '1000')).toBe('a')
+    expect(await getSnapshot(kv, 'room1', a.id)).toBe('a')
   })
 
   it('does not confuse a room with another whose id is a prefix (a vs a:b)', async () => {
@@ -57,8 +69,8 @@ describe('snapshot store', () => {
     await recordSnapshot(kv, 'a', 'plain', 1000)
     await recordSnapshot(kv, 'a:b', 'nested', 2000)
     // Encoding the room in the key keeps "a" from matching "a:b"'s snapshots.
-    expect(await listSnapshots(kv, 'a')).toEqual([{ id: '1000', timestamp: 1000 }])
-    expect(await listSnapshots(kv, 'a:b')).toEqual([{ id: '2000', timestamp: 2000 }])
+    expect((await listSnapshots(kv, 'a')).map((s) => s.timestamp)).toEqual([1000])
+    expect((await listSnapshots(kv, 'a:b')).map((s) => s.timestamp)).toEqual([2000])
   })
 
   it('pages through the cursor so the newest snapshots past the 1000-key cap survive', async () => {

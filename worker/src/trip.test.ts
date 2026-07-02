@@ -286,9 +286,9 @@ describe('version history (link-gated)', () => {
 
   it('returns a single snapshot’s trip JSON verbatim', async () => {
     const kv = makeKv()
-    await recordSnapshot(kv, 'room1', '{"trip":{"title":"Snapshotted"}}', 1000)
+    const { id } = await recordSnapshot(kv, 'room1', '{"trip":{"title":"Snapshotted"}}', 1000)
 
-    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1', '1000')
+    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1', id)
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('application/json')
     expect((await res.json()) as { trip: { title: string } }).toEqual({ trip: { title: 'Snapshotted' } })

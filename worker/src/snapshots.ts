@@ -31,22 +31,22 @@ function base(room: string): string {
   return `${PREFIX}${encodeURIComponent(room)}:`
 }
 
-// ponytail: 13-digit ms timestamps sort lexicographically until year 2286 and
-// are unique unless two writes land in the same millisecond — impossible at
-// human pace for a personal planner. Upgrade path if that ever matters: append
-// a counter/random suffix and split it back off in `listSnapshots`.
 function keyFor(room: string, id: string): string {
   return base(room) + id
 }
 
-/** Record the room's current trip JSON as a new keep-all snapshot; returns its meta. */
+// The id is `<ms>-<uuid>`: the ms timestamp keeps the keys sorting chronologically,
+// and the random suffix guarantees uniqueness so two writes in the same millisecond
+// land on distinct keys instead of one overwriting the other (which would drop a
+// keep-all rollback point). `listSnapshots` parses the ms back off the prefix; older
+// suffix-less ids still parse (`split('-')[0]`) and still fetch (id is the full key).
 export async function recordSnapshot(
   kv: SnapshotKv,
   room: string,
   json: string,
   now: number = Date.now(),
 ): Promise<SnapshotMeta> {
-  const id = String(now)
+  const id = `${now}-${crypto.randomUUID()}`
   await kv.put(keyFor(room, id), json)
   return { id, timestamp: now }
 }
@@ -67,7 +67,7 @@ export async function listSnapshots(kv: SnapshotKv, room: string): Promise<Snaps
   return names
     .map((name) => {
       const id = name.slice(prefix.length)
-      return { id, timestamp: Number(id) }
+      return { id, timestamp: Number(id.split('-')[0]) }
     })
     .sort((a, b) => b.timestamp - a.timestamp)
 }

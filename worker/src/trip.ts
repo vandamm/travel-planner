@@ -63,14 +63,17 @@ export async function applyTripToRoom(
   api: LiveblocksApi,
   roomId: string,
   trip: TripDocument,
-): Promise<TripDocument> {
+): Promise<{ data: TripDocument; snapshotted: boolean }> {
   const doc = await loadRoomDoc(api, roomId)
   // Record history before mutating — best-effort. Skipped if KV isn't bound, or
   // if the current state can't be serialized: `exportTrip` re-validates and
   // throws on an inconsistent doc (e.g. a dangling cityId a concurrent
   // remove-city + add-referencing-it merge can leave). A board that drifted into
   // that state must stay writable — otherwise `write_board`, the very tool used
-  // to repair it, would 502 (and only in prod, where KV is bound).
+  // to repair it, would 502 (and only in prod, where KV is bound). We report
+  // whether a snapshot was actually taken so callers don't promise a rollback
+  // point that doesn't exist.
+  let snapshotted = false
   if (env.SNAPSHOTS) {
     let snapshot: string | null = null
     try {
@@ -78,13 +81,16 @@ export async function applyTripToRoom(
     } catch {
       snapshot = null
     }
-    if (snapshot !== null) await recordSnapshot(env.SNAPSHOTS, roomId, snapshot)
+    if (snapshot !== null) {
+      await recordSnapshot(env.SNAPSHOTS, roomId, snapshot)
+      snapshotted = true
+    }
   }
   const before = Y.encodeStateVector(doc)
   const data = applyTrip(doc, trip)
   const update = Y.encodeStateAsUpdate(doc, before)
   await api.sendYUpdate(roomId, update)
-  return data
+  return { data, snapshotted }
 }
 
 /**
@@ -165,6 +171,6 @@ export async function handlePostTrip(
   const parsed = tripDocumentSchema.safeParse(input)
   if (!parsed.success) return json({ error: formatTripErrors(parsed.error) }, 400)
 
-  const data = await applyTripToRoom(env, api, roomId, parsed.data)
+  const { data } = await applyTripToRoom(env, api, roomId, parsed.data)
   return json(data, 200)
 }
