@@ -257,6 +257,21 @@ describe('handlePostTrip', () => {
     // The unserializable snapshot was skipped, not thrown.
     expect(kv.store.size).toBe(0)
   })
+
+  it('still writes when the KV snapshot put fails (transient outage)', async () => {
+    // Snapshotting is best-effort: a KV write error must not take down the write
+    // path — otherwise write_board, the tool used to repair a board, would 502.
+    const kv = makeKv()
+    kv.put = async () => {
+      throw new Error('KV unavailable')
+    }
+    const api = makeApi(seededDoc()) as LiveblocksApi & { sentCount(): number }
+
+    const res = await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+
+    expect(res.status).toBe(200)
+    expect(api.sentCount()).toBe(1)
+  })
 })
 
 describe('version history (link-gated)', () => {

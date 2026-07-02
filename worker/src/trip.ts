@@ -65,25 +65,22 @@ export async function applyTripToRoom(
   trip: TripDocument,
 ): Promise<{ data: TripDocument; snapshotted: boolean }> {
   const doc = await loadRoomDoc(api, roomId)
-  // Record history before mutating — best-effort. Skipped if KV isn't bound, or
-  // if the current state can't be serialized: `exportTrip` re-validates and
-  // throws on an inconsistent doc (e.g. a dangling cityId a concurrent
-  // remove-city + add-referencing-it merge can leave). A board that drifted into
-  // that state must stay writable — otherwise `write_board`, the very tool used
-  // to repair it, would 502 (and only in prod, where KV is bound). We report
-  // whether a snapshot was actually taken so callers don't promise a rollback
-  // point that doesn't exist.
+  // Record history before mutating — best-effort. Skipped if KV isn't bound, if
+  // the current state can't be serialized (`exportTrip` re-validates and throws
+  // on an inconsistent doc — e.g. a dangling cityId a concurrent remove-city +
+  // add-referencing-it merge can leave), or if the KV write itself errors
+  // (transient outage/rate-limit). A board that drifted into any of those states
+  // must stay writable — otherwise `write_board`, the very tool used to repair
+  // it, would 502 (and only in prod, where KV is bound). We report whether a
+  // snapshot was actually taken so callers don't promise a rollback point that
+  // doesn't exist.
   let snapshotted = false
   if (env.SNAPSHOTS) {
-    let snapshot: string | null = null
     try {
-      snapshot = JSON.stringify(exportTrip(doc))
-    } catch {
-      snapshot = null
-    }
-    if (snapshot !== null) {
-      await recordSnapshot(env.SNAPSHOTS, roomId, snapshot)
+      await recordSnapshot(env.SNAPSHOTS, roomId, JSON.stringify(exportTrip(doc)))
       snapshotted = true
+    } catch {
+      snapshotted = false
     }
   }
   const before = Y.encodeStateVector(doc)
