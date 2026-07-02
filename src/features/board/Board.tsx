@@ -26,6 +26,7 @@ import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
 import { MobileDayView } from './MobileDayView'
 import { useTimeDirection } from './useTimeDirection'
+import { useUndoManager } from './undoManager'
 import { useColumnsThatFit, useViewport } from './useViewport'
 
 /** Which card the editor is open on: a new card on a day, or an existing card. */
@@ -47,6 +48,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   const { doc } = useRoom()
   useDocVersion(doc)
   const { direction, toggle } = useTimeDirection()
+  const { undo, redo, canUndo, canRedo } = useUndoManager(doc)
   const viewport = useViewport()
   const columns = useColumnsThatFit()
   const [editor, setEditor] = useState<EditorState | null>(null)
@@ -159,6 +161,27 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
               </div>
             </>
           )}
+          {/* Live undo/redo for hand edits (Cmd/Ctrl+Z / Shift+Cmd/Ctrl+Z), also
+              tappable on mobile. Disabled when the stack is empty; agent writes /
+              restores run under APPLY_TRIP_ORIGIN and stay off this stack. */}
+          <button
+            type="button"
+            aria-label="Undo"
+            disabled={!canUndo}
+            onClick={undo}
+            className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span aria-hidden>↶</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Redo"
+            disabled={!canRedo}
+            onClick={redo}
+            className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span aria-hidden>↷</span>
+          </button>
           {/* Desktop's "Add stay" lives at the right end of the stays lane; mobile
               reaches it through the header ≡ menu (lifted to AppShell via nonce). */}
           <button
