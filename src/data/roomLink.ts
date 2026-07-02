@@ -27,11 +27,16 @@ export function roomIdFromHash(hash: string): string | null {
 export function roomIdFromLink(link: string): string | null {
   const trimmed = link.trim()
   if (!trimmed) return null
-  try {
-    // A full URL: the room id is only ever in the fragment.
-    return roomIdFromHash(new URL(trimmed).hash)
-  } catch {
-    // Not a URL — treat the raw string as a hash or bare room id.
-    return roomIdFromHash(trimmed)
+  // A full URL carries the room id only in its fragment; detect one by its
+  // scheme+authority ('://'). Anything else is a bare hash or room id — which may
+  // itself contain ':' (e.g. "a:b"), so it must NOT go through the URL parser
+  // (`new URL('a:b')` reads 'a:' as a scheme and yields an empty fragment).
+  if (trimmed.includes('://')) {
+    try {
+      return roomIdFromHash(new URL(trimmed).hash)
+    } catch {
+      return null
+    }
   }
+  return roomIdFromHash(trimmed)
 }

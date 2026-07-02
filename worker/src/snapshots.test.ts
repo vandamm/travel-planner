@@ -13,6 +13,7 @@ function makeKv(): SnapshotKv & { store: Map<string, string> } {
     },
     list: async ({ prefix }) => ({
       keys: [...store.keys()].filter((n) => n.startsWith(prefix)).map((name) => ({ name })),
+      list_complete: true,
     }),
   }
 }
@@ -58,5 +59,24 @@ describe('snapshot store', () => {
     // Encoding the room in the key keeps "a" from matching "a:b"'s snapshots.
     expect(await listSnapshots(kv, 'a')).toEqual([{ id: '1000', timestamp: 1000 }])
     expect(await listSnapshots(kv, 'a:b')).toEqual([{ id: '2000', timestamp: 2000 }])
+  })
+
+  it('pages through the cursor so the newest snapshots past the 1000-key cap survive', async () => {
+    // Fake a KV that hands back one key per page (list_complete only on the last)
+    // — the newest id (3000) is on the final page and must still surface first.
+    const pages = [
+      { keys: [{ name: 'snap:room1:1000' }], list_complete: false, cursor: 'c1' },
+      { keys: [{ name: 'snap:room1:2000' }], list_complete: false, cursor: 'c2' },
+      { keys: [{ name: 'snap:room1:3000' }], list_complete: true },
+    ]
+    let calls = 0
+    const kv: SnapshotKv = {
+      get: async () => null,
+      put: async () => {},
+      list: async () => pages[calls++],
+    }
+    const list = await listSnapshots(kv, 'room1')
+    expect(calls).toBe(3)
+    expect(list.map((s) => s.timestamp)).toEqual([3000, 2000, 1000])
   })
 })

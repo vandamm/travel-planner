@@ -59,8 +59,9 @@ Two independent pieces deployed on Cloudflare:
    **Cloudflare Pages**. Local-first: it renders and edits on IndexedDB alone, so
    it is fully usable offline with no backend.
 2. **The Worker** (`worker/`) — mints Liveblocks tokens, gates room creation, and
-   exposes the agent HTTP API. It holds the only copies of `LIVEBLOCKS_SECRET_KEY`
-   and `OWNER_SECRET`; neither ever reaches the browser.
+   exposes the agent HTTP + MCP API. It holds the only copies of
+   `LIVEBLOCKS_SECRET_KEY`, `OWNER_SECRET`, and `MCP_API_KEY`; none ever reaches
+   the browser.
 
 ```
 Browser (Pages)  ──auth / rooms / trip──▶  Worker  ──REST + secret key──▶  Liveblocks

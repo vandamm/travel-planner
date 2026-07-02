@@ -38,6 +38,11 @@ describe('roomIdFromLink', () => {
     expect(roomIdFromLink('italy-2027')).toBe('italy-2027')
   })
 
+  it('accepts a bare room id containing a colon (not parsed as a URL scheme)', () => {
+    expect(roomIdFromLink('a:b')).toBe('a:b')
+    expect(roomIdFromLink('https://app.example.com/#room=a:b')).toBe('a:b')
+  })
+
   it('returns null for empty / whitespace input', () => {
     expect(roomIdFromLink('')).toBeNull()
     expect(roomIdFromLink('   ')).toBeNull()

@@ -4,8 +4,10 @@ The app ships as two independent pieces on Cloudflare:
 
 1. **The SPA** — a static Vite build (`dist/`) served by **Cloudflare Pages**.
 2. **The Worker** (`worker/`) — mints Liveblocks tokens, gates room creation,
-   and exposes the agent HTTP API. It holds the only copies of the
-   `LIVEBLOCKS_SECRET_KEY` and `OWNER_SECRET`; neither ever reaches the browser.
+   and exposes the agent HTTP + MCP API. It holds the only copies of the
+   `LIVEBLOCKS_SECRET_KEY`, `OWNER_SECRET`, and `MCP_API_KEY`; none ever reaches
+   the browser. It also owns a **KV namespace** (`SNAPSHOTS`) of trip-version
+   history.
 
 The browser only ever talks to the Worker (for auth, room creation, and the
 agent API). Liveblocks talks to the Worker too, via the secret key. The room id
@@ -25,6 +27,8 @@ Browser (Pages)  ──auth/rooms──▶  Worker  ──REST + secret key─�
   Dashboard → project → API keys.
 - An **owner secret** of your choosing — any long random string. It gates
   new-room creation (`POST /api/rooms`) and the agent API (`/api/trip/:room`).
+- An **MCP API key** of your choosing — any long random string. It gates the MCP
+  endpoint (`POST /mcp`), presented by the MCP client as `Authorization: Bearer …`.
 - `wrangler` is installed as a dev dependency, so all commands below run through
   `npm run …` / `npx wrangler …` without a global install.
 
@@ -41,9 +45,28 @@ the **production** environment:
 ```sh
 npx wrangler secret put LIVEBLOCKS_SECRET_KEY --config worker/wrangler.toml --env production
 npx wrangler secret put OWNER_SECRET          --config worker/wrangler.toml --env production
+npx wrangler secret put MCP_API_KEY           --config worker/wrangler.toml --env production
 ```
 
-(For the default/test Worker omit `--env production`.)
+(For the default/test Worker omit `--env production`.) `MCP_API_KEY` gates
+`POST /mcp`; leave it unset and every MCP request is rejected with 401.
+
+### Create the snapshot KV namespace
+
+Trip-version history (the "Recent versions" restore list, and snapshot-before-write
+for every AI/owner write) is backed by a KV namespace bound as `SNAPSHOTS`.
+`worker/wrangler.toml` ships with placeholder ids — create the real namespaces and
+paste the printed ids in, or `wrangler deploy` fails on the bad binding:
+
+```sh
+npx wrangler kv namespace create SNAPSHOTS --config worker/wrangler.toml
+npx wrangler kv namespace create SNAPSHOTS --config worker/wrangler.toml --env production
+```
+
+Paste each printed id into the matching `[[kv_namespaces]]` / `[[env.production.kv_namespaces]]`
+block in `worker/wrangler.toml`. (If the binding is absent the handlers still work —
+writes just skip history and `GET /api/versions/:room` returns an empty list — but the
+placeholder id must be replaced or removed, since a non-existent id errors the deploy.)
 
 ### Pin the CORS origin
 

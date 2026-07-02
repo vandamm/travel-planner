@@ -49,6 +49,7 @@ function makeKv(): SnapshotKv & { store: Map<string, string> } {
     },
     list: async ({ prefix }) => ({
       keys: [...store.keys()].filter((n) => n.startsWith(prefix)).map((name) => ({ name })),
+      list_complete: true,
     }),
   }
 }
@@ -77,9 +78,11 @@ type RpcResponse = { result?: unknown; error?: { code: number; message: string }
 type ToolResult = { content: Array<{ type: string; text: string }>; isError?: boolean }
 
 describe('handleMcp — handshake', () => {
-  it('responds to initialize with capabilities + serverInfo, echoing the protocol version', async () => {
+  it('responds to initialize with capabilities + serverInfo and the version it supports', async () => {
+    // Client asks for a version the server does not implement; the server must
+    // still answer with its own supported version, not echo the request back.
     const res = await handleMcp(
-      mcpRequest({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } }),
+      mcpRequest({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '1999-01-01' } }),
       env,
       makeApi(),
     )
@@ -93,6 +96,36 @@ describe('handleMcp — handshake', () => {
     expect(result.protocolVersion).toBe('2025-06-18')
     expect(result.capabilities.tools).toBeDefined()
     expect(result.serverInfo.name).toBe('travel-planner')
+  })
+
+  it('acks ping with an empty result', async () => {
+    const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 7, method: 'ping' }), env, makeApi())
+    expect(res.status).toBe(200)
+    expect(((await res.json()) as RpcResponse).result).toEqual({})
+  })
+
+  it('returns a parse error (-32700) for a non-JSON body', async () => {
+    const req = new Request('https://worker.test/mcp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer mcp-key' },
+      body: 'not json',
+    })
+    const res = await handleMcp(req, env, makeApi())
+    expect(((await res.json()) as RpcResponse).error?.code).toBe(-32700)
+  })
+
+  it('returns an invalid-request error (-32600) when method is missing', async () => {
+    const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 8 }), env, makeApi())
+    expect(((await res.json()) as RpcResponse).error?.code).toBe(-32600)
+  })
+
+  it('returns an invalid-params error (-32602) for an unknown tool', async () => {
+    const res = await handleMcp(
+      mcpRequest({ jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'bogus', arguments: {} } }),
+      env,
+      makeApi(),
+    )
+    expect(((await res.json()) as RpcResponse).error?.code).toBe(-32602)
   })
 
   it('acks notifications/initialized with 202 and no body', async () => {

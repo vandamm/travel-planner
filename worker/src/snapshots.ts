@@ -12,7 +12,10 @@
 export interface SnapshotKv {
   get(key: string): Promise<string | null>
   put(key: string, value: string): Promise<void>
-  list(options: { prefix: string }): Promise<{ keys: Array<{ name: string }> }>
+  list(options: {
+    prefix: string
+    cursor?: string
+  }): Promise<{ keys: Array<{ name: string }>; list_complete: boolean; cursor?: string }>
 }
 
 export interface SnapshotMeta {
@@ -51,10 +54,19 @@ export async function recordSnapshot(
 /** List a room's snapshots, newest first. */
 export async function listSnapshots(kv: SnapshotKv, room: string): Promise<SnapshotMeta[]> {
   const prefix = base(room)
-  const { keys } = await kv.list({ prefix })
-  return keys
-    .map((k) => {
-      const id = k.name.slice(prefix.length)
+  // KV list() returns at most 1000 keys per call. Keep-all history can exceed
+  // that, and keys sort oldest-first, so a single call would drop the *newest*
+  // snapshots entirely — page through the cursor until the listing is complete.
+  const names: string[] = []
+  let cursor: string | undefined
+  do {
+    const page = await kv.list({ prefix, cursor })
+    for (const k of page.keys) names.push(k.name)
+    cursor = page.list_complete ? undefined : page.cursor
+  } while (cursor)
+  return names
+    .map((name) => {
+      const id = name.slice(prefix.length)
       return { id, timestamp: Number(id) }
     })
     .sort((a, b) => b.timestamp - a.timestamp)

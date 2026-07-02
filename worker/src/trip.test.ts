@@ -25,6 +25,7 @@ function makeKv(): SnapshotKv & { store: Map<string, string> } {
     },
     list: async ({ prefix }) => ({
       keys: [...store.keys()].filter((n) => n.startsWith(prefix)).map((name) => ({ name })),
+      list_complete: true,
     }),
   }
 }

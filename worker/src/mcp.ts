@@ -217,14 +217,14 @@ export async function handleMcp(
   if (method.startsWith('notifications/')) return new Response(null, { status: 202 })
 
   switch (method) {
-    case 'initialize': {
-      const requested = (body.params as { protocolVersion?: unknown } | undefined)?.protocolVersion
+    case 'initialize':
+      // Per the MCP spec the server states a protocol version *it* supports, not
+      // whatever the client requested — we implement exactly one.
       return rpcResult(id, {
-        protocolVersion: typeof requested === 'string' ? requested : PROTOCOL_VERSION,
+        protocolVersion: PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
       })
-    }
     case 'ping':
       return rpcResult(id, {})
     case 'tools/list':
