@@ -12,7 +12,7 @@ async function setUpTrip(page: import('@playwright/test').Page) {
 test('mobile shows one day at a time and pages with prev/next, clamping at the ends', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setUpTrip(page)
 
   const columns = page.locator('[data-testid="day-column"]')
@@ -42,7 +42,7 @@ test('mobile shows one day at a time and pages with prev/next, clamping at the e
 })
 
 test('mobile swipes between days', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setUpTrip(page)
 
   const columns = page.locator('[data-testid="day-column"]')

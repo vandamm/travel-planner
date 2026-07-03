@@ -7,7 +7,7 @@ import { pickTime, setupTrip } from './helpers'
 // writes/clears the stored HH:mm.)
 
 test('setting a card start + end through the wheel shows the time range', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
@@ -23,7 +23,7 @@ test('setting a card start + end through the wheel shows the time range', async 
 })
 
 test('clearing a card start time in the wheel untimes the card', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
@@ -46,7 +46,7 @@ test('clearing a card start time in the wheel untimes the card', async ({ page }
 })
 
 test('setting the trip day window through the wheel updates the field', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   await page.getByRole('button', { name: 'Trip' }).click()

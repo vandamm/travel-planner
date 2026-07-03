@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { setupTrip } from './helpers'
 
 test('a card set to whole-day grows taller than a default card', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
 
   await setupTrip(page, { title: 'Heights', startDate: '2027-05-01', numDays: 1 })
 

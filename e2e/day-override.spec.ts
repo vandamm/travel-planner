@@ -28,7 +28,7 @@ async function seed(page: Page) {
 }
 
 test('per-day city override recolors the header and Auto reverts it', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 2 })
   await seed(page)
 

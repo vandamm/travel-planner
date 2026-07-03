@@ -30,7 +30,7 @@ async function setUpTrip(page: Page) {
 }
 
 test('toggling time direction reverses card order and persists across reload', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setUpTrip(page)
   await seedCards(page, '2027-05-01', [
     { title: 'Breakfast', startTime: '08:00' },

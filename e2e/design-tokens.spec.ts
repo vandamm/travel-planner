@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 // Task 1 tokens: screen title uses Lora (serif), body text uses Manrope (sans).
 test('title renders in Lora, body in Manrope', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
 
   const title = page.getByRole('heading', { name: 'Travel Planner' })
   await expect(title).toBeVisible()

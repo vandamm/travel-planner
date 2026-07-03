@@ -1,9 +1,19 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 
-describe('App', () => {
+// The app only mounts when a board id is present in the URL hash; give the
+// board-focused tests one, and reset the hash after each test.
+afterEach(() => {
+  window.location.hash = ''
+})
+
+describe('App (with a board id in the hash)', () => {
+  beforeEach(() => {
+    window.location.hash = '#room=test-room'
+  })
+
   it('renders the wordmark heading (falls back to Travel Planner when untitled)', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Travel Planner' })).toBeInTheDocument()
@@ -53,5 +63,17 @@ describe('App', () => {
     // Escape flips AppShell's open flag back off, unmounting the modal.
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
+  })
+})
+
+describe('App without a board id', () => {
+  it('shows a notice and renders no board or editing controls', () => {
+    window.location.hash = ''
+    render(<App />)
+    // A quiet notice, not the editable board.
+    expect(screen.getByText(/share link/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Trip' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('app-meta')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument()
   })
 })

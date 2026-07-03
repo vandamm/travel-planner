@@ -8,7 +8,7 @@ test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true
 test('pager dots match the day count, mark the current day, and navigate on tap', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
 
   const dots = page.getByTestId('mobile-day-dot')

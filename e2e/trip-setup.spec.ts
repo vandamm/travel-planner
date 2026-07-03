@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { addCity, setupTrip } from './helpers'
 
 test('set up a trip and add a city', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 10 })
 

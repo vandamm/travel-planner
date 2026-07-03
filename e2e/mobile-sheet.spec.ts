@@ -8,7 +8,7 @@ import { setupTrip } from './helpers'
 const MOBILE = { width: 375, height: 667 }
 
 async function openCardEditor(page: import('@playwright/test').Page) {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
   const firstColumn = page.locator('[data-testid="day-column"]').first()
   await firstColumn.getByRole('button', { name: /Add card/ }).click()

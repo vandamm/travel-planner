@@ -9,7 +9,7 @@ test.describe('mobile: ≡ menu', () => {
   test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true })
 
   test('collapses Trip/Cities/Add-stay into the ≡ menu', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/#room=e2e')
 
     // Inline buttons are lg:-only → not in the mobile a11y tree; ≡ is present.
     await expect(page.getByRole('button', { name: 'Trip' })).toHaveCount(0)
@@ -44,7 +44,7 @@ test.describe('desktop: inline header buttons', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
   test('keeps inline Trip/Cities and has no ≡', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/#room=e2e')
     await expect(page.getByRole('button', { name: 'Trip' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Cities' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(0)

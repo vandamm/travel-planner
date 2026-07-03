@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './components/Modal'
 import { RoomProvider, useRoom } from './data/RoomProvider'
+import { roomIdFromHash } from './data/provider'
 import { getTrip, listCities } from './data/doc'
 import { useDocVersion } from './data/useDoc'
 import { Board } from './features/board/Board'
@@ -145,9 +146,33 @@ function AppShell() {
   )
 }
 
-export default function App() {
+/** Shown when the app is opened without a board id in the URL hash. Rooms are
+ *  created out-of-band (owner API), so a bare visit has nothing to show or edit
+ *  — render a quiet notice and never mount the doc/board. */
+function NoRoom() {
   return (
-    <RoomProvider>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface px-6 text-center text-ink">
+      <div
+        aria-hidden
+        className="flex h-12 w-12 items-center justify-center rounded-[2px] bg-city-vermilion font-serif text-2xl font-semibold italic leading-none text-white"
+      >
+        I
+      </div>
+      <h1 className="font-serif text-2xl font-semibold text-ink">Travel Planner</h1>
+      <p className="max-w-sm font-sans text-sm text-ink-500">Open a trip using its share link.</p>
+    </main>
+  )
+}
+
+export default function App() {
+  // The board only exists for a specific room. Opened without a board id in the
+  // URL hash there is nothing to do, so render a notice and never mount
+  // RoomProvider (no doc, no connection, no dev bridge). Read once at mount —
+  // like RoomProvider itself; a fresh link is always opened as a navigation.
+  const roomId = roomIdFromHash(typeof location !== 'undefined' ? location.hash : '')
+  if (!roomId) return <NoRoom />
+  return (
+    <RoomProvider roomId={roomId}>
       <AppShell />
     </RoomProvider>
   )

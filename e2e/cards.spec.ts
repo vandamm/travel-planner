@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { pickTime, setupTrip } from './helpers'
 
 test('create, edit, and delete an activity card on the board', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
 
   // A trip with days, so the board renders columns to drop cards into.
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })

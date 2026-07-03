@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { pickTime, setupTrip } from './helpers'
 
 test('undo removes a hand-added card; redo restores it', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()

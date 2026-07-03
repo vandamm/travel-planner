@@ -23,7 +23,7 @@ async function seedStays(
 }
 
 test('add an accommodation and see day headers recolor', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
 
   // A trip with days plus a city to assign the stay to.
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 4 })
@@ -64,7 +64,7 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
 })
 
 test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   // With no stays the whole trip is one gap: the right-end button is present and
@@ -91,7 +91,7 @@ test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => 
 })
 
 test('Add-stay popup preselects the first uncovered night and saves a range', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   // Cover the first two nights; the right-end "Add stay" should preselect the
@@ -114,7 +114,7 @@ test('Add-stay popup preselects the first uncovered night and saves a range', as
 })
 
 test('two stays sharing a changeover day render on one row meeting mid-day', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/#room=e2e')
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   // A checks out 05-03; B checks in 05-03 — a pure changeover, only that day shared.
