@@ -13,10 +13,11 @@
 
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { Env, LiveblocksApi } from './liveblocks'
+import { verifyToken } from './token'
 import { applyTripToRoom, loadRoomDoc } from './trip'
 import { exportTrip } from '../../src/data/exportTrip'
 import { formatTripErrors, tripDocumentSchema } from '../../src/data/tripSchema'
-import { roomIdFromLink } from '../../src/data/roomLink'
+import { permAtLeast, tokenFromLink, type Perm } from '../../src/data/token'
 
 const PROTOCOL_VERSION = '2025-06-18'
 const SERVER_INFO = { name: 'travel-planner', version: '1.0.0' }
@@ -32,7 +33,8 @@ const LINK_SCHEMA = {
   properties: {
     link: {
       type: 'string',
-      description: 'The full board share link (contains #room=...), pasted verbatim.',
+      description:
+        'The full board share link (its # fragment is the access token that also authorizes this call), pasted verbatim.',
     },
   },
   required: ['link'],
@@ -44,7 +46,8 @@ const WRITE_SCHEMA = {
   properties: {
     link: {
       type: 'string',
-      description: 'The full board share link (contains #room=...), pasted verbatim.',
+      description:
+        'The full board share link (its # fragment is the access token that also authorizes this call), pasted verbatim.',
     },
     trip: {
       type: 'object',
@@ -66,13 +69,13 @@ const TOOLS = [
   {
     name: 'read_board',
     description:
-      "Read a travel board's current trip as JSON. Pass the board's share link (the one containing #room=...).",
+      "Read a travel board's current trip as JSON. Pass the board's share link — a view, edit, or owner link all work.",
     inputSchema: LINK_SCHEMA,
   },
   {
     name: 'write_board',
     description:
-      "Replace a travel board's trip with an updated document. Pass the board's share link and the full trip JSON (call get_schema first). The previous version is snapshotted, so the change can be reverted.",
+      "Replace a travel board's trip with an updated document. Pass an edit or owner share link (a view link can't write) and the full trip JSON (call get_schema first). The previous version is snapshotted, so the change can be reverted.",
     inputSchema: WRITE_SCHEMA,
   },
 ] as const
@@ -108,34 +111,42 @@ function toolError(text: string): ToolResult {
   return { content: [{ type: 'text', text }], isError: true }
 }
 
-/** The MCP endpoint is gated by `MCP_API_KEY`, presented as a bearer token. */
-function mcpAuthorized(request: Request, env: Env): boolean {
-  if (!env.MCP_API_KEY) return false
-  const bearer = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
-  return bearer === env.MCP_API_KEY
-}
-
-/** Resolve a pasted link to an existing room id, or a user-facing error result. */
+/**
+ * Verify the pasted link's capability token and resolve it to an existing room,
+ * or a user-facing tool error. The link's # fragment IS the token — it is the
+ * sole credential (no separate API key). `minPerm` gates the action: `read_board`
+ * needs `view`+, `write_board` needs `edit`+.
+ */
 async function resolveRoom(
+  env: Env,
   api: LiveblocksApi,
   link: string,
+  minPerm: Perm,
 ): Promise<{ roomId: string } | { error: ToolResult }> {
-  const roomId = roomIdFromLink(link)
-  if (!roomId) {
+  const raw = tokenFromLink(link)
+  const payload = raw ? await verifyToken(raw, env.TOKEN_SECRET) : null
+  if (!payload) {
     return {
       error: toolError(
-        'Could not find a room id in that link. Paste the full board link — it contains "#room=...".',
+        'That link is invalid or expired. Paste the full, current board share link.',
       ),
     }
   }
-  if (!(await api.roomExists(roomId))) {
-    return { error: toolError(`No board found for room "${roomId}". Check the link is current.`) }
+  if (!permAtLeast(payload.p, minPerm)) {
+    return {
+      error: toolError(
+        `That link is ${payload.p}-only — it can't ${minPerm === 'edit' ? 'edit' : 'access'} this board. Use an ${minPerm} (or owner) link.`,
+      ),
+    }
   }
-  return { roomId }
+  if (!(await api.roomExists(payload.r))) {
+    return { error: toolError(`No board found for room "${payload.r}". Check the link is current.`) }
+  }
+  return { roomId: payload.r }
 }
 
-async function readBoard(api: LiveblocksApi, link: string): Promise<ToolResult> {
-  const room = await resolveRoom(api, link)
+async function readBoard(env: Env, api: LiveblocksApi, link: string): Promise<ToolResult> {
+  const room = await resolveRoom(env, api, link, 'view')
   if ('error' in room) return room.error
   const doc = await loadRoomDoc(api, room.roomId)
   // `exportTrip` re-validates and throws on an inconsistent doc (e.g. a dangling
@@ -158,7 +169,7 @@ async function writeBoard(
   link: string,
   trip: unknown,
 ): Promise<ToolResult> {
-  const room = await resolveRoom(api, link)
+  const room = await resolveRoom(env, api, link, 'edit')
   if ('error' in room) return room.error
 
   // Validate before touching the room so a bad payload never mutates the doc (nor
@@ -191,7 +202,7 @@ async function handleToolCall(
   }
   if (p.name === 'read_board') {
     const link = typeof args.link === 'string' ? args.link : ''
-    return rpcResult(id, await readBoard(api, link))
+    return rpcResult(id, await readBoard(env, api, link))
   }
   if (p.name === 'write_board') {
     const link = typeof args.link === 'string' ? args.link : ''
@@ -209,10 +220,9 @@ export async function handleMcp(
   env: Env,
   api: LiveblocksApi,
 ): Promise<Response> {
-  if (!mcpAuthorized(request, env)) {
-    return json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'unauthorized' } }, 401)
-  }
-
+  // No endpoint-level API key: discovery (initialize/tools/list) is open, and
+  // each acting tool (read_board/write_board) authorizes itself from the token in
+  // the pasted share link — that token is the sole credential.
   let body: JsonRpcRequest
   try {
     body = (await request.json()) as JsonRpcRequest

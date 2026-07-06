@@ -4,6 +4,7 @@ import {
   decodePayload,
   parseToken,
   liveblocksAccess,
+  permAtLeast,
   type TokenPayload,
 } from './token'
 
@@ -39,6 +40,16 @@ describe('liveblocksAccess', () => {
     expect(liveblocksAccess('view')).toBe('room:read')
     expect(liveblocksAccess('edit')).toBe('room:write')
     expect(liveblocksAccess('owner')).toBe('room:write')
+  })
+})
+
+describe('permAtLeast', () => {
+  it('treats view ⊂ edit ⊂ owner', () => {
+    expect(permAtLeast('view', 'view')).toBe(true)
+    expect(permAtLeast('edit', 'view')).toBe(true)
+    expect(permAtLeast('owner', 'edit')).toBe(true)
+    expect(permAtLeast('view', 'edit')).toBe(false)
+    expect(permAtLeast('edit', 'owner')).toBe(false)
   })
 })
 

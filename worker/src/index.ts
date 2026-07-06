@@ -9,7 +9,7 @@
 //   POST /api/trip/:room    → write trip JSON into the room (owner-gated)
 //   GET  /api/versions/:room       → list a room's snapshots (link-gated)
 //   GET  /api/versions/:room/:id   → read one snapshot's trip JSON (link-gated)
-//   POST /mcp               → MCP-over-HTTP tools endpoint (MCP_API_KEY-gated)
+//   POST /mcp               → MCP-over-HTTP tools endpoint (per-tool token-gated via the link)
 //
 // The handlers depend on the `LiveblocksApi` abstraction; production builds the
 // REST-backed implementation, while tests call `handleRequest` with a fake.

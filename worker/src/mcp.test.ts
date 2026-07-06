@@ -2,12 +2,15 @@
 import { describe, it, expect } from 'vitest'
 import * as Y from 'yjs'
 import { handleMcp } from './mcp'
+import { signToken } from './token'
 import type { Env, LiveblocksApi } from './liveblocks'
 import type { SnapshotKv } from './snapshots'
+import type { Perm } from '../../src/data/token'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 import { exportTrip } from '../../src/data/exportTrip'
 
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw', MCP_API_KEY: 'mcp-key' }
+const SECRET = 'test-token-secret'
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET, OWNER_SECRET: 'owner-pw' }
 
 type TestApi = LiveblocksApi & { sentCount(): number; lastUpdate(): Uint8Array | null }
 
@@ -62,14 +65,15 @@ function seededDoc(): Y.Doc {
   return doc
 }
 
-// `null` = send no Authorization header (explicit `undefined` would just trigger
-// the default value). Any string is sent verbatim as the bearer token.
-function mcpRequest(payload: unknown, apiKey: string | null = 'mcp-key'): Request {
-  const headers: Record<string, string> = { 'content-type': 'application/json' }
-  if (apiKey !== null) headers['authorization'] = `Bearer ${apiKey}`
+/** A share link whose # fragment is a signed capability token for a room. */
+async function linkFor(perm: Perm, room = 'room1', secret = SECRET): Promise<string> {
+  return `https://app/#${await signToken({ r: room, p: perm, v: 1 }, secret)}`
+}
+
+function mcpRequest(payload: unknown): Request {
   return new Request('https://worker.test/mcp', {
     method: 'POST',
-    headers,
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
   })
 }
@@ -77,7 +81,7 @@ function mcpRequest(payload: unknown, apiKey: string | null = 'mcp-key'): Reques
 type RpcResponse = { result?: unknown; error?: { code: number; message: string } }
 type ToolResult = { content: Array<{ type: string; text: string }>; isError?: boolean }
 
-describe('handleMcp — handshake', () => {
+describe('handleMcp — handshake (open, no token needed)', () => {
   it('responds to initialize with capabilities + serverInfo and the version it supports', async () => {
     // Client asks for a version the server does not implement; the server must
     // still answer with its own supported version, not echo the request back.
@@ -107,7 +111,7 @@ describe('handleMcp — handshake', () => {
   it('returns a parse error (-32700) for a non-JSON body', async () => {
     const req = new Request('https://worker.test/mcp', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: 'Bearer mcp-key' },
+      headers: { 'content-type': 'application/json' },
       body: 'not json',
     })
     const res = await handleMcp(req, env, makeApi())
@@ -145,27 +149,10 @@ describe('handleMcp — handshake', () => {
   })
 })
 
-describe('handleMcp — auth', () => {
-  it('rejects a request with no bearer token (401)', async () => {
-    const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, null), env, makeApi())
-    expect(res.status).toBe(401)
-  })
-
-  it('rejects a request with the wrong bearer token (401)', async () => {
-    const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, 'nope'), env, makeApi())
-    expect(res.status).toBe(401)
-  })
-
-  it('rejects when MCP_API_KEY is unset on the Worker (401)', async () => {
-    const noKeyEnv: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw' }
-    const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' }), noKeyEnv, makeApi())
-    expect(res.status).toBe(401)
-  })
-})
-
-describe('handleMcp — tools/list', () => {
-  it('advertises get_schema, read_board and write_board with input schemas', async () => {
+describe('handleMcp — tools/list (open discovery)', () => {
+  it('advertises get_schema, read_board and write_board with input schemas, no token required', async () => {
     const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 2, method: 'tools/list' }), env, makeApi())
+    expect(res.status).toBe(200)
     const body = (await res.json()) as RpcResponse
     const tools = (body.result as { tools: Array<{ name: string; inputSchema: unknown }> }).tools
     expect(tools.map((t) => t.name).sort()).toEqual(['get_schema', 'read_board', 'write_board'])
@@ -173,7 +160,7 @@ describe('handleMcp — tools/list', () => {
   })
 })
 
-describe('handleMcp — get_schema', () => {
+describe('handleMcp — get_schema (open, no token)', () => {
   it('returns the JSON Schema derived from the trip document schema', async () => {
     const res = await handleMcp(
       mcpRequest({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'get_schema', arguments: {} } }),
@@ -198,33 +185,31 @@ describe('handleMcp — read_board', () => {
       api,
     )
   }
+  const toolOf = async (res: Response) => ((await res.json()) as RpcResponse).result as ToolResult
 
-  it('reads the seeded trip from a full share link', async () => {
-    const res = await callRead('https://travel-planner.pages.dev/#room=room1')
-    const tool = ((await res.json()) as RpcResponse).result as ToolResult
+  it.each(['view', 'edit', 'owner'] as Perm[])('reads the seeded trip with a %s link', async (perm) => {
+    const tool = await toolOf(await callRead(await linkFor(perm)))
     expect(tool.isError).toBeFalsy()
     const trip = JSON.parse(tool.content[0].text) as { trip: { title: string }; cities: Array<{ name: string }> }
     expect(trip.trip.title).toBe('Seed Trip')
     expect(trip.cities.map((c) => c.name)).toEqual(['Paris'])
   })
 
-  it('accepts a bare #room= hash as the link', async () => {
-    const res = await callRead('#room=room1')
-    const tool = ((await res.json()) as RpcResponse).result as ToolResult
-    const trip = JSON.parse(tool.content[0].text) as { trip: { title: string } }
-    expect(trip.trip.title).toBe('Seed Trip')
+  it('returns an isError result when the link has no/invalid token', async () => {
+    const tool = await toolOf(await callRead('https://travel-planner.pages.dev/'))
+    expect(tool.isError).toBe(true)
+    expect(tool.content[0].text).toMatch(/invalid or expired/i)
   })
 
-  it('returns an isError result when the link carries no room id', async () => {
-    const res = await callRead('https://travel-planner.pages.dev/')
-    const tool = ((await res.json()) as RpcResponse).result as ToolResult
+  it('returns an isError result for a token signed with the wrong key', async () => {
+    const tool = await toolOf(await callRead(await linkFor('view', 'room1', 'other-secret')))
     expect(tool.isError).toBe(true)
-    expect(tool.content[0].text).toMatch(/room id/i)
+    expect(tool.content[0].text).toMatch(/invalid or expired/i)
   })
 
   it('returns an isError result when the room does not exist', async () => {
-    const res = await callRead('https://app/#room=ghost', makeApi(seededDoc(), { roomExists: async () => false }))
-    const tool = ((await res.json()) as RpcResponse).result as ToolResult
+    const api = makeApi(seededDoc(), { roomExists: async () => false })
+    const tool = await toolOf(await callRead(await linkFor('view', 'ghost'), api))
     expect(tool.isError).toBe(true)
     expect(tool.content[0].text).toMatch(/no board found/i)
   })
@@ -234,7 +219,7 @@ describe('handleMcp — read_board', () => {
     // surface that as a tool error, not let it escape as a bare Worker 502.
     const seed = seededDoc()
     seed.getMap('dayOverrides').set('2027-01-01', 'ghost-city')
-    const res = await callRead('https://app/#room=room1', makeApi(seed))
+    const res = await callRead(await linkFor('view'), makeApi(seed))
     const body = (await res.json()) as RpcResponse
     const tool = body.result as ToolResult
     expect(body.error).toBeUndefined()
@@ -269,30 +254,49 @@ describe('handleMcp — write_board', () => {
     return ((await res.json()) as RpcResponse).result as ToolResult
   }
 
-  it('writes a valid trip, reports success, and the update merges into a second doc', async () => {
-    const seed = seededDoc()
-    const api = makeApi(seed)
-    const res = await callWrite('https://app/#room=room1', validTrip, api)
+  it.each(['edit', 'owner'] as Perm[])(
+    'writes a valid trip with a %s link and the update merges into a second doc',
+    async (perm) => {
+      const seed = seededDoc()
+      const api = makeApi(seed)
+      const res = await callWrite(await linkFor(perm), validTrip, api)
 
-    const tool = await toolOf(res)
-    expect(tool.isError).toBeFalsy()
-    expect(tool.content[0].text).toMatch(/updated/i)
-    expect(api.sentCount()).toBe(1)
+      const tool = await toolOf(res)
+      expect(tool.isError).toBeFalsy()
+      expect(tool.content[0].text).toMatch(/updated/i)
+      expect(api.sentCount()).toBe(1)
 
-    // Two-doc integration: a second client at the seed state applies the diff and converges.
-    const docB = new Y.Doc()
-    Y.applyUpdate(docB, Y.encodeStateAsUpdate(seed))
-    Y.applyUpdate(docB, api.lastUpdate()!)
-    const merged = exportTrip(docB)
-    expect(merged.trip.title).toBe('Italy')
-    expect(merged.cities.map((c) => c.id)).toEqual(['c2'])
-    expect(merged.cards.map((c) => c.id)).toEqual(['k2'])
+      // Two-doc integration: a second client at the seed state applies the diff and converges.
+      const docB = new Y.Doc()
+      Y.applyUpdate(docB, Y.encodeStateAsUpdate(seed))
+      Y.applyUpdate(docB, api.lastUpdate()!)
+      const merged = exportTrip(docB)
+      expect(merged.trip.title).toBe('Italy')
+      expect(merged.cities.map((c) => c.id)).toEqual(['c2'])
+      expect(merged.cards.map((c) => c.id)).toEqual(['k2'])
+    },
+  )
+
+  it('rejects a view-only link with isError, mutating nothing', async () => {
+    const api = makeApi(seededDoc())
+    const tool = await toolOf(await callWrite(await linkFor('view'), validTrip, api))
+    expect(tool.isError).toBe(true)
+    expect(tool.content[0].text).toMatch(/view-only/i)
+    expect(api.sentCount()).toBe(0)
+  })
+
+  it('rejects an invalid/expired token with isError, mutating nothing', async () => {
+    const api = makeApi(seededDoc())
+    const tool = await toolOf(await callWrite('https://app/#garbage.sig', validTrip, api))
+    expect(tool.isError).toBe(true)
+    expect(tool.content[0].text).toMatch(/invalid or expired/i)
+    expect(api.sentCount()).toBe(0)
   })
 
   it('snapshots the pre-write trip before applying', async () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
-    await callWrite('https://app/#room=room1', validTrip, api, { ...env, SNAPSHOTS: kv })
+    await callWrite(await linkFor('edit'), validTrip, api, { ...env, SNAPSHOTS: kv })
 
     const snapshots = [...kv.store.values()]
     expect(snapshots).toHaveLength(1)
@@ -305,7 +309,7 @@ describe('handleMcp — write_board', () => {
     // KV unbound → applyTripToRoom takes no snapshot; the success text must not
     // claim the previous version was snapshotted (there is nothing to restore).
     const api = makeApi(seededDoc())
-    const res = await callWrite('https://app/#room=room1', validTrip, api, { ...env, SNAPSHOTS: undefined })
+    const res = await callWrite(await linkFor('edit'), validTrip, api, { ...env, SNAPSHOTS: undefined })
     const tool = await toolOf(res)
     expect(tool.isError).toBeFalsy()
     expect(tool.content[0].text).toMatch(/updated/i)
@@ -316,7 +320,7 @@ describe('handleMcp — write_board', () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
     const res = await callWrite(
-      'https://app/#room=room1',
+      await linkFor('edit'),
       { trip: { title: 'x', startDate: 'nope', numDays: -1 } },
       api,
       { ...env, SNAPSHOTS: kv },
@@ -331,19 +335,10 @@ describe('handleMcp — write_board', () => {
 
   it('returns an isError result when the room does not exist, without writing', async () => {
     const api = makeApi(seededDoc(), { roomExists: async () => false })
-    const res = await callWrite('https://app/#room=ghost', validTrip, api)
+    const res = await callWrite(await linkFor('edit', 'ghost'), validTrip, api)
     const tool = await toolOf(res)
     expect(tool.isError).toBe(true)
     expect(tool.content[0].text).toMatch(/no board found/i)
-    expect(api.sentCount()).toBe(0)
-  })
-
-  it('returns an isError result when the link carries no room id', async () => {
-    const api = makeApi(seededDoc())
-    const res = await callWrite('https://travel-planner.pages.dev/', validTrip, api)
-    const tool = await toolOf(res)
-    expect(tool.isError).toBe(true)
-    expect(tool.content[0].text).toMatch(/room id/i)
     expect(api.sentCount()).toBe(0)
   })
 })

@@ -99,14 +99,14 @@ describe('handleRequest (router + CORS)', () => {
     expect(res.status).toBe(405)
   })
 
-  it('routes POST /mcp to the MCP handler (401 without the MCP key)', async () => {
+  it('routes POST /mcp to the MCP handler (open discovery, no key) with CORS', async () => {
     const req = new Request('https://worker.test/mcp', {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: 'https://app.example' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
     })
     const res = await handleRequest(req, env, makeApi())
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(200)
     expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
   })
 

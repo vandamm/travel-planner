@@ -23,6 +23,17 @@ export interface TokenPayload {
 
 const PERMS: readonly Perm[] = ['view', 'edit', 'owner']
 
+/** Perm capability order — higher grants everything a lower one does. */
+const PERM_RANK: Record<Perm, number> = { view: 1, edit: 2, owner: 3 }
+
+/**
+ * True when `perm` grants at least `min` (`view` ⊂ `edit` ⊂ `owner`). Pure +
+ * shared so the Worker gates read (`view`+) vs write (`edit`+) with one rule.
+ */
+export function permAtLeast(perm: Perm, min: Perm): boolean {
+  return PERM_RANK[perm] >= PERM_RANK[min]
+}
+
 /**
  * The Liveblocks access scope a capability perm grants: `view` reads,
  * `edit`/`owner` write. Pure so it's unit-testable and shared (the Worker mints
@@ -77,8 +88,12 @@ function isValidPayload(o: unknown): o is TokenPayload {
   )
 }
 
-/** Extract the raw fragment/token from a full link, a `#…` hash, or a bare token. */
-function fragmentOf(input: string): string {
+/**
+ * Extract the raw token (the whole `#…` fragment) from a full link, a `#…` hash,
+ * or a bare token string. Returns '' when there's nothing to extract. The Worker
+ * feeds the result to `verifyToken`; the client feeds it to `parseToken`.
+ */
+export function tokenFromLink(input: string): string {
   const trimmed = input.trim()
   if (!trimmed) return ''
   // A full URL carries the token only in its fragment; detect one by '://'.
@@ -100,7 +115,7 @@ function fragmentOf(input: string): string {
  * is `<base64url(payload)>.<base64url(sig)>`; the payload is the first segment.
  */
 export function parseToken(input: string): TokenPayload | null {
-  const token = fragmentOf(input)
+  const token = tokenFromLink(input)
   if (!token) return null
   return decodePayload(token.split('.')[0])
 }
