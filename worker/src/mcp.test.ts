@@ -10,7 +10,7 @@ import { addCard, addCity, setTrip } from '../../src/data/doc'
 import { exportTrip } from '../../src/data/exportTrip'
 
 const SECRET = 'test-token-secret'
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET, OWNER_SECRET: 'owner-pw' }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET }
 
 type TestApi = LiveblocksApi & { sentCount(): number; lastUpdate(): Uint8Array | null }
 

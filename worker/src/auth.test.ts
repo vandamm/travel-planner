@@ -6,7 +6,7 @@ import type { Env, LiveblocksApi } from './liveblocks'
 import type { TokenPayload } from '../../src/data/token'
 
 const SECRET = 'test-signing-secret'
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET, OWNER_SECRET: 'owner-pw' }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET }
 
 interface MintCall {
   roomId: string

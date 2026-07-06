@@ -14,7 +14,7 @@ import { recordSnapshot, type SnapshotKv } from './snapshots'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 
 const SECRET = 'test-token-secret'
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET, OWNER_SECRET: 'owner-pw' }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET }
 
 // Capability tokens scoped to `room1` (the room every request below targets), plus
 // one scoped to a different room to prove the token's room must match `:room`.

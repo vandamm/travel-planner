@@ -4,12 +4,11 @@
 # Liveblocks project secret key (Dashboard → project → API keys). Never shipped to the client.
 LIVEBLOCKS_SECRET_KEY=sk_dev_replace_me
 
-# Secret that gates new-room creation (POST /api/rooms). Choose any strong string.
-OWNER_SECRET=replace_me_with_a_long_random_string
-
-# API key gating the MCP endpoint (POST /mcp). Presented by the MCP client as
-# `Authorization: Bearer <MCP_API_KEY>`. Choose any strong string.
-MCP_API_KEY=replace_me_with_a_long_random_string
+# HMAC key that signs/verifies every capability token (the share links). This is the
+# sole hidden secret — humans hold links, the Worker holds this. Choose any long random
+# string; rotating it invalidates all outstanding links. Mint a link with:
+#   npx tsx scripts/mint-token.ts <roomId> owner
+TOKEN_SECRET=replace_me_with_a_long_random_string
 
 # Optional: lock CORS to your Pages origin in production (e.g. https://travel-planner.pages.dev).
 # Leave unset locally to reflect the request Origin.
