@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { addCity, listCities } from './doc'
-import { connectRoom, createRoom, roomHash, roomIdFromHash } from './provider'
+import { connectRoom, roomHash, roomIdFromHash } from './provider'
 
 describe('roomIdFromHash', () => {
   it('parses a `#room=<id>` hash', () => {
@@ -20,46 +20,6 @@ describe('roomIdFromHash', () => {
   it('round-trips with roomHash', () => {
     expect(roomHash('italy-2027')).toBe('#room=italy-2027')
     expect(roomIdFromHash(roomHash('italy-2027'))).toBe('italy-2027')
-  })
-})
-
-describe('createRoom', () => {
-  it('POSTs to the worker with the owner secret and returns the new room id', async () => {
-    let url: string | undefined
-    let init: RequestInit | undefined
-    const fetchImpl = vi.fn(async (calledUrl: string, calledInit: RequestInit) => {
-      url = calledUrl
-      init = calledInit
-      return new Response(JSON.stringify({ id: 'rome-2027' }), {
-        status: 201,
-        headers: { 'content-type': 'application/json' },
-      })
-    })
-
-    const id = await createRoom({
-      workerUrl: 'https://worker.test/',
-      ownerSecret: 'owner-pw',
-      roomId: 'rome-2027',
-      fetchImpl: fetchImpl as unknown as typeof fetch,
-    })
-
-    expect(id).toBe('rome-2027')
-    expect(fetchImpl).toHaveBeenCalledTimes(1)
-    expect(url).toBe('https://worker.test/api/rooms')
-    expect(init?.method).toBe('POST')
-    expect((init?.headers as Record<string, string>)['x-owner-secret']).toBe('owner-pw')
-    expect(JSON.parse(init?.body as string)).toEqual({ room: 'rome-2027' })
-  })
-
-  it('throws when the worker rejects the request', async () => {
-    const fetchImpl = vi.fn(async () => new Response('nope', { status: 401 }))
-    await expect(
-      createRoom({
-        workerUrl: 'https://worker.test',
-        ownerSecret: 'wrong',
-        fetchImpl: fetchImpl as unknown as typeof fetch,
-      }),
-    ).rejects.toThrow()
   })
 })
 

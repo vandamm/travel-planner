@@ -4,8 +4,8 @@
 //      through the Worker's `/api/auth` endpoint (the secret key never reaches
 //      the client).
 //
-// The pure helpers (`roomIdFromHash`, `roomHash`, `createRoom`) are unit-tested
-// directly. The actual provider wiring degrades gracefully: with no IndexedDB
+// The pure helpers (`roomIdFromHash`, `roomHash`) are unit-tested directly. The
+// actual provider wiring degrades gracefully: with no IndexedDB
 // (e.g. a test/SSR runtime) it uses an in-memory doc, and with sync disabled it
 // never touches the network — so the app always loads and edits locally.
 
@@ -28,34 +28,6 @@ function trimSlash(url: string): string {
 /** Build the shareable secret-link hash for a room id. */
 export function roomHash(roomId: string): string {
   return `#room=${encodeURIComponent(roomId)}`
-}
-
-export interface CreateRoomOptions {
-  /** Base URL of the Worker (e.g. `https://worker.example.com`). */
-  workerUrl: string
-  /** Owner secret presented as `x-owner-secret`; gates room creation. */
-  ownerSecret: string
-  /** Optional explicit room id; the Worker generates one when omitted. */
-  roomId?: string
-  /** Injectable fetch for tests. */
-  fetchImpl?: typeof fetch
-}
-
-/**
- * Create a new room via the owner-gated Worker endpoint and return its id.
- * This is how "new trip" comes into existence; everyone else joins an existing
- * room with the secret link (no owner secret, no login).
- */
-export async function createRoom(opts: CreateRoomOptions): Promise<string> {
-  const doFetch = opts.fetchImpl ?? fetch
-  const res = await doFetch(`${trimSlash(opts.workerUrl)}/api/rooms`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-owner-secret': opts.ownerSecret },
-    body: JSON.stringify(opts.roomId ? { room: opts.roomId } : {}),
-  })
-  if (!res.ok) throw new Error(`Room creation failed: ${res.status}`)
-  const data = (await res.json()) as { id: string }
-  return data.id
 }
 
 export interface ConnectOptions {
