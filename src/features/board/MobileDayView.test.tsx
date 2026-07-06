@@ -2,7 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
-import { clampDayIndex, MobileDayView } from './MobileDayView'
+import { MobileDayView } from './MobileDayView'
+import { clampDayIndex } from './mobileDayViewMath'
 
 const days: Day[] = [
   { key: '2027-05-01', index: 0 },

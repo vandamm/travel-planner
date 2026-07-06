@@ -109,6 +109,14 @@ function docWithMergedInvertedWindow(): Y.Doc {
   return a
 }
 
+function docWithCorruptCityContainer(): Y.Doc {
+  const doc = seededDoc()
+  // Deliberately bypass the sanctioned mutators to simulate an unexpected
+  // programming/runtime failure rather than a schema-invalid but well-shaped trip.
+  doc.getMap('cities').set('bad-city', { id: 'bad-city' })
+  return doc
+}
+
 const validTrip = {
   trip: { title: 'Italy', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'c2', name: 'Rome', color: '#ff0000' }],
@@ -193,6 +201,17 @@ describe('handleGetTrip', () => {
       'room1',
     )
     expect(healthy.status).toBe(200)
+  })
+
+  it('rethrows unexpected export failures instead of reporting them as repairable state', async () => {
+    await expect(
+      handleGetTrip(
+        tripRequest('GET', undefined, viewTok),
+        env,
+        makeApi(docWithCorruptCityContainer()),
+        'room1',
+      ),
+    ).rejects.toThrow(TypeError)
   })
 
   it('rejects without a token (401)', async () => {
@@ -460,6 +479,26 @@ describe('version history (view+ token, room-matched)', () => {
     }
   })
 
+  it('authorizes list requests before checking whether the room exists', async () => {
+    for (const tok of [undefined, 'garbage.sig', otherRoomTok]) {
+      let roomChecked = false
+      const api = makeApi(undefined, {
+        roomExists: async () => {
+          roomChecked = true
+          throw new Error('room lookup should not run before auth')
+        },
+      })
+      const res = await handleListVersions(
+        versionRequest('/api/versions/room1', tok),
+        env,
+        api,
+        'room1',
+      )
+      expect(res.status).toBe(401)
+      expect(roomChecked).toBe(false)
+    }
+  })
+
   it('404s the list for a room that does not exist after token auth passes', async () => {
     const kv = makeKv()
     const api = makeApi(undefined, { roomExists: async () => false })
@@ -502,6 +541,27 @@ describe('version history (view+ token, room-matched)', () => {
         '1000',
       )
       expect(res.status).toBe(401)
+    }
+  })
+
+  it('authorizes snapshot fetches before checking whether the room exists', async () => {
+    for (const tok of [undefined, 'garbage.sig', otherRoomTok]) {
+      let roomChecked = false
+      const api = makeApi(undefined, {
+        roomExists: async () => {
+          roomChecked = true
+          throw new Error('room lookup should not run before auth')
+        },
+      })
+      const res = await handleGetVersion(
+        versionRequest('/api/versions/room1/1000', tok),
+        env,
+        api,
+        'room1',
+        '1000',
+      )
+      expect(res.status).toBe(401)
+      expect(roomChecked).toBe(false)
     }
   })
 

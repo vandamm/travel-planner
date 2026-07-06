@@ -14,7 +14,7 @@ import {
   removeAccommodation,
   updateAccommodation,
 } from '../../data/doc'
-import { useRoom } from '../../data/RoomProvider'
+import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import type { Accommodation } from '../../data/schema'
 

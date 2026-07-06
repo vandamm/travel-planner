@@ -2,33 +2,12 @@
 // its live sync status to the tree. UI components read the doc via `useRoom()`
 // and mutate it through the `doc.ts` mutators.
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as Y from 'yjs'
 import { installDevBridge } from './devBridge'
 import { connectRoom, type SyncStatus } from './provider'
-import { parseToken, tokenFromLink, type Perm } from './token'
-
-export interface RoomContextValue {
-  doc: Y.Doc
-  /** Raw capability token from the URL fragment, if present. */
-  token: string | null
-  roomId: string | null
-  /** Capability level decoded (NOT verified) from the token — shapes local UX. */
-  perm: Perm | null
-  /** Optional display name decoded from the token. */
-  name: string | null
-  status: SyncStatus
-  /** Worker base URL (may be '' — then Worker-backed features fetch relative). */
-  workerUrl: string
-}
-
-const RoomContext = createContext<RoomContextValue | null>(null)
-
-export function useRoom(): RoomContextValue {
-  const ctx = useContext(RoomContext)
-  if (!ctx) throw new Error('useRoom must be used within a <RoomProvider>')
-  return ctx
-}
+import { parseToken, tokenFromLink } from './token'
+import { RoomContext, type RoomContextValue } from './RoomContext'
 
 export interface RoomProviderProps {
   /** Worker base URL; defaults to `import.meta.env.VITE_WORKER_URL`. */

@@ -21,21 +21,14 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type * as Y from 'yjs'
 import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
 import { Card } from '../cards/Card'
+import { DragOverDayContext } from './dragOverDayContext'
 import { applyCardDragEnd, dayKeyFromDroppableId, isDayDroppableId } from './dndHandlers'
 import type { TimeDirection } from './timeDirection'
-
-/** The day key currently under the drag pointer, or null when idle. */
-const DragOverDayContext = createContext<string | null>(null)
-
-/** Whether a card is being dragged over the given day column (drop hint). */
-export function useIsDragOverDay(dayKey: string): boolean {
-  return useContext(DragOverDayContext) === dayKey
-}
 
 export interface BoardDndProps {
   doc: Y.Doc

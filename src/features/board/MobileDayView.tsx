@@ -10,6 +10,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { resolveDayCity } from '../../data/cityResolution'
 import type { Accommodation, Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
+import { clampDayIndex } from './mobileDayViewMath'
 import { dayDotColor } from './pagerDot'
 import { showScrollHint } from './scrollHint'
 import type { TimeDirection } from './timeDirection'
@@ -38,15 +39,6 @@ export interface MobileDayViewProps {
   onEditCard?: (card: Card) => void
   /** Set or clear a day's manual city override (`null` = Auto). */
   onSetCity?: (dayKey: string, cityId: string | null) => void
-}
-
-/**
- * Clamp a day index to the valid range `[0, dayCount - 1]`, so paging or
- * swiping can never run off either end. Returns 0 when there are no days.
- */
-export function clampDayIndex(index: number, dayCount: number): number {
-  if (dayCount <= 0) return 0
-  return Math.min(Math.max(index, 0), dayCount - 1)
 }
 
 export function MobileDayView({

@@ -86,6 +86,10 @@ The four collections are optional on input and default to empty, and
 document is just `{ "trip": { "title": "", "startDate": "", "numDays": 0 } }`.
 An export always emits the collections (sorted deterministically) and the
 default-filled window, so every export round-trips through `POST` unchanged.
+Exports also defensively prune dangling city references that can appear after a
+concurrent CRDT remove-city/add-reference merge: invalid `dayOverrides` entries
+are dropped, and invalid `accommodations[].cityId` values are omitted while the
+stay itself is kept. Imports and API writes still reject dangling city references.
 
 ## City resolution
 
@@ -157,7 +161,8 @@ compare-and-swap Liveblocks doesn't expose).
 | `200` | `GET` succeeded / `POST` applied |
 | `400` | malformed JSON or schema violation (message is path-prefixed, as above) |
 | `401` | missing, invalid, or insufficient token (wrong room, or below the required perm) |
-| `404` | the room does not exist (create it first via `POST /api/rooms`) |
+| `404` | the room does not exist (create it first via `POST /api/rooms`), or a requested version id does not exist |
+| `409` | authenticated `GET /api/trip/:room` found the room, but its Yjs state could not export as a valid trip; repair by `POST`ing a valid document or using MCP `write_board` |
 
 ### Examples
 

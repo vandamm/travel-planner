@@ -8,7 +8,7 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { addCity, listCities, removeCity, updateCity } from '../../data/doc'
-import { useRoom } from '../../data/RoomProvider'
+import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import { randomCityColor } from './colors'
 

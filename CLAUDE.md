@@ -46,7 +46,11 @@ field (e.g. untiming a card); absent keys are left untouched.
 Referential integrity: `removeCity` cascades — it also deletes any `dayOverrides`
 entry and clears any accommodation `cityId` that pointed at the removed city, so
 no dangling `cityId` reference survives (one would otherwise resolve to no-city
-yet persist and round-trip through export).
+yet persist and round-trip through export). A CRDT merge can still produce a
+dangling city reference after a concurrent remove-city/add-reference; `exportTrip`
+defensively prunes that read-side artifact before schema validation by dropping
+invalid `dayOverrides` entries and omitting invalid accommodation `cityId` values
+while keeping the stay.
 
 ## Shared between client and Worker — never duplicate
 
@@ -227,7 +231,9 @@ nest: `view` ⊂ `edit` ⊂ `owner`. There is **one hidden secret**, `TOKEN_SECR
   the client just shapes local rendering; no security rests on it),
   `permAtLeast`, `liveblocksAccess`. `worker/src/token.ts` (Worker-only) holds
   `signToken`/`verifyToken` via `crypto.subtle`. `verifyToken` returning a
-  non-null payload is the **only** thing a security decision may rest on.
+  non-null payload is the **only** thing a security decision may rest on. UI code
+  that calls token-gated Worker endpoints should read `token` from `useRoom()` and
+  send `Authorization: Bearer <token>`; the client only extracts/decodes it.
 - `POST /api/auth` takes `{ token }`, **verifies** it, requires the room to
   already exist (403 if not; 401 on an invalid/absent token), and mints a
   Liveblocks token **scoped to the token's perms** — `view`→`room:read`,

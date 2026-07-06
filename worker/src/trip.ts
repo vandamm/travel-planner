@@ -25,6 +25,7 @@
 // Worker joining as a live Yjs client), both far past what this API needs.
 
 import * as Y from 'yjs'
+import { ZodError } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { exportTrip } from '../../src/data/exportTrip'
@@ -130,7 +131,8 @@ export async function handleGetTrip(
   const schemaUrl = new URL('/api/schema', request.url).toString()
   try {
     return json({ $schema: schemaUrl, ...exportTrip(doc) }, 200)
-  } catch {
+  } catch (error) {
+    if (!(error instanceof ZodError)) throw error
     return json(
       {
         error:

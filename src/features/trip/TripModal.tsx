@@ -14,7 +14,7 @@ import { MAX_TRIP_DAYS } from '../../data/days'
 import { applyTrip } from '../../data/applyTrip'
 import { exportTripJSON } from '../../data/exportTrip'
 import { parseTripText } from '../../data/tripSchema'
-import { useRoom } from '../../data/RoomProvider'
+import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 
 export interface TripModalProps {
@@ -52,14 +52,6 @@ export function TripModal({ onClose }: TripModalProps) {
   const [versions, setVersions] = useState<VersionMeta[]>([])
   const [versionsError, setVersionsError] = useState<string | null>(null)
 
-  function versionsBase(): string {
-    return `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId ?? '')}`
-  }
-
-  function versionFetchInit(): RequestInit {
-    return token ? { headers: { authorization: `Bearer ${token}` } } : {}
-  }
-
   function handleCopy() {
     if (currentJson === null) return
     void navigator.clipboard?.writeText(currentJson)
@@ -92,10 +84,11 @@ export function TripModal({ onClose }: TripModalProps) {
   }
 
   async function loadVersions() {
-    if (!roomId) return
+    if (!roomId || !token) return
     setVersionsError(null)
     try {
-      const res = await fetch(versionsBase(), versionFetchInit())
+      const base = `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId)}`
+      const res = await fetch(base, { headers: { authorization: `Bearer ${token}` } })
       if (!res.ok) throw new Error(String(res.status))
       const body = (await res.json()) as { versions?: VersionMeta[] }
       setVersions(body.versions ?? [])
@@ -105,9 +98,13 @@ export function TripModal({ onClose }: TripModalProps) {
   }
 
   async function restoreVersion(id: string) {
+    if (!roomId || !token) return
     setVersionsError(null)
     try {
-      const res = await fetch(`${versionsBase()}/${encodeURIComponent(id)}`, versionFetchInit())
+      const base = `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId)}`
+      const res = await fetch(`${base}/${encodeURIComponent(id)}`, {
+        headers: { authorization: `Bearer ${token}` },
+      })
       if (!res.ok) throw new Error(String(res.status))
       applyJsonText(await res.text())
     } catch {
@@ -220,7 +217,7 @@ export function TripModal({ onClose }: TripModalProps) {
               aria-label="Current trip JSON"
               value={
                 currentJson ??
-                "This board can't be serialized right now — a city may have been removed while a stay or day still points at it. Fix that reference to export."
+                "This board can't be serialized right now because it is in an inconsistent state. Fix the trip settings, such as the day window, or replace it with valid trip JSON to export."
               }
               className="h-28 w-full resize-y rounded-card border border-edge bg-surface p-2 font-mono text-[11px] text-ink-600"
             />

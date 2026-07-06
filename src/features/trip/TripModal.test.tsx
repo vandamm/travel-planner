@@ -1,18 +1,42 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as Y from 'yjs'
 import type { ReactNode } from 'react'
 import { setTrip } from '../../data/doc'
-import { RoomProvider, useRoom } from '../../data/RoomProvider'
+import { useRoom } from '../../data/RoomContext'
+import { RoomProvider } from '../../data/RoomProvider'
+import { encodePayload } from '../../data/token'
 import { TripModal } from './TripModal'
 
-function renderInRoom(ui: ReactNode) {
+const ROOM_TOKEN = encodePayload({ r: 'rome-2027', p: 'edit', v: 1 })
+
+function renderInRoom(
+  ui: ReactNode,
+  { token = null, workerUrl = '' }: { token?: string | null; workerUrl?: string } = {},
+) {
   return render(
-    <RoomProvider workerUrl="" token={null} enableSync={false}>
+    <RoomProvider workerUrl={workerUrl} token={token} enableSync={false}>
       {ui}
     </RoomProvider>,
   )
+}
+
+function sync(from: Y.Doc, to: Y.Doc) {
+  Y.applyUpdate(to, Y.encodeStateAsUpdate(from, Y.encodeStateVector(to)))
+}
+
+function docWithMergedInvertedWindow(): Y.Doc {
+  const a = new Y.Doc()
+  const b = new Y.Doc()
+  setTrip(a, { title: 'Broken', startDate: '2027-05-10', numDays: 1 })
+  sync(a, b)
+  setTrip(a, { dayStart: '20:00' })
+  setTrip(b, { dayEnd: '07:00' })
+  sync(a, b)
+  sync(b, a)
+  return a
 }
 
 /** Seeds a known start date once so the calendar opens on a deterministic month. */
@@ -22,7 +46,18 @@ function TripWithStart() {
   return <TripModal onClose={() => {}} />
 }
 
+function TripWithMergedInvertedWindow() {
+  const { doc } = useRoom()
+  useState(() => Y.applyUpdate(doc, Y.encodeStateAsUpdate(docWithMergedInvertedWindow())))
+  return <TripModal onClose={() => {}} />
+}
+
 describe('TripModal', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
   it('writes title and day count into the trip live', () => {
     renderInRoom(<TripModal onClose={() => {}} />)
     fireEvent.change(screen.getByLabelText('Trip title'), { target: { value: 'Italy' } })
@@ -64,6 +99,60 @@ describe('TripModal', () => {
     const dialog = screen.getByRole('dialog', { name: 'Trip details' })
     expect(dialog.outerHTML).not.toMatch(/slate-/)
     expect(screen.getByRole('heading', { name: 'Trip details' })).toHaveClass('font-serif')
+  })
+
+  it('shows generic repair guidance when the current trip cannot be exported', () => {
+    renderInRoom(<TripWithMergedInvertedWindow />)
+
+    const currentJson = screen.getByLabelText('Current trip JSON') as HTMLTextAreaElement
+    expect(currentJson.value).toContain('inconsistent state')
+    expect(currentJson.value).toContain('day window')
+    expect(currentJson.value).not.toContain('city may have been removed')
+  })
+
+  it('shows an alert when token-gated version history cannot be listed', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn(async () => new Response('', { status: 401 }))
+    vi.stubGlobal('fetch', fetchMock)
+    renderInRoom(<TripModal onClose={() => {}} />, {
+      token: ROOM_TOKEN,
+      workerUrl: 'https://worker.test',
+    })
+
+    await user.click(screen.getByText('Trip JSON (for AI)'))
+    await user.click(screen.getByText('Recent versions'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load version history.')
+    expect(fetchMock).toHaveBeenCalledWith('https://worker.test/api/versions/rome-2027', {
+      headers: { authorization: `Bearer ${ROOM_TOKEN}` },
+    })
+  })
+
+  it('shows an alert when a listed version cannot be restored', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ versions: [{ id: '1000', timestamp: 1000 }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(new Response('', { status: 500 }))
+    vi.stubGlobal('fetch', fetchMock)
+    renderInRoom(<TripModal onClose={() => {}} />, {
+      token: ROOM_TOKEN,
+      workerUrl: 'https://worker.test',
+    })
+
+    await user.click(screen.getByText('Trip JSON (for AI)'))
+    await user.click(screen.getByText('Recent versions'))
+    await user.click(await screen.findByRole('button', { name: 'Restore' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load that version.')
+    expect(fetchMock).toHaveBeenLastCalledWith('https://worker.test/api/versions/rome-2027/1000', {
+      headers: { authorization: `Bearer ${ROOM_TOKEN}` },
+    })
   })
 
   it('closes via Done, Escape, and backdrop click', async () => {

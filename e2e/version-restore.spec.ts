@@ -17,10 +17,11 @@ const SNAPSHOT = JSON.stringify({
   cards: [],
   dayOverrides: {},
 })
+const EXPECTED_RESTORE_TOKEN = RESTORE_LINK.split('#')[1]
 
 test('Recent versions: restore reverts the board to an earlier snapshot', async ({ page }) => {
   await page.route('**/api/versions/**', async (route) => {
-    expect(route.request().headers().authorization).toMatch(/^Bearer .+/)
+    expect(route.request().headers().authorization).toBe(`Bearer ${EXPECTED_RESTORE_TOKEN}`)
     const url = route.request().url()
     if (url.endsWith('/1000')) {
       await route.fulfill({ contentType: 'application/json', body: SNAPSHOT })

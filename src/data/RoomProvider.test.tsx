@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import * as provider from './provider'
-import { RoomProvider, useRoom } from './RoomProvider'
+import { useRoom } from './RoomContext'
+import { RoomProvider } from './RoomProvider'
 import { addCity, listCities } from './doc'
 import { encodePayload } from './token'
 
@@ -77,15 +78,20 @@ describe('RoomProvider', () => {
   })
 
   it('exposes a null token when there is no hash', () => {
-    window.history.replaceState(null, '', '/')
-    render(
-      <RoomProvider workerUrl="" enableSync={false}>
-        <PermProbe />
-      </RoomProvider>,
-    )
-    expect(screen.getByTestId('room')).toHaveTextContent('∅')
-    expect(screen.getByTestId('perm')).toHaveTextContent('∅')
-    expect(screen.getByTestId('token')).toHaveTextContent('∅')
+    const previousUrl = window.location.href
+    try {
+      window.history.replaceState(null, '', '/')
+      render(
+        <RoomProvider workerUrl="" enableSync={false}>
+          <PermProbe />
+        </RoomProvider>,
+      )
+      expect(screen.getByTestId('room')).toHaveTextContent('∅')
+      expect(screen.getByTestId('perm')).toHaveTextContent('∅')
+      expect(screen.getByTestId('token')).toHaveTextContent('∅')
+    } finally {
+      window.history.replaceState(null, '', previousUrl)
+    }
   })
 
   it('exposes null room/perm for an undecodable (legacy `#room=…`) token', () => {

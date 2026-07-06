@@ -131,6 +131,55 @@ describe('exportTrip', () => {
       dayOverrides: { '2027-05-03': 'rome' },
     })
   })
+
+  it('prunes only dangling city references when valid refs are mixed in the same export', () => {
+    const removeDoc = new Y.Doc()
+    const addRefDoc = new Y.Doc()
+    setTrip(removeDoc, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+    addCity(removeDoc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+    addCity(removeDoc, { id: 'paris', name: 'Paris', color: '#2563eb' })
+    sync(removeDoc, addRefDoc)
+
+    removeCity(removeDoc, 'rome')
+    addAccommodation(addRefDoc, {
+      id: 'stay-paris',
+      label: 'Hotel Paris',
+      cityId: 'paris',
+      startNight: '2027-05-01',
+      endNight: '2027-05-01',
+    })
+    addAccommodation(addRefDoc, {
+      id: 'stay-rome',
+      label: 'Hotel Roma',
+      cityId: 'rome',
+      startNight: '2027-05-02',
+      endNight: '2027-05-02',
+    })
+    setDayCityOverride(addRefDoc, '2027-05-01', 'paris')
+    setDayCityOverride(addRefDoc, '2027-05-02', 'rome')
+    sync(removeDoc, addRefDoc)
+    sync(addRefDoc, removeDoc)
+
+    expect(exportTrip(removeDoc)).toMatchObject({
+      cities: [{ id: 'paris', name: 'Paris', color: '#2563eb' }],
+      accommodations: [
+        {
+          id: 'stay-paris',
+          label: 'Hotel Paris',
+          cityId: 'paris',
+          startNight: '2027-05-01',
+          endNight: '2027-05-01',
+        },
+        {
+          id: 'stay-rome',
+          label: 'Hotel Roma',
+          startNight: '2027-05-02',
+          endNight: '2027-05-02',
+        },
+      ],
+      dayOverrides: { '2027-05-01': 'paris' },
+    })
+  })
 })
 
 describe('export → import round-trip', () => {

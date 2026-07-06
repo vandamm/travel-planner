@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { ReactNode } from 'react'
 import * as Y from 'yjs'
 import { addAccommodation, addCard, addCity, setTrip } from '../../data/doc'
-import { RoomProvider, useRoom } from '../../data/RoomProvider'
+import { useRoom } from '../../data/RoomContext'
+import { RoomProvider } from '../../data/RoomProvider'
 import { Board } from './Board'
 
 let doc: Y.Doc

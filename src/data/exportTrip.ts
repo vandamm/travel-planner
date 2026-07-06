@@ -24,12 +24,9 @@ export function exportTrip(doc: Y.Doc): TripDocument {
   const accommodations = listAccommodations(doc)
     .map((acc) => {
       if (acc.cityId === undefined || cityIds.has(acc.cityId)) return acc
-      return {
-        id: acc.id,
-        label: acc.label,
-        startNight: acc.startNight,
-        endNight: acc.endNight,
-      }
+      const withoutCityId = { ...acc }
+      delete withoutCityId.cityId
+      return withoutCityId
     })
     .slice()
     .sort((a, b) => a.startNight.localeCompare(b.startNight) || byId(a, b))

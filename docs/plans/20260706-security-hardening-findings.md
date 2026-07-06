@@ -1,5 +1,7 @@
 # Security hardening — findings from the 2026-07-06 architecture review
 
+Status: Complete.
+
 ## Overview
 
 Address three of the accepted findings from the architecture/security review

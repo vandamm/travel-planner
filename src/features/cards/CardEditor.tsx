@@ -8,7 +8,7 @@ import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { TimePicker } from '../pickers/TimePicker'
 import { addCard, removeCard, updateCard } from '../../data/doc'
-import { useRoom } from '../../data/RoomProvider'
+import { useRoom } from '../../data/RoomContext'
 import type { Card, CardCategory, CardSize } from '../../data/schema'
 import { cardCategory } from './cardCategory'
 

@@ -13,7 +13,7 @@ import {
   listDayOverrides,
   setDayCityOverride,
 } from '../../data/doc'
-import { useRoom } from '../../data/RoomProvider'
+import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
 import { generateDays, toDayKey } from '../../data/days'

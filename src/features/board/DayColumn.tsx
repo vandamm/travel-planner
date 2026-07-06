@@ -12,7 +12,7 @@ import type { Card as CardType, City, Day } from '../../data/schema'
 import { NO_CITY_COLOR } from '../cities/colors'
 import { SortableCard } from '../cards/Card'
 import { cardHeightPx, noonFraction, windowHeightPx } from '../cards/cardHeight'
-import { useIsDragOverDay } from './dndContext'
+import { useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
 
