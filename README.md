@@ -45,11 +45,12 @@ show accommodation as horizontal bars spanning the nights they cover.
 
 Edits persist instantly to local storage (IndexedDB) and sync in the background
 via Liveblocks + Yjs (CRDT), so two people can co-edit the same board in real
-time. Access is via a **secret link** (the room id lives in the URL hash) with no
-login; a small Cloudflare Worker holds the Liveblocks secret key, mints access
-tokens, and restricts new-room creation to the owner. The same Worker exposes a
-structured HTTP API so an **AI agent can read the whole trip and write it back**
-— you discuss the plan with the agent and it visualizes it directly in the room.
+time. Access is via a **capability link** — a signed token in the URL hash that
+grants `view`, `edit`, or `owner` on one room — with no login; a small Cloudflare
+Worker holds the single signing key, verifies links, and mints matching Liveblocks
+tokens. The same Worker exposes a structured HTTP API so an **AI agent can read the
+whole trip and write it back** — you discuss the plan with the agent and it
+visualizes it directly in the room.
 
 ## Architecture
 
@@ -60,8 +61,8 @@ Two independent pieces deployed on Cloudflare:
    it is fully usable offline with no backend.
 2. **The Worker** (`worker/`) — mints Liveblocks tokens, gates room creation, and
    exposes the agent HTTP + MCP API. It holds the only copies of
-   `LIVEBLOCKS_SECRET_KEY`, `OWNER_SECRET`, and `MCP_API_KEY`; none ever reaches
-   the browser.
+   `LIVEBLOCKS_SECRET_KEY` and `TOKEN_SECRET` (the capability-link signing key);
+   neither ever reaches the browser.
 
 ```
 Browser (Pages)  ──auth / rooms / trip──▶  Worker  ──REST + secret key──▶  Liveblocks
@@ -72,18 +73,22 @@ Browser (Pages)  ──auth / rooms / trip──▶  Worker  ──REST + secret
 The browser only ever talks to the Worker (for auth, room creation, and the
 agent API). Liveblocks talks to the Worker too, via the secret key.
 
-### The secret link (room id)
+### The capability link (signed token)
 
-The room id lives in the URL **hash** — `https://<app>/#room=<roomId>` (a bare
-`#<roomId>` is also accepted). That hash is the "secret link":
+A share link is a **signed capability token** carried as the whole URL fragment —
+`https://<app>/#<token>`. The token is `base64url(payload).base64url(HMAC-SHA256)`,
+its payload `{ r: roomId, p: 'view'|'edit'|'owner', n?: name, v:1 }`, signed with
+the Worker's `TOKEN_SECRET`. Perms nest (`view` ⊂ `edit` ⊂ `owner`):
 
-- **Anyone with the link can join and co-edit** an existing room with no login.
-  The client posts the room id to the Worker's `/api/auth`, which mints a
-  room-scoped token *only if the room already exists*.
-- **Creating a new room requires the owner secret** (`POST /api/rooms`, gated by
-  `x-owner-secret`). This is the only way rooms come into existence, which
-  satisfies "nobody but me can create rooms" while keeping a guest's access
-  login-free.
+- **Anyone with a link joins at its perm level, no login.** The client posts the
+  token to the Worker's `/api/auth`, which verifies it and mints a room-scoped
+  Liveblocks token *only if the room already exists* — scoped `room:read` for
+  `view`, `room:write` for `edit`/`owner`, so view-only is enforced by Liveblocks.
+- **Creating a new room requires an `owner` token** (`POST /api/rooms`,
+  `Authorization: Bearer <token>`); it returns a fresh **owner** link for the new
+  room, so ownership chains (create-from-in-a-room). The very first (genesis) link
+  is minted locally with `scripts/mint-token.ts`. The client only *decodes* a token
+  (never verifies) to shape rendering — no security rests on the client.
 
 ### Shared data modules
 
@@ -132,8 +137,7 @@ cp .env.example .env
 | --- | --- | --- |
 | `VITE_WORKER_URL` | client (`.env`) | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret. |
 | `LIVEBLOCKS_SECRET_KEY` | Worker secret | Liveblocks project secret key (`sk_...`). Never shipped to the client. |
-| `OWNER_SECRET` | Worker secret | Gates `POST /api/rooms` and the owner agent API. Any long random string. |
-| `MCP_API_KEY` | Worker secret | Gates the MCP endpoint (`POST /mcp`), presented as `Authorization: Bearer <key>`. Any long random string. |
+| `TOKEN_SECRET` | Worker secret | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates all outstanding links. |
 | `ALLOWED_ORIGIN` | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset. |
 
 For local Worker dev, copy `worker/.dev.vars.example` to `worker/.dev.vars`
@@ -173,38 +177,42 @@ npm run test:e2e  # end-to-end
 ## Deployment
 
 See [`docs/deployment.md`](./docs/deployment.md) for the full Cloudflare Pages +
-Worker deploy flow (secrets, CORS, Pages build config, creating the first room,
-and sharing the secret link).
+Worker deploy flow (secrets, CORS, Pages build config, minting the genesis owner
+link, and sharing capability links).
 
 ## Agent API
 
 The trip serializes to a single JSON document — the format the agent API reads
 and writes (there is no in-app import/export). The zod schema in
 `src/data/tripSchema.ts` is the single source of truth, and `GET /api/schema`
-publishes the matching JSON Schema. See
+publishes the matching JSON Schema (public — no token). See
 [`docs/trip-schema.md`](./docs/trip-schema.md) for the schema and the agent API
-(`GET`/`POST /api/trip/:room`, `GET /api/schema`, owner token, example payloads).
+(`GET`/`POST /api/trip/:room`, `GET /api/schema`, capability token, example payloads).
 
 There are three ways to drive a board with an agent:
 
-- **Owner HTTP API** — `GET`/`POST /api/trip/:room`, gated by the owner secret
-  (`x-owner-secret`). The scripting path; see `docs/trip-schema.md`.
+- **HTTP API** — `GET`/`POST /api/trip/:room`, gated by a capability token
+  presented as `Authorization: Bearer <token>` (the token from the board's link):
+  `GET` needs `view`+, `POST` needs `edit`+, and the token's room must match the
+  path. The scripting path; see `docs/trip-schema.md`.
 - **MCP connector** (`POST /mcp`) — for an MCP client such as **Perplexity Pro**.
-  Add the connector with the Worker's `/mcp` URL and the `MCP_API_KEY` as a bearer
-  token, then paste a board's share link into the chat. It exposes three tools:
-  `get_schema`, `read_board(link)`, and `write_board(link, trip)` — the link is
-  passed as a string, so the room id in the URL hash travels fine. `write_board`
-  snapshots the current board before replacing it, so any AI edit is revertible.
+  Add the connector with just the Worker's `/mcp` URL (no separate key), then paste
+  a board's share link into the chat. It exposes three tools: `get_schema`,
+  `read_board(link)`, and `write_board(link, trip)` — the link *is* the credential
+  (its `#` fragment is the token), passed as a string, and each tool authorizes
+  itself from it (`read_board` needs a `view`+ link, `write_board` an `edit`+ link).
+  `write_board` snapshots the current board before replacing it, so any AI edit is
+  revertible.
 - **Trip JSON panel** — zero-setup manual loop for any AI: open the Trip modal,
   copy the current board JSON, paste it into a chat, and paste the AI's reply back
   into the panel to Apply (guarded by a replace confirm).
 
-**Version history & restore.** Every Worker-mediated write (owner `POST` and MCP
+**Version history & restore.** Every Worker-mediated write (`POST /api/trip` and MCP
 `write_board`) records the room's prior trip JSON to Cloudflare **KV** first
 (keep-all, keyed by room + timestamp). The Trip panel's "Recent versions" list
 restores any earlier version — link-gated (`GET /api/versions/:room` and
-`…/:room/:id`), the same room-id-as-capability model as `/api/auth`. For live
-hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within the
-session; agent writes and restores are kept off that keystroke stack. Provision
-the `SNAPSHOTS` KV namespace and set `MCP_API_KEY` per the notes in
+`…/:room/:id`): knowing the room id is the capability (same model as `/api/auth`).
+For live hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within
+the session; agent writes and restores are kept off that keystroke stack. Provision
+the `SNAPSHOTS` KV namespace and set `TOKEN_SECRET` per the notes in
 `worker/wrangler.toml` and `worker/.dev.vars.example`.

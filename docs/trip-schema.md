@@ -103,21 +103,25 @@ path-prefixed message, e.g. `cards.0.dayKey: Expected a date as YYYY-MM-DD`.
 
 ## Agent HTTP API
 
-An agent reads and writes the same room over JSON via the Cloudflare Worker. Both
-endpoints are **owner-gated**: present the owner secret as the `x-owner-secret`
-header (the same secret that gates new-room creation). The room id is the one
-from the secret link.
+An agent reads and writes the same room over JSON via the Cloudflare Worker. The
+two `/api/trip/:room` endpoints are gated by a **capability token** — the signed
+token from the board's share link, presented as `Authorization: Bearer <token>`:
+`GET` needs a `view`+ token, `POST` needs `edit`+, and the token's room must match
+`:room` (a token for one room can't act on another). `GET /api/schema` is **public**
+— the schema is the API's shape, not a secret, so it needs no token.
 
-| Method | Path | Body | Returns |
-| --- | --- | --- | --- |
-| `GET` | `/api/schema` | — | the JSON Schema for the trip document (derived from the zod schema) |
-| `GET` | `/api/trip/:room` | — | the room's current trip as the JSON document above |
-| `POST` | `/api/trip/:room` | a trip document (above) | the validated, default-filled document |
+| Method | Path | Body | Auth | Returns |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/schema` | — | none (public) | the JSON Schema for the trip document (derived from the zod schema) |
+| `GET` | `/api/trip/:room` | — | `view`+ token, room-matched | the room's current trip as the JSON document above |
+| `POST` | `/api/trip/:room` | a trip document (above) | `edit`+ token, room-matched | the validated, default-filled document |
 
 The same read/write surface is also reachable via the **MCP endpoint**
-(`POST /mcp`, gated by `MCP_API_KEY`) as the `get_schema` / `read_board` /
-`write_board` tools, for MCP clients like Perplexity Pro. Every write here and via
-`POST` above snapshots the prior trip to KV first; the **link-gated** version
+(`POST /mcp`) as the `get_schema` / `read_board` / `write_board` tools, for MCP
+clients like Perplexity Pro. There is no separate endpoint key: each acting tool
+takes the share link as a string and authorizes itself from the token in it
+(`read_board` a `view`+ link, `write_board` an `edit`+ link). Every write here and
+via `POST` above snapshots the prior trip to KV first; the **link-gated** version
 endpoints (`GET /api/versions/:room` and `…/:room/:id`) list and read those
 snapshots for restore. See the [README](../README.md#agent-api) for the connector
 setup and version-history overview.
@@ -149,30 +153,30 @@ compare-and-swap Liveblocks doesn't expose).
 | --- | --- |
 | `200` | `GET` succeeded / `POST` applied |
 | `400` | malformed JSON or schema violation (message is path-prefixed, as above) |
-| `401` | missing or wrong `x-owner-secret` |
+| `401` | missing, invalid, or insufficient token (wrong room, or below the required perm) |
 | `404` | the room does not exist (create it first via `POST /api/rooms`) |
 
 ### Examples
 
-Fetch the JSON Schema:
+Fetch the JSON Schema (public — no token):
 
 ```sh
-curl https://<worker-url>/api/schema \
-  -H "x-owner-secret: $OWNER_SECRET"
+curl https://<worker-url>/api/schema
 ```
 
-Read the current trip (the response includes a `$schema` pointer):
+Read the current trip (the response includes a `$schema` pointer). `$TOKEN` is the
+token from the board's share link — its `#` fragment:
 
 ```sh
 curl https://<worker-url>/api/trip/<roomId> \
-  -H "x-owner-secret: $OWNER_SECRET"
+  -H "authorization: Bearer $TOKEN"
 ```
 
-Write a trip (full replace) — connected clients update live:
+Write a trip (full replace) — connected clients update live (needs an `edit`+ token):
 
 ```sh
 curl -X POST https://<worker-url>/api/trip/<roomId> \
-  -H "x-owner-secret: $OWNER_SECRET" \
+  -H "authorization: Bearer $TOKEN" \
   -H "content-type: application/json" \
   -d '{
     "trip": { "title": "Italy 2027", "startDate": "2027-05-01", "numDays": 3 },

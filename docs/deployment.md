@@ -4,15 +4,16 @@ The app ships as two independent pieces on Cloudflare:
 
 1. **The SPA** — a static Vite build (`dist/`) served by **Cloudflare Pages**.
 2. **The Worker** (`worker/`) — mints Liveblocks tokens, gates room creation,
-   and exposes the agent HTTP + MCP API. It holds the only copies of the
-   `LIVEBLOCKS_SECRET_KEY`, `OWNER_SECRET`, and `MCP_API_KEY`; none ever reaches
-   the browser. It also owns a **KV namespace** (`SNAPSHOTS`) of trip-version
-   history.
+   and exposes the agent HTTP + MCP API. It holds the only copies of
+   `LIVEBLOCKS_SECRET_KEY` and `TOKEN_SECRET` (the capability-link signing key);
+   neither ever reaches the browser. It also owns a **KV namespace**
+   (`SNAPSHOTS`) of trip-version history.
 
 The browser only ever talks to the Worker (for auth, room creation, and the
-agent API). Liveblocks talks to the Worker too, via the secret key. The room id
-lives in the URL hash (`#<roomId>`) — the "secret link" — so anyone with the
-link can join and edit, while creating a *new* room requires the owner secret.
+agent API). Liveblocks talks to the Worker too, via the secret key. A share link
+is a **signed capability token** carried in the URL hash (`#<token>`) that grants
+`view`, `edit`, or `owner` on one room — anyone with a link joins at its perm
+level, while creating a *new* room requires an `owner` token.
 
 ```
 Browser (Pages)  ──auth/rooms──▶  Worker  ──REST + secret key──▶  Liveblocks
@@ -25,10 +26,10 @@ Browser (Pages)  ──auth/rooms──▶  Worker  ──REST + secret key─�
 - A Cloudflare account with Pages and Workers enabled.
 - A Liveblocks account and project; copy its **secret key** (`sk_...`) from
   Dashboard → project → API keys.
-- An **owner secret** of your choosing — any long random string. It gates
-  new-room creation (`POST /api/rooms`) and the agent API (`/api/trip/:room`).
-- An **MCP API key** of your choosing — any long random string. It gates the MCP
-  endpoint (`POST /mcp`), presented by the MCP client as `Authorization: Bearer …`.
+- A **token secret** of your choosing — any long random string. This single HMAC
+  key signs and verifies every capability link, so it gates all access: joining a
+  room (`/api/auth`), new-room creation (`POST /api/rooms`, an `owner` token), and
+  the agent HTTP + MCP API. Rotating it invalidates all outstanding links.
 - `wrangler` is installed as a dev dependency, so all commands below run through
   `npm run …` / `npx wrangler …` without a global install.
 
@@ -44,12 +45,11 @@ the **production** environment:
 
 ```sh
 npx wrangler secret put LIVEBLOCKS_SECRET_KEY --config worker/wrangler.toml --env production
-npx wrangler secret put OWNER_SECRET          --config worker/wrangler.toml --env production
-npx wrangler secret put MCP_API_KEY           --config worker/wrangler.toml --env production
+npx wrangler secret put TOKEN_SECRET          --config worker/wrangler.toml --env production
 ```
 
-(For the default/test Worker omit `--env production`.) `MCP_API_KEY` gates
-`POST /mcp`; leave it unset and every MCP request is rejected with 401.
+(For the default/test Worker omit `--env production`.) `TOKEN_SECRET` verifies
+every link; leave it unset and no link can be verified, so all access is rejected.
 
 ### Create the snapshot KV namespace
 
@@ -132,35 +132,45 @@ npx wrangler pages deploy dist --project-name travel-planner
 After the first deploy, go back and set `ALLOWED_ORIGIN` (step 1) to the Pages
 URL and redeploy the Worker.
 
-## 3. First room and sharing the secret link
+## 3. Genesis room and sharing capability links
 
-Only the owner can create rooms. With the owner secret, create the first room
-against the deployed Worker:
+Creating a room needs an `owner` token, so bootstrap the first ("genesis") one
+locally with the mint CLI (it signs with `TOKEN_SECRET` from `worker/.dev.vars`
+or the environment). Pick a room id, then:
 
 ```sh
+ROOM=$(uuidgen)                                   # or any string you like
+OWNER=$(npx tsx scripts/mint-token.ts "$ROOM" owner)   # signs an owner token
+
+# Create the Liveblocks room with that owner token
 curl -X POST https://<worker-url>/api/rooms \
-  -H "x-owner-secret: $OWNER_SECRET" \
+  -H "authorization: Bearer $OWNER" \
   -H "content-type: application/json" \
-  -d '{}'
-# → { "id": "<roomId>" }
+  -d "{\"room\": \"$ROOM\"}"
+# → { "id": "<roomId>", "token": "<a fresh owner token for it>" }
 ```
 
-Open the SPA at `https://<pages-url>/#<roomId>` and share that exact URL — the
-room id in the hash is the secret link. Anyone with it joins and co-edits with
-no login; without the owner secret they cannot create new rooms.
+Open the SPA at `https://<pages-url>/#<token>` and share that exact URL — the
+token in the hash *is* the capability link. Anyone with it joins at the token's
+perm level (no login). To hand out narrower access, mint a `view` or `edit` token
+for the same room (`npx tsx scripts/mint-token.ts "$ROOM" edit`) and share
+`#<that token>`. Rooms created from inside the app (`POST /api/rooms` with an
+owner link) return their own fresh owner link, so ownership chains — the genesis
+mint is a one-time step.
 
 ## 4. Agent API smoke test
 
-The agent reads and writes the same room over JSON (owner-gated). See
+The agent reads and writes the same room over JSON, gated by a capability token
+(`view`+ to read, `edit`+ to write) whose room matches the path. See
 [`trip-schema.md`](./trip-schema.md) for the payload shape.
 
 ```sh
 # Read the current trip
-curl https://<worker-url>/api/trip/<roomId> -H "x-owner-secret: $OWNER_SECRET"
+curl https://<worker-url>/api/trip/$ROOM -H "authorization: Bearer $OWNER"
 
 # Write a trip (full replace) — connected clients converge live
-curl -X POST https://<worker-url>/api/trip/<roomId> \
-  -H "x-owner-secret: $OWNER_SECRET" \
+curl -X POST https://<worker-url>/api/trip/$ROOM \
+  -H "authorization: Bearer $OWNER" \
   -H "content-type: application/json" \
   -d @trip.json
 ```
