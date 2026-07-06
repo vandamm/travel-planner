@@ -137,7 +137,7 @@ cp .env.example .env
 | --- | --- | --- |
 | `VITE_WORKER_URL` | client (`.env`) | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret. |
 | `LIVEBLOCKS_SECRET_KEY` | Worker secret | Liveblocks project secret key (`sk_...`). Never shipped to the client. |
-| `TOKEN_SECRET` | Worker secret | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates all outstanding links. |
+| `TOKEN_SECRET` | Worker secret | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates every token-verified capability (sync join, room creation, trip API + MCP), but **not** the room-id-gated version-history endpoints, which verify no token. |
 | `ALLOWED_ORIGIN` | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset. |
 
 For local Worker dev, copy `worker/.dev.vars.example` to `worker/.dev.vars`

@@ -267,9 +267,13 @@ nest: `view` ⊂ `edit` ⊂ `owner`. There is **one hidden secret**, `TOKEN_SECR
   session-local undo; this KV log is the durable history.
 - Only `LIVEBLOCKS_SECRET_KEY` and `TOKEN_SECRET` live on the Worker (the old
   `OWNER_SECRET`/`MCP_API_KEY` are gone — collapsed into `TOKEN_SECRET`). Rotating
-  `TOKEN_SECRET` invalidates **all** outstanding links (Phase-1 revocation). The
-  client's only configured secret-adjacent value is `VITE_WORKER_URL`, a public
-  URL baked into the bundle.
+  `TOKEN_SECRET` invalidates every **token-verified** capability (sync join via
+  `/api/auth`, room creation, the trip HTTP + MCP API) — the Phase-1 revocation
+  lever. It does **not** cut off the **room-id-gated** version-history endpoints
+  (`/api/versions/:room`), which verify no token: anyone who still knows a room id
+  can list/restore its snapshots regardless of rotation. The client's only
+  configured secret-adjacent value is `VITE_WORKER_URL`, a public URL baked into
+  the bundle.
 
 ## Testing conventions
 

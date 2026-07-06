@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { signToken, verifyToken } from './token'
+import { signToken, verifyToken, TokenConfigError } from './token'
 import { encodePayload, type TokenPayload } from '../../src/data/token'
 
 const SECRET = 'test-signing-secret'
@@ -32,6 +32,16 @@ describe('signToken / verifyToken', () => {
     expect(await verifyToken('.onlysig', SECRET)).toBeNull()
     expect(await verifyToken('onlypayload.', SECRET)).toBeNull()
     expect(await verifyToken(`${encodePayload(payload)}.@@bad-b64@@`, SECRET)).toBeNull()
+  })
+
+  it('throws TokenConfigError when the secret is missing/blank (not an opaque crypto error)', async () => {
+    const token = await signToken(payload, SECRET)
+    await expect(signToken(payload, '')).rejects.toBeInstanceOf(TokenConfigError)
+    await expect(verifyToken(token, '')).rejects.toBeInstanceOf(TokenConfigError)
+    // An unbound Worker secret is `undefined` at runtime, not the declared string.
+    await expect(verifyToken(token, undefined as unknown as string)).rejects.toBeInstanceOf(
+      TokenConfigError,
+    )
   })
 
   it('rejects a valid signature over an invalid payload', async () => {

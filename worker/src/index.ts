@@ -24,6 +24,7 @@ import {
   handlePostTrip,
 } from './trip'
 import { handleMcp } from './mcp'
+import { TokenConfigError } from './token'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -130,7 +131,12 @@ export async function handleRequest(
     }
 
     return withCors(res, cors)
-  } catch {
+  } catch (err) {
+    // A missing/blank TOKEN_SECRET is a deploy mistake, not an upstream failure —
+    // answer 500 "server misconfigured" so it isn't mistaken for a Liveblocks outage.
+    if (err instanceof TokenConfigError) {
+      return withCors(json({ error: 'server misconfigured' }, 500), cors)
+    }
     // The Liveblocks REST layer throws on any non-2xx (outage, 429, transient
     // 5xx). Without this guard that rejection escapes `fetch` as a bare 500 with
     // no CORS headers, so the browser surfaces an opaque CORS error instead of a

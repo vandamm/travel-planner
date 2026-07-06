@@ -29,7 +29,10 @@ Browser (Pages)  ──auth/rooms──▶  Worker  ──REST + secret key─�
 - A **token secret** of your choosing — any long random string. This single HMAC
   key signs and verifies every capability link, so it gates all access: joining a
   room (`/api/auth`), new-room creation (`POST /api/rooms`, an `owner` token), and
-  the agent HTTP + MCP API. Rotating it invalidates all outstanding links.
+  the agent HTTP + MCP API. Rotating it invalidates every **token-verified**
+  capability (those three). It does **not** cut off the room-id-gated
+  version-history endpoints (`/api/versions/:room`), which verify no token —
+  anyone who still knows a room id can list/restore its snapshots after rotation.
 - `wrangler` is installed as a dev dependency, so all commands below run through
   `npm run …` / `npx wrangler …` without a global install.
 

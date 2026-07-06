@@ -13,7 +13,22 @@ import {
   type TokenPayload,
 } from '../../src/data/token'
 
+/**
+ * Thrown when `TOKEN_SECRET` is absent or blank — a Worker misconfiguration, not
+ * a bad token. Distinct so the router can answer 500 "server misconfigured"
+ * instead of the generic 502 (which reads as a Liveblocks outage). Without this
+ * guard an empty key reaches `crypto.subtle.importKey`, which throws an opaque
+ * `DataError` ("Zero-length key is not supported").
+ */
+export class TokenConfigError extends Error {
+  constructor() {
+    super('TOKEN_SECRET is not configured')
+    this.name = 'TokenConfigError'
+  }
+}
+
 async function hmacKey(secret: string): Promise<CryptoKey> {
+  if (!secret) throw new TokenConfigError()
   return crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
