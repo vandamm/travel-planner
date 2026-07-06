@@ -29,10 +29,10 @@ Browser (Pages)  ──auth/rooms──▶  Worker  ──REST + secret key─�
 - A **token secret** of your choosing — any long random string. This single HMAC
   key signs and verifies every capability link, so it gates all access: joining a
   room (`/api/auth`), new-room creation (`POST /api/rooms`, an `owner` token), and
-  the agent HTTP + MCP API. Rotating it invalidates every **token-verified**
-  capability (those three). It does **not** cut off the room-id-gated
-  version-history endpoints (`/api/versions/:room`), which verify no token —
-  anyone who still knows a room id can list/restore its snapshots after rotation.
+  the agent HTTP + MCP API, including the version-history endpoints
+  (`/api/versions/:room`). Rotating it invalidates every existing capability link
+  everywhere, including history access; keep the room ids you need so you can mint
+  and share replacement links signed with the new secret.
 - `wrangler` is installed as a dev dependency, so all commands below run through
   `npm run …` / `npx wrangler …` without a global install.
 
@@ -53,6 +53,8 @@ npx wrangler secret put TOKEN_SECRET          --config worker/wrangler.toml --en
 
 (For the default/test Worker omit `--env production`.) `TOKEN_SECRET` verifies
 every link; leave it unset and no link can be verified, so all access is rejected.
+If you rotate it, old links fail for sync, room creation, trip API/MCP, and
+version-history reads until replacement links are minted with the new value.
 
 ### Create the snapshot KV namespace
 

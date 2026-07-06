@@ -258,20 +258,19 @@ nest: `view` ⊂ `edit` ⊂ `owner`. There is **one hidden secret**, `TOKEN_SECR
   binding `SNAPSHOTS`): every Worker-mediated write (owner `POST /api/trip` and MCP
   `write_board`, both via `applyTripToRoom`) records the room's current trip JSON
   *before* mutating, keyed by room + timestamp, **keep-all**. Snapshotting is guarded
-  on the KV binding being present, so handlers still work unbound. Two **link-gated**
-  endpoints (room-id-as-capability — no token verify, knowing the room id is enough)
-  expose the log: `GET /api/versions/:room` (list `{id, timestamp}`) and
-  `GET /api/versions/:room/:id` (that snapshot's JSON). The Trip-settings panel lists
-  recent versions and restores one by feeding its JSON through the same paste-apply
-  path (a restore is itself snapshotted on the next write). `UndoManager` is the
-  session-local undo; this KV log is the durable history.
+  on the KV binding being present, so handlers still work unbound. Two
+  **token-gated** endpoints expose the log: `GET /api/versions/:room` (list
+  `{id, timestamp}`) and `GET /api/versions/:room/:id` (that snapshot's JSON).
+  Both require a Bearer capability token with `view`+ permission whose `r` matches
+  the room. The Trip-settings panel lists recent versions and restores one by
+  feeding its JSON through the same paste-apply path (a restore is itself
+  snapshotted on the next write). `UndoManager` is the session-local undo; this KV
+  log is the durable history.
 - Only `LIVEBLOCKS_SECRET_KEY` and `TOKEN_SECRET` live on the Worker (the old
   `OWNER_SECRET`/`MCP_API_KEY` are gone — collapsed into `TOKEN_SECRET`). Rotating
-  `TOKEN_SECRET` invalidates every **token-verified** capability (sync join via
-  `/api/auth`, room creation, the trip HTTP + MCP API) — the Phase-1 revocation
-  lever. It does **not** cut off the **room-id-gated** version-history endpoints
-  (`/api/versions/:room`), which verify no token: anyone who still knows a room id
-  can list/restore its snapshots regardless of rotation. The client's only
+  `TOKEN_SECRET` invalidates every token-verified capability: sync join via
+  `/api/auth`, room creation, the trip HTTP + MCP API, and version-history access.
+  This is the revocation lever for all link-held access. The client's only
   configured secret-adjacent value is `VITE_WORKER_URL`, a public URL baked into
   the bundle.
 

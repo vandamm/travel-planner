@@ -115,16 +115,19 @@ token from the board's share link, presented as `Authorization: Bearer <token>`:
 | `GET` | `/api/schema` | — | none (public) | the JSON Schema for the trip document (derived from the zod schema) |
 | `GET` | `/api/trip/:room` | — | `view`+ token, room-matched | the room's current trip as the JSON document above |
 | `POST` | `/api/trip/:room` | a trip document (above) | `edit`+ token, room-matched | the validated, default-filled document |
+| `GET` | `/api/versions/:room` | — | `view`+ token, room-matched | the room's saved version list |
+| `GET` | `/api/versions/:room/:id` | — | `view`+ token, room-matched | one saved version as a trip document |
 
 The same read/write surface is also reachable via the **MCP endpoint**
 (`POST /mcp`) as the `get_schema` / `read_board` / `write_board` tools, for MCP
 clients like Perplexity Pro. There is no separate endpoint key: each acting tool
 takes the share link as a string and authorizes itself from the token in it
 (`read_board` a `view`+ link, `write_board` an `edit`+ link). Every write here and
-via `POST` above snapshots the prior trip to KV first; the **link-gated** version
-endpoints (`GET /api/versions/:room` and `…/:room/:id`) list and read those
-snapshots for restore. See the [README](../README.md#agent-api) for the connector
-setup and version-history overview.
+via `POST` above snapshots the prior trip to KV first; the version endpoints
+(`GET /api/versions/:room` and `…/:room/:id`) list and read those snapshots for
+restore, gated by the same room-matched `view`+ Bearer token rule as trip reads.
+See the [README](../README.md#agent-api) for the connector setup and
+version-history overview.
 
 `GET /api/schema` returns the JSON Schema generated from `tripDocumentSchema` —
 the *same* schema `POST` validates against, so the published shape can never

@@ -155,14 +155,14 @@ Address three of the accepted findings from the architecture/security review
       `npx tsc --noEmit` (root and `worker/`) clean.
 
 ### Task 5: Update documentation
-- [ ] `CLAUDE.md` "Auth / room-creation model": version endpoints are now
+- [x] `CLAUDE.md` "Auth / room-creation model": version endpoints are now
       token-gated (`view`+, room-matched); rotating `TOKEN_SECRET` now revokes
       **all** access including history.
-- [ ] `README.md`: env table `TOKEN_SECRET` note (rotation caveat is gone),
+- [x] `README.md`: env table `TOKEN_SECRET` note (rotation caveat is gone),
       Agent API / version-history section (token-gated).
-- [ ] `docs/deployment.md`: rotation prerequisite note.
-- [ ] `docs/trip-schema.md`: version-endpoints auth description.
-- [ ] `worker/wrangler.toml`: secrets comment block (rotation now total).
+- [x] `docs/deployment.md`: rotation prerequisite note.
+- [x] `docs/trip-schema.md`: version-endpoints auth description.
+- [x] `worker/wrangler.toml`: secrets comment block (rotation now total).
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`.*
 

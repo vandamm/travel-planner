@@ -137,7 +137,7 @@ cp .env.example .env
 | --- | --- | --- |
 | `VITE_WORKER_URL` | client (`.env`) | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret. |
 | `LIVEBLOCKS_SECRET_KEY` | Worker secret | Liveblocks project secret key (`sk_...`). Never shipped to the client. |
-| `TOKEN_SECRET` | Worker secret | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates every token-verified capability (sync join, room creation, trip API + MCP), but **not** the room-id-gated version-history endpoints, which verify no token. |
+| `TOKEN_SECRET` | Worker secret | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates all token-verified access: sync join, room creation, trip API + MCP, and version-history reads. |
 | `ALLOWED_ORIGIN` | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset. |
 
 For local Worker dev, copy `worker/.dev.vars.example` to `worker/.dev.vars`
@@ -210,10 +210,11 @@ There are three ways to drive a board with an agent:
 **Version history & restore.** Every Worker-mediated write (`POST /api/trip` and MCP
 `write_board`) records the room's prior trip JSON to Cloudflare **KV** first
 (keep-all, keyed by room + timestamp). The Trip panel's "Recent versions" list
-restores any earlier version — room-id-gated (`GET /api/versions/:room` and
-`…/:room/:id`): these verify no token, so knowing the room id alone is the
-capability (unlike `/api/auth`/`/api/trip`, and so not covered by `TOKEN_SECRET`
-rotation).
+restores any earlier version through `GET /api/versions/:room` and
+`GET /api/versions/:room/:id`; both endpoints require
+`Authorization: Bearer <token>` with a `view`+ capability token whose room matches
+the path. Rotating `TOKEN_SECRET` revokes history access along with sync, room
+creation, and the trip APIs.
 For live hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within
 the session; agent writes and restores are kept off that keystroke stack. Provision
 the `SNAPSHOTS` KV namespace and set `TOKEN_SECRET` per the notes in

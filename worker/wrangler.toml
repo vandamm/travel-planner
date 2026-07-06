@@ -6,10 +6,9 @@ compatibility_date = "2026-06-25"
 #   LIVEBLOCKS_SECRET_KEY  — Liveblocks project secret key (never shipped to the client)
 #   TOKEN_SECRET           — HMAC key that signs/verifies capability tokens (the sole
 #                            hidden secret; every share link is a token signed with it).
-#                            Rotate it to invalidate every token-verified capability
-#                            (sync join, room creation, trip HTTP + MCP API). It does
-#                            NOT cut off the room-id-gated version-history endpoints
-#                            (/api/versions/:room), which verify no token.
+#                            Rotate it to invalidate all link-held access: sync join,
+#                            room creation, trip HTTP + MCP API, and version-history
+#                            reads (/api/versions/:room).
 #
 # Set them locally for `wrangler dev` via worker/.dev.vars (gitignored), and for a
 # deployed Worker with:
