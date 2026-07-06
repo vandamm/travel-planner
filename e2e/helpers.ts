@@ -1,4 +1,20 @@
 import { expect, type Locator, type Page } from '@playwright/test'
+import { encodePayload, type Perm } from '../src/data/token'
+
+/**
+ * Build a `#<token>` link fragment for e2e. The payload is UNSIGNED (no `.sig`
+ * segment) — fine because offline e2e never hits `/api/auth`; the client only
+ * decodes the token to derive the room + perms. Mirrors the production link format.
+ */
+export function tokenHash(roomId: string, perm: Perm = 'edit'): string {
+  return `#${encodePayload({ r: roomId, p: perm, v: 1 })}`
+}
+
+/** The default e2e board link (edit perms on room "e2e"). */
+export const E2E_LINK = `/${tokenHash('e2e')}`
+
+/** A distinct board used by the version-restore spec. */
+export const RESTORE_LINK = `/${tokenHash('restore-test')}`
 
 /**
  * Navigate an open calendar Popover to `iso`'s month (stepping ‹/› by the month

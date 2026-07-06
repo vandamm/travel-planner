@@ -10,7 +10,7 @@ import { CardEditor } from './CardEditor'
 
 function renderInRoom(ui: ReactNode) {
   return render(
-    <RoomProvider workerUrl="" roomId={null} enableSync={false}>
+    <RoomProvider workerUrl="" token={null} enableSync={false}>
       {ui}
     </RoomProvider>,
   )

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 // A minimal valid replacement document (full-replace apply target).
 const REPLACEMENT = JSON.stringify({
@@ -19,7 +19,7 @@ async function openJsonPanel(page: import('@playwright/test').Page) {
 
 test('Trip JSON panel: show current + copy', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const dialog = await openJsonPanel(page)
@@ -33,7 +33,7 @@ test('Trip JSON panel: show current + copy', async ({ page, context }) => {
 })
 
 test('Trip JSON panel: paste valid JSON replaces the trip (after confirm)', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const dialog = await openJsonPanel(page)
@@ -47,7 +47,7 @@ test('Trip JSON panel: paste valid JSON replaces the trip (after confirm)', asyn
 })
 
 test('Trip JSON panel: confirm gates the apply (dismiss keeps the trip)', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const dialog = await openJsonPanel(page)
@@ -61,7 +61,7 @@ test('Trip JSON panel: confirm gates the apply (dismiss keeps the trip)', async 
 })
 
 test('Trip JSON panel: invalid JSON shows an error and does not apply', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const dialog = await openJsonPanel(page)

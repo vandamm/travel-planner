@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './components/Modal'
 import { RoomProvider, useRoom } from './data/RoomProvider'
-import { roomIdFromHash } from './data/provider'
+import { parseToken } from './data/token'
 import { getTrip, listCities } from './data/doc'
 import { useDocVersion } from './data/useDoc'
 import { Board } from './features/board/Board'
@@ -165,14 +165,16 @@ function NoRoom() {
 }
 
 export default function App() {
-  // The board only exists for a specific room. Opened without a board id in the
-  // URL hash there is nothing to do, so render a notice and never mount
-  // RoomProvider (no doc, no connection, no dev bridge). Read once at mount —
-  // like RoomProvider itself; a fresh link is always opened as a navigation.
-  const roomId = roomIdFromHash(typeof location !== 'undefined' ? location.hash : '')
-  if (!roomId) return <NoRoom />
+  // The board only exists for a specific room, addressed by a capability token
+  // in the URL fragment (`#<token>`). Opened without a decodable token there is
+  // nothing to do, so render a notice and never mount RoomProvider (no doc, no
+  // connection, no dev bridge). Read once at mount — like RoomProvider itself;
+  // a fresh link is always opened as a navigation. An old `#room=…` fragment
+  // fails to decode → the same notice.
+  const payload = parseToken(typeof location !== 'undefined' ? location.hash : '')
+  if (!payload) return <NoRoom />
   return (
-    <RoomProvider roomId={roomId}>
+    <RoomProvider>
       <AppShell />
     </RoomProvider>
   )

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 interface PlannerBridge {
   doc: unknown
@@ -30,7 +30,7 @@ async function setUpTrip(page: Page) {
 }
 
 test('toggling time direction reverses card order and persists across reload', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setUpTrip(page)
   await seedCards(page, '2027-05-01', [
     { title: 'Breakfast', startTime: '08:00' },

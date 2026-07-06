@@ -2,16 +2,20 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
+import { encodePayload } from './data/token'
 
-// The app only mounts when a board id is present in the URL hash; give the
+// A board link is a `#<token>` fragment; build one for the board-focused tests.
+const TOKEN_HASH = '#' + encodePayload({ r: 'test-room', p: 'edit', v: 1 })
+
+// The app only mounts when a decodable token is present in the URL hash; give the
 // board-focused tests one, and reset the hash after each test.
 afterEach(() => {
   window.location.hash = ''
 })
 
-describe('App (with a board id in the hash)', () => {
+describe('App (with a board token in the hash)', () => {
   beforeEach(() => {
-    window.location.hash = '#room=test-room'
+    window.location.hash = TOKEN_HASH
   })
 
   it('renders the wordmark heading (falls back to Travel Planner when untitled)', () => {
@@ -66,7 +70,7 @@ describe('App (with a board id in the hash)', () => {
   })
 })
 
-describe('App without a board id', () => {
+describe('App without a decodable token', () => {
   it('shows a notice and renders no board or editing controls', () => {
     window.location.hash = ''
     render(<App />)
@@ -75,5 +79,12 @@ describe('App without a board id', () => {
     expect(screen.queryByRole('button', { name: 'Trip' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-meta')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument()
+  })
+
+  it('treats an old `#room=…` link as no token (hard cut)', () => {
+    window.location.hash = '#room=legacy'
+    render(<App />)
+    expect(screen.getByText(/share link/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('app-meta')).not.toBeInTheDocument()
   })
 })

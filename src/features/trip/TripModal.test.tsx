@@ -9,7 +9,7 @@ import { TripModal } from './TripModal'
 
 function renderInRoom(ui: ReactNode) {
   return render(
-    <RoomProvider workerUrl="" roomId={null} enableSync={false}>
+    <RoomProvider workerUrl="" token={null} enableSync={false}>
       {ui}
     </RoomProvider>,
   )

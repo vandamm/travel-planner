@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 /**
  * Drag dnd-kit's grab handle onto a target with explicit, stepped pointer moves
@@ -37,7 +37,7 @@ async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
 }
 
 test('drag a card to another day column', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
@@ -63,7 +63,7 @@ test('drag a card to another day column', async ({ page }) => {
 })
 
 test('dragged card follows the cursor and highlights the target day', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
@@ -108,7 +108,7 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
 })
 
 test('reorder untimed cards within a day', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 

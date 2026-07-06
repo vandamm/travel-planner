@@ -17,7 +17,7 @@ function Capture() {
 
 function renderEditor(ui: ReactNode) {
   return render(
-    <RoomProvider workerUrl="" roomId={null} enableSync={false}>
+    <RoomProvider workerUrl="" token={null} enableSync={false}>
       <Capture />
       {ui}
     </RoomProvider>,
@@ -124,7 +124,7 @@ describe('AccommodationEditor', () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(
-      <RoomProvider workerUrl="" roomId={null} enableSync={false}>
+      <RoomProvider workerUrl="" token={null} enableSync={false}>
         <AccommodationEditor onClose={onClose} />
       </RoomProvider>,
     )

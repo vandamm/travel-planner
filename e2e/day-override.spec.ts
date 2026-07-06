@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 interface PlannerBridge {
   doc: unknown
@@ -28,7 +28,7 @@ async function seed(page: Page) {
 }
 
 test('per-day city override recolors the header and Auto reverts it', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 2 })
   await seed(page)
 

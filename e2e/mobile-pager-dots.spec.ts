@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 // City-coloured pager dots below the prev/next controls: one dot per day, the
 // active dot carries aria-current, and tapping a dot jumps to that day.
@@ -8,7 +8,7 @@ test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true
 test('pager dots match the day count, mark the current day, and navigate on tap', async ({
   page,
 }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
 
   const dots = page.getByTestId('mobile-day-dot')

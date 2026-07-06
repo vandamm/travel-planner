@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 // On a phone the crowded inline [✎ Trip]/[◉ Cities] header buttons collapse into
 // a ≡ menu (a shared-Modal sheet) that also carries "Add stay". On desktop the
@@ -9,7 +9,7 @@ test.describe('mobile: ≡ menu', () => {
   test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true })
 
   test('collapses Trip/Cities/Add-stay into the ≡ menu', async ({ page }) => {
-    await page.goto('/#room=e2e')
+    await page.goto(E2E_LINK)
 
     // Inline buttons are lg:-only → not in the mobile a11y tree; ≡ is present.
     await expect(page.getByRole('button', { name: 'Trip' })).toHaveCount(0)
@@ -44,7 +44,7 @@ test.describe('desktop: inline header buttons', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
   test('keeps inline Trip/Cities and has no ≡', async ({ page }) => {
-    await page.goto('/#room=e2e')
+    await page.goto(E2E_LINK)
     await expect(page.getByRole('button', { name: 'Trip' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Cities' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(0)

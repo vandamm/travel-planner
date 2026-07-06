@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 // Drive the board on a phone-sized, touch-enabled viewport so it renders the
 // single-day swipe view instead of the multi-column board.
@@ -12,7 +12,7 @@ async function setUpTrip(page: import('@playwright/test').Page) {
 test('mobile shows one day at a time and pages with prev/next, clamping at the ends', async ({
   page,
 }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setUpTrip(page)
 
   const columns = page.locator('[data-testid="day-column"]')
@@ -42,7 +42,7 @@ test('mobile shows one day at a time and pages with prev/next, clamping at the e
 })
 
 test('mobile swipes between days', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setUpTrip(page)
 
   const columns = page.locator('[data-testid="day-column"]')

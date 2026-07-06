@@ -60,6 +60,12 @@ export async function createRoom(opts: CreateRoomOptions): Promise<string> {
 
 export interface ConnectOptions {
   roomId: string
+  /**
+   * The raw capability token (URL fragment) POSTed to `/api/auth` — the sole
+   * credential. The Worker verifies it and derives the room + perms; the client
+   * never sends the room id separately.
+   */
+  token?: string | null
   /** Worker base URL used for the Liveblocks auth endpoint. */
   workerUrl: string
   /** Reuse an existing doc instead of creating one (handy for tests). */
@@ -155,13 +161,14 @@ async function setupLiveblocksSync(
   ])
 
   const client = createClient({
-    // The secret link is the credential: post the room id to the Worker, which
-    // mints a room-scoped token only if the room already exists.
-    authEndpoint: async (room) => {
+    // The capability token is the credential: POST it to the Worker, which
+    // verifies it, derives the room + perms, and mints a perm-scoped Liveblocks
+    // token only if the room already exists. The room id is never sent separately.
+    authEndpoint: async () => {
       const res = await fetch(`${base}/api/auth`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ room }),
+        body: JSON.stringify({ token: opts.token }),
       })
       if (!res.ok) throw new Error(`auth failed: ${res.status}`)
       return (await res.json()) as { token: string }

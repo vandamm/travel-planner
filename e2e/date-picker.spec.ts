@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test'
-import { pickDate, pickRange, setupTrip } from './helpers'
+import { pickDate, pickRange, setupTrip, E2E_LINK } from './helpers'
 
 // §10 date picker: the custom calendar pop-over replaces the native date inputs.
 
 test('picking the trip start via the calendar rebuilds the board to that date', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Cal Trip', startDate: '2027-05-01', numDays: 3 })
 
   // Board rebuilt from the picked ISO date; headers show European dd.MM.
@@ -21,7 +21,7 @@ test('picking the trip start via the calendar rebuilds the board to that date', 
 })
 
 test('a stay range highlights both endpoints and the days between', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
 
   await page.getByTestId('add-stay').click()

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, RESTORE_LINK } from './helpers'
 
 // The app is local-first with no live backend in e2e, so we mock the link-gated
 // version endpoints the Trip-settings panel calls. The snapshot we hand back is
@@ -26,7 +26,7 @@ test('Recent versions: restore reverts the board to an earlier snapshot', async 
   })
 
   // A room id in the hash is what makes the "Recent versions" section render.
-  await page.goto('/#room=restore-test')
+  await page.goto(RESTORE_LINK)
   await setupTrip(page, { title: 'Current Draft', startDate: '2027-05-01', numDays: 3 })
 
   await page.getByRole('button', { name: 'Trip' }).click()

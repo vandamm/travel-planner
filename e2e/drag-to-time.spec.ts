@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 /** Same stepped-pointer drag the dnd spec uses (the high-level dragTo is unreliable). */
 async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
@@ -24,7 +24,7 @@ async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
 }
 
 test('dragging an untimed card toward the evening gives it an evening time', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 1 })
 

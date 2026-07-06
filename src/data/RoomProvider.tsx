@@ -5,11 +5,16 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as Y from 'yjs'
 import { installDevBridge } from './devBridge'
-import { connectRoom, roomIdFromHash, type SyncStatus } from './provider'
+import { connectRoom, type SyncStatus } from './provider'
+import { parseToken, tokenFromLink, type Perm } from './token'
 
 export interface RoomContextValue {
   doc: Y.Doc
   roomId: string | null
+  /** Capability level decoded (NOT verified) from the token — shapes local UX. */
+  perm: Perm | null
+  /** Optional display name decoded from the token. */
+  name: string | null
   status: SyncStatus
   /** Worker base URL (may be '' — then Worker-backed features fetch relative). */
   workerUrl: string
@@ -27,10 +32,12 @@ export interface RoomProviderProps {
   /** Worker base URL; defaults to `import.meta.env.VITE_WORKER_URL`. */
   workerUrl?: string
   /**
-   * Room id. When omitted, it is derived from `location.hash`. Pass `null`
-   * explicitly for a local-only doc with no room.
+   * The raw capability token (URL fragment). When omitted, it is read from
+   * `location.hash`. Pass `null` explicitly for a local-only doc with no room.
+   * Room id, perms and name are decoded from it (NO signature check — the client
+   * only shapes local rendering; the Worker verifies on `/api/auth`).
    */
-  roomId?: string | null
+  token?: string | null
   /** Force-enable/disable background sync (defaults to auto from room + url). */
   enableSync?: boolean
   children: ReactNode
@@ -42,12 +49,16 @@ function currentHash(): string {
 
 export function RoomProvider({
   workerUrl,
-  roomId: roomIdProp,
+  token: tokenProp,
   enableSync,
   children,
 }: RoomProviderProps) {
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ''
-  const roomId = roomIdProp !== undefined ? roomIdProp : roomIdFromHash(currentHash())
+  const token = tokenProp !== undefined ? tokenProp : tokenFromLink(currentHash()) || null
+  const payload = token ? parseToken(token) : null
+  const roomId = payload?.r ?? null
+  const perm = payload?.p ?? null
+  const name = payload?.n ?? null
 
   // The Y.Doc is cheap and owns no external resources, so it can live in useMemo
   // and be available synchronously for the first render. The *connection*
@@ -66,6 +77,7 @@ export function RoomProvider({
   useEffect(() => {
     const connection = connectRoom({
       roomId: roomId ?? 'local',
+      token,
       workerUrl: workerBase,
       enableSync: enableSync ?? Boolean(roomId && workerBase),
       doc,
@@ -77,11 +89,11 @@ export function RoomProvider({
       unsubscribe()
       connection.destroy()
     }
-  }, [doc, roomId, workerBase, enableSync])
+  }, [doc, roomId, token, workerBase, enableSync])
 
   const value = useMemo<RoomContextValue>(
-    () => ({ doc, roomId, status, workerUrl: workerBase }),
-    [doc, roomId, status, workerBase],
+    () => ({ doc, roomId, perm, name, status, workerUrl: workerBase }),
+    [doc, roomId, perm, name, status, workerBase],
   )
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>

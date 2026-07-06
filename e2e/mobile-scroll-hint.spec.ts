@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 // The mobile single-day view bounds the day timeline in a scroll container and
 // overlays a fade + "scroll for more" hint only while there is more below. The
@@ -7,7 +7,7 @@ import { setupTrip } from './helpers'
 test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true })
 
 test('a tall day shows the scroll hint, which clears at the bottom', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 1 })
 
   // Seed a few tall cards so the day comfortably overflows the phone viewport.
@@ -29,7 +29,7 @@ test('a tall day shows the scroll hint, which clears at the bottom', async ({ pa
 })
 
 test('paging to another day resets the scroll position to the top', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 2 })
 
   // Both days overflow so day 2 is also tall enough to hold a non-zero offset.
@@ -51,7 +51,7 @@ test('paging to another day resets the scroll position to the top', async ({ pag
 })
 
 test('a short day that fits never shows the hint', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 1 })
 
   // A narrow day window fits the viewport with no cards → no overflow.

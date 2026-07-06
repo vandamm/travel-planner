@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { pickTime, setupTrip } from './helpers'
+import { pickTime, setupTrip, E2E_LINK } from './helpers'
 
 // §11 time picker: the custom hour/minute wheel pop-over replaces the native
 // time inputs on cards and the trip day window. (Card height is derived from the
@@ -7,7 +7,7 @@ import { pickTime, setupTrip } from './helpers'
 // writes/clears the stored HH:mm.)
 
 test('setting a card start + end through the wheel shows the time range', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
@@ -23,7 +23,7 @@ test('setting a card start + end through the wheel shows the time range', async 
 })
 
 test('clearing a card start time in the wheel untimes the card', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
@@ -46,7 +46,7 @@ test('clearing a card start time in the wheel untimes the card', async ({ page }
 })
 
 test('setting the trip day window through the wheel updates the field', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
 
   await page.getByRole('button', { name: 'Trip' }).click()

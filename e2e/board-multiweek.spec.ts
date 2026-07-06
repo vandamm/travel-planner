@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip } from './helpers'
+import { setupTrip, E2E_LINK } from './helpers'
 
 // §9 desktop multi-week affordances: a right-edge fade while more columns lie
 // off-screen, "Jump to today", and a date-range stepper that pages the scroll.
@@ -8,7 +8,7 @@ import { setupTrip } from './helpers'
 test('a long trip shows the right-edge fade, which clears when scrolled fully right', async ({
   page,
 }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 14 })
 
   const fade = page.getByTestId('board-fade')
@@ -21,7 +21,7 @@ test('a long trip shows the right-edge fade, which clears when scrolled fully ri
 })
 
 test('a short trip that fits shows no fade', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   // Three ~224px columns fit a desktop viewport with room to spare → no overflow.
   await setupTrip(page, { title: 'Weekend', startDate: '2027-05-01', numDays: 3 })
 
@@ -30,7 +30,7 @@ test('a short trip that fits shows no fade', async ({ page }) => {
 })
 
 test('Jump to today brings today’s column into view', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   // Anchor the trip on the browser's real "today" so the component's `new Date()`
   // matches — then today is column 0 and a scroll-right hides it.
   const today = await page.evaluate(() => new Date().toISOString().slice(0, 10))
@@ -45,7 +45,7 @@ test('Jump to today brings today’s column into view', async ({ page }) => {
 })
 
 test('Jump to today is absent when today is outside the trip', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   // A 3-day trip starting ~40 days out never contains the real "today".
   const soon = await page.evaluate(() => {
     const d = new Date()
@@ -57,7 +57,7 @@ test('Jump to today is absent when today is outside the trip', async ({ page }) 
 })
 
 test('the range stepper pages the scroll and updates its label', async ({ page }) => {
-  await page.goto('/#room=e2e')
+  await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 14 })
 
   const label = page.getByTestId('visible-range')
