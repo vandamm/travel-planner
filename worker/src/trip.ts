@@ -128,7 +128,18 @@ export async function handleGetTrip(
   // Point at the schema endpoint so an agent reading even an empty trip learns
   // where to fetch the full shape.
   const schemaUrl = new URL('/api/schema', request.url).toString()
-  return json({ $schema: schemaUrl, ...exportTrip(doc) }, 200)
+  try {
+    return json({ $schema: schemaUrl, ...exportTrip(doc) }, 200)
+  } catch {
+    return json(
+      {
+        error:
+          'The board could not be read as a valid trip - it is in an inconsistent state. ' +
+          'Use write_board or POST /api/trip/:room to replace it with a valid trip document.',
+      },
+      409,
+    )
+  }
 }
 
 /**

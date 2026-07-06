@@ -172,6 +172,29 @@ describe('handleGetTrip', () => {
     expect(body.$schema).toBe('https://worker.test/api/schema')
   })
 
+  it('returns 409 with repair guidance when the room doc cannot be exported', async () => {
+    const res = await handleGetTrip(
+      tripRequest('GET', undefined, viewTok),
+      env,
+      makeApi(docWithMergedInvertedWindow()),
+      'room1',
+    )
+
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toMatch(/could not be read as a valid trip/i)
+    expect(body.error).toMatch(/inconsistent state/i)
+    expect(body.error).toMatch(/POST|write_board/i)
+
+    const healthy = await handleGetTrip(
+      tripRequest('GET', undefined, viewTok),
+      env,
+      makeApi(seededDoc()),
+      'room1',
+    )
+    expect(healthy.status).toBe(200)
+  })
+
   it('rejects without a token (401)', async () => {
     const res = await handleGetTrip(tripRequest('GET'), env, makeApi(seededDoc()), 'room1')
     expect(res.status).toBe(401)

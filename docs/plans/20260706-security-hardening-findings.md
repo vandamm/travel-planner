@@ -129,17 +129,17 @@ Address three of the accepted findings from the architecture/security review
 - [x] run `npm test` — must pass before Task 3.
 
 ### Task 3: guard `exportTrip` in `GET /api/trip/:room`
-- [ ] `worker/src/trip.ts` `handleGetTrip`: wrap the `exportTrip(doc)` call in
+- [x] `worker/src/trip.ts` `handleGetTrip`: wrap the `exportTrip(doc)` call in
       try/catch; on throw return **409** with a legible message (reuse the MCP
       `read_board` wording: the board is in an inconsistent state — use
       `write_board`/`POST` to replace it with a valid document) instead of
       falling through to the router's generic 502.
-- [ ] write a worker test: build the inconsistent doc via a two-`Y.Doc` merge of
+- [x] write a worker test: build the inconsistent doc via a two-`Y.Doc` merge of
       two individually-valid `setTrip` window edits (A: `dayStart` 20:00 against
       end 21:00; B: `dayEnd` 07:00 against start 06:00 → merged window inverted),
       push it through the fake, assert `GET /api/trip/:room` → 409 with the
       message (not 502); assert a healthy doc still returns 200.
-- [ ] run `npm test` — must pass before Task 4.
+- [x] run `npm test` — must pass before Task 4.
 
 ### Task 4: Verify acceptance criteria
 - [ ] verify all three Overview items behave end to end against the fakes:
