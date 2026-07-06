@@ -17,7 +17,6 @@ function json(data: unknown, status = 200): Response {
 
 interface AuthBody {
   token?: unknown
-  userId?: unknown
 }
 
 export async function handleAuth(
@@ -42,9 +41,9 @@ export async function handleAuth(
     return json({ error: 'room not found' }, 403)
   }
 
-  // Identify the session; the token is the credential, so a stable per-session
-  // id is sufficient (no login).
-  const userId = typeof body.userId === 'string' && body.userId ? body.userId : `guest-${room}`
+  // Identify the session; the token is the credential and there is no login, so
+  // a stable per-room guest id is sufficient.
+  const userId = `guest-${room}`
   const token = await api.mintAccessToken(room, userId, {
     access: liveblocksAccess(payload.p),
     name: payload.n,

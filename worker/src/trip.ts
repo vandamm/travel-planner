@@ -131,10 +131,12 @@ export async function handleGetTrip(
 }
 
 /**
- * Version history is **link-gated**, not owner-gated: knowing the room id is the
- * capability (same model as `/api/auth`), so anyone with the secret link can list
- * and restore snapshots — no owner secret. Unknown room → 404 (mirrors the trip
- * handlers). When KV isn't bound there's simply no history: list is empty.
+ * Version history is **room-id-gated**: knowing the room id alone is the
+ * capability — these endpoints verify NO token (unlike `/api/auth` and
+ * `/api/trip`, which now verify a signed capability token). So anyone who ever
+ * held a link can still list/restore snapshots, and rotating `TOKEN_SECRET` does
+ * NOT revoke this history access. Unknown room → 404 (mirrors the trip handlers).
+ * When KV isn't bound there's simply no history: list is empty.
  */
 export async function handleListVersions(
   env: Env,

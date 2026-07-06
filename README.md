@@ -210,8 +210,10 @@ There are three ways to drive a board with an agent:
 **Version history & restore.** Every Worker-mediated write (`POST /api/trip` and MCP
 `write_board`) records the room's prior trip JSON to Cloudflare **KV** first
 (keep-all, keyed by room + timestamp). The Trip panel's "Recent versions" list
-restores any earlier version — link-gated (`GET /api/versions/:room` and
-`…/:room/:id`): knowing the room id is the capability (same model as `/api/auth`).
+restores any earlier version — room-id-gated (`GET /api/versions/:room` and
+`…/:room/:id`): these verify no token, so knowing the room id alone is the
+capability (unlike `/api/auth`/`/api/trip`, and so not covered by `TOKEN_SECRET`
+rotation).
 For live hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within
 the session; agent writes and restores are kept off that keystroke stack. Provision
 the `SNAPSHOTS` KV namespace and set `TOKEN_SECRET` per the notes in

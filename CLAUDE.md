@@ -74,10 +74,6 @@ of browser- or Worker-only APIs:
   client shapes local rendering from a link (`parseToken`) and the Worker's MCP
   tools extract the same fragment (`tokenFromLink`) before `verifyToken` — same
   parse logic, no drift. Signing/verifying is Worker-only (`worker/src/token.ts`).
-- `roomLink.ts` — pure `roomIdFromHash` room-id parsing, re-exported through
-  `provider.ts` (which has browser-only imports). Legacy from the `#room=<id>`
-  era; link parsing now goes through `token.ts` (`#<token>`), so this is only a
-  thin hash helper.
 
 `days.ts` (day generation) and `cityResolution.ts` are also pure shared logic.
 `cityResolution.ts` resolves a day's city/color (`resolveDayCity`) *and* exposes

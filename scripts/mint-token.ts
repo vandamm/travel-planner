@@ -23,6 +23,12 @@ export interface MintOpts {
 export async function mintToken({ roomId, perm = 'owner', name }: MintOpts, secret: string): Promise<string> {
   if (!roomId) throw new Error('roomId is required')
   if (!secret) throw new Error('TOKEN_SECRET is required')
+  // The CLI casts an untyped argv string to Perm, so validate here (the root
+  // callsite) — an unknown perm would sign a payload that verifyToken rejects,
+  // handing out a dead link with no feedback at mint time.
+  if (!(['view', 'edit', 'owner'] as string[]).includes(perm)) {
+    throw new Error(`invalid perm "${perm}" (expected view|edit|owner)`)
+  }
   const payload: TokenPayload = { r: roomId, p: perm, v: 1, ...(name ? { n: name } : {}) }
   return signToken(payload, secret)
 }

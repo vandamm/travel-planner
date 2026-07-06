@@ -4,18 +4,13 @@
 //      through the Worker's `/api/auth` endpoint (the secret key never reaches
 //      the client).
 //
-// The pure helpers (`roomIdFromHash`, `roomHash`) are unit-tested directly. The
-// actual provider wiring degrades gracefully: with no IndexedDB
-// (e.g. a test/SSR runtime) it uses an in-memory doc, and with sync disabled it
-// never touches the network — so the app always loads and edits locally.
+// The provider wiring degrades gracefully: with no IndexedDB (e.g. a test/SSR
+// runtime) it uses an in-memory doc, and with sync disabled it never touches the
+// network — so the app always loads and edits locally. Link parsing lives in
+// `token.ts` (`parseToken`/`tokenFromLink`), shared with the Worker's MCP tools.
 
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
-
-// `roomIdFromHash` lives in the environment-agnostic `roomLink` module so the
-// Worker's MCP tools parse the pasted link with the same logic. Re-exported
-// here so client callers (and their tests) keep importing it from `provider`.
-export { roomIdFromHash } from './roomLink'
 
 /** Sync lifecycle as the UI cares about it. */
 export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error'
@@ -23,11 +18,6 @@ export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error'
 /** Strip a trailing slash so we can safely append `/api/...`. */
 function trimSlash(url: string): string {
   return url.replace(/\/+$/, '')
-}
-
-/** Build the shareable secret-link hash for a room id. */
-export function roomHash(roomId: string): string {
-  return `#room=${encodeURIComponent(roomId)}`
 }
 
 export interface ConnectOptions {

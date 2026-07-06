@@ -30,12 +30,12 @@ function makeApi(overrides: Partial<LiveblocksApi> = {}): { api: LiveblocksApi; 
   return { api, mints }
 }
 
-async function authRequest(payload: TokenPayload, userId?: string): Promise<Request> {
+async function authRequest(payload: TokenPayload): Promise<Request> {
   const token = await signToken(payload, SECRET)
   return new Request('https://worker.test/api/auth', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ token, ...(userId ? { userId } : {}) }),
+    body: JSON.stringify({ token }),
   })
 }
 
@@ -56,6 +56,7 @@ describe('handleAuth', () => {
     expect(await res.json()).toEqual({ token: 'tok-for-paris-2026' })
     expect(mints).toHaveLength(1)
     expect(mints[0].roomId).toBe('paris-2026')
+    expect(mints[0].userId).toBe('guest-paris-2026')
     expect(mints[0].opts.access).toBe('room:read')
   })
 

@@ -30,6 +30,11 @@ describe('mintToken', () => {
     await expect(mintToken({ roomId: '' }, SECRET)).rejects.toThrow()
     await expect(mintToken({ roomId: 'r1' }, '')).rejects.toThrow()
   })
+
+  it('throws on an unknown perm (would sign a dead link)', async () => {
+    // Simulates the CLI casting a bad argv string (e.g. `mint-token r1 edt`).
+    await expect(mintToken({ roomId: 'r1', perm: 'edt' as never }, SECRET)).rejects.toThrow(/invalid perm/)
+  })
 })
 
 describe('parseDevVar', () => {
