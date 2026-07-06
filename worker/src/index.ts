@@ -3,10 +3,10 @@
 // Routes:
 //   OPTIONS *               → CORS preflight
 //   POST /api/auth          → mint a room-scoped token for an existing room
-//   POST /api/rooms         → create a room (owner-gated)
-//   GET  /api/schema        → JSON Schema for the trip document (owner-gated)
-//   GET  /api/trip/:room    → read the room's trip as JSON (owner-gated)
-//   POST /api/trip/:room    → write trip JSON into the room (owner-gated)
+//   POST /api/rooms         → create a room (owner-token-gated)
+//   GET  /api/schema        → JSON Schema for the trip document (public)
+//   GET  /api/trip/:room    → read the room's trip as JSON (view+ token, room-matched)
+//   POST /api/trip/:room    → write trip JSON into the room (edit+ token, room-matched)
 //   GET  /api/versions/:room       → list a room's snapshots (link-gated)
 //   GET  /api/versions/:room/:id   → read one snapshot's trip JSON (link-gated)
 //   POST /mcp               → MCP-over-HTTP tools endpoint (per-tool token-gated via the link)
@@ -31,7 +31,7 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   return {
     'access-control-allow-origin': origin,
     'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'content-type, authorization, x-owner-secret',
+    'access-control-allow-headers': 'content-type, authorization',
     'access-control-max-age': '86400',
     vary: 'Origin',
   }
@@ -79,7 +79,7 @@ export async function handleRequest(
     } else if (pathname === '/api/schema') {
       res =
         request.method === 'GET'
-          ? await handleGetSchema(request, env)
+          ? await handleGetSchema()
           : json({ error: 'method not allowed' }, 405)
     } else if (pathname === '/mcp') {
       res =

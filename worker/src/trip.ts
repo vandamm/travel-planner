@@ -3,10 +3,12 @@
 //   GET  /api/trip/:room  → serialize the room's Yjs doc to trip JSON
 //   POST /api/trip/:room  → validate + apply trip JSON, push the change to the room
 //
-// Both are gated by the owner secret (`x-owner-secret`), so the agent API is as
-// privileged as room creation. The serialize/apply path reuses the SAME shared
-// modules the client uses (`exportTrip`, `applyTrip`, the zod schema), so what an
-// agent reads and writes is identical to what the UI renders — they can't drift.
+// Both are gated by a Bearer capability token (the same signed link the UI/MCP
+// use): `GET` needs `view`+, `POST` needs `edit`+, and the token's room must match
+// `:room` — a token for one room can't act on another. The serialize/apply path
+// reuses the SAME shared modules the client uses (`exportTrip`, `applyTrip`, the
+// zod schema), so what an agent reads and writes is identical to what the UI
+// renders — they can't drift.
 //
 // Writes are a snapshot-relative full replace: we load the room's current Yjs
 // state, capture its state vector, apply the new trip (clear + rebuild), then
@@ -29,6 +31,8 @@ import { exportTrip } from '../../src/data/exportTrip'
 import { applyTrip } from '../../src/data/applyTrip'
 import { formatTripErrors, tripDocumentSchema, type TripDocument } from '../../src/data/tripSchema'
 import { getSnapshot, listSnapshots, recordSnapshot } from './snapshots'
+import { verifyToken } from './token'
+import { permAtLeast, type Perm } from '../../src/data/token'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -37,10 +41,20 @@ function json(data: unknown, status = 200): Response {
   })
 }
 
-/** The agent API is owner-only — the same gate as new-room creation. */
-function ownerAuthorized(request: Request, env: Env): boolean {
-  const presented = request.headers.get('x-owner-secret')
-  return Boolean(env.OWNER_SECRET) && presented === env.OWNER_SECRET
+/**
+ * Authorize an agent HTTP request against its Bearer capability token: the token
+ * must verify, grant at least `minPerm`, and be scoped to `roomId` (its `r` must
+ * match the `:room` path — a token for one room can't act on another).
+ */
+async function tokenAuthorized(
+  request: Request,
+  env: Env,
+  roomId: string,
+  minPerm: Perm,
+): Promise<boolean> {
+  const bearer = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
+  const payload = bearer ? await verifyToken(bearer, env.TOKEN_SECRET) : null
+  return Boolean(payload && payload.r === roomId && permAtLeast(payload.p, minPerm))
 }
 
 /** Reconstruct the room's current `Y.Doc` from its binary Liveblocks state. */
@@ -93,11 +107,10 @@ export async function applyTripToRoom(
 /**
  * Serve the JSON Schema derived from `tripDocumentSchema` — the same zod schema
  * the agent API validates against, so the published shape can never drift from
- * what POST actually accepts (no hand-written duplicate). Owner-gated like the
- * rest of the agent API.
+ * what POST actually accepts (no hand-written duplicate). Public: the schema is
+ * the API's shape, not a secret, so no token is required to read it.
  */
-export async function handleGetSchema(request: Request, env: Env): Promise<Response> {
-  if (!ownerAuthorized(request, env)) return json({ error: 'unauthorized' }, 401)
+export async function handleGetSchema(): Promise<Response> {
   return json(zodToJsonSchema(tripDocumentSchema), 200)
 }
 
@@ -107,7 +120,7 @@ export async function handleGetTrip(
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
-  if (!ownerAuthorized(request, env)) return json({ error: 'unauthorized' }, 401)
+  if (!(await tokenAuthorized(request, env, roomId, 'view'))) return json({ error: 'unauthorized' }, 401)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
 
   const doc = await loadRoomDoc(api, roomId)
@@ -152,7 +165,7 @@ export async function handlePostTrip(
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
-  if (!ownerAuthorized(request, env)) return json({ error: 'unauthorized' }, 401)
+  if (!(await tokenAuthorized(request, env, roomId, 'edit'))) return json({ error: 'unauthorized' }, 401)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
 
   let input: unknown

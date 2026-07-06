@@ -8,11 +8,20 @@ import {
   handleListVersions,
   handlePostTrip,
 } from './trip'
+import { signToken } from './token'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { recordSnapshot, type SnapshotKv } from './snapshots'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw' }
+const SECRET = 'test-token-secret'
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET, OWNER_SECRET: 'owner-pw' }
+
+// Capability tokens scoped to `room1` (the room every request below targets), plus
+// one scoped to a different room to prove the token's room must match `:room`.
+const viewTok = await signToken({ r: 'room1', p: 'view', v: 1 }, SECRET)
+const editTok = await signToken({ r: 'room1', p: 'edit', v: 1 }, SECRET)
+const ownerTok = await signToken({ r: 'room1', p: 'owner', v: 1 }, SECRET)
+const otherRoomTok = await signToken({ r: 'other-room', p: 'owner', v: 1 }, SECRET)
 
 /** In-memory KV fake — the small slice `snapshots.ts` uses. */
 function makeKv(): SnapshotKv & { store: Map<string, string> } {
@@ -57,9 +66,10 @@ function makeApi(seed?: Y.Doc, overrides: Partial<LiveblocksApi> = {}): Livebloc
   return api
 }
 
-function tripRequest(method: string, body?: unknown, ownerSecret?: string): Request {
+/** A request to /api/trip/room1 carrying `token` as a Bearer credential (omit for none). */
+function tripRequest(method: string, body?: unknown, token?: string): Request {
   const headers: Record<string, string> = { 'content-type': 'application/json' }
-  if (ownerSecret !== undefined) headers['x-owner-secret'] = ownerSecret
+  if (token !== undefined) headers['authorization'] = `Bearer ${token}`
   return new Request('https://worker.test/api/trip/room1', {
     method,
     headers,
@@ -84,8 +94,8 @@ const validTrip = {
 }
 
 describe('handleGetTrip', () => {
-  it('serializes the room Yjs doc to trip JSON with the owner secret', async () => {
-    const res = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, makeApi(seededDoc()), 'room1')
+  it('serializes the room Yjs doc to trip JSON with a view token', async () => {
+    const res = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, makeApi(seededDoc()), 'room1')
 
     expect(res.status).toBe(200)
     const body = (await res.json()) as { trip: unknown; cities: unknown[]; cards: unknown[] }
@@ -100,8 +110,15 @@ describe('handleGetTrip', () => {
     expect(body.cards).toEqual([{ id: 'k1', dayKey: '2027-01-01', title: 'Louvre', order: 0 }])
   })
 
+  it('accepts an edit or owner token too (view+ grants read)', async () => {
+    for (const tok of [editTok, ownerTok]) {
+      const res = await handleGetTrip(tripRequest('GET', undefined, tok), env, makeApi(seededDoc()), 'room1')
+      expect(res.status).toBe(200)
+    }
+  })
+
   it('returns an empty-but-valid trip for a room with no Yjs data yet', async () => {
-    const res = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, makeApi(), 'room1')
+    const res = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, makeApi(), 'room1')
 
     expect(res.status).toBe(200)
     const body = (await res.json()) as { trip: unknown; cities: unknown[] }
@@ -110,32 +127,36 @@ describe('handleGetTrip', () => {
   })
 
   it('points an empty trip at the schema endpoint via $schema so an agent learns the shape', async () => {
-    const res = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, makeApi(), 'room1')
+    const res = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, makeApi(), 'room1')
     const body = (await res.json()) as { $schema: string }
     expect(body.$schema).toBe('https://worker.test/api/schema')
   })
 
-  it('rejects without the owner secret (401)', async () => {
+  it('rejects without a token (401)', async () => {
     const res = await handleGetTrip(tripRequest('GET'), env, makeApi(seededDoc()), 'room1')
+    expect(res.status).toBe(401)
+  })
+
+  it('rejects an invalid/tampered token (401)', async () => {
+    const res = await handleGetTrip(tripRequest('GET', undefined, 'garbage.sig'), env, makeApi(seededDoc()), 'room1')
+    expect(res.status).toBe(401)
+  })
+
+  it('rejects a token scoped to a different room (401)', async () => {
+    const res = await handleGetTrip(tripRequest('GET', undefined, otherRoomTok), env, makeApi(seededDoc()), 'room1')
     expect(res.status).toBe(401)
   })
 
   it('returns 404 for a room that does not exist', async () => {
     const api = makeApi(seededDoc(), { roomExists: async () => false })
-    const res = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, api, 'room1')
+    const res = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, api, 'room1')
     expect(res.status).toBe(404)
   })
 })
 
 describe('handleGetSchema', () => {
-  function schemaRequest(ownerSecret?: string): Request {
-    const headers: Record<string, string> = {}
-    if (ownerSecret !== undefined) headers['x-owner-secret'] = ownerSecret
-    return new Request('https://worker.test/api/schema', { method: 'GET', headers })
-  }
-
-  it('returns the JSON Schema derived from the trip document schema with the owner secret', async () => {
-    const res = await handleGetSchema(schemaRequest('owner-pw'), env)
+  it('returns the JSON Schema derived from the trip document schema — no token required', async () => {
+    const res = await handleGetSchema()
     expect(res.status).toBe(200)
     const body = (await res.json()) as { type?: string; properties?: Record<string, unknown> }
     expect(body.type).toBe('object')
@@ -144,40 +165,56 @@ describe('handleGetSchema', () => {
       expect.arrayContaining(['trip', 'cities', 'accommodations', 'cards', 'dayOverrides']),
     )
   })
-
-  it('rejects without the owner secret (401)', async () => {
-    const res = await handleGetSchema(schemaRequest(), env)
-    expect(res.status).toBe(401)
-  })
 })
 
 describe('handlePostTrip', () => {
-  it('validates and applies a trip, pushing the update to Liveblocks', async () => {
+  it('validates and applies a trip with an edit token, pushing the update to Liveblocks', async () => {
     const api = makeApi() as LiveblocksApi & { sentCount(): number }
-    const res = await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), env, api, 'room1')
+    const res = await handlePostTrip(tripRequest('POST', validTrip, editTok), env, api, 'room1')
 
     expect(res.status).toBe(200)
     expect(api.sentCount()).toBe(1)
 
     // A follow-up GET reflects the applied trip.
-    const after = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, api, 'room1')
+    const after = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, api, 'room1')
     const body = (await after.json()) as { trip: unknown; cities: unknown[]; cards: unknown[] }
     expect(body.trip).toEqual(validTrip.trip)
     expect(body.cities).toEqual(validTrip.cities)
     expect(body.cards).toEqual(validTrip.cards)
   })
 
+  it('accepts an owner token too (edit+ grants write)', async () => {
+    const api = makeApi() as LiveblocksApi & { sentCount(): number }
+    const res = await handlePostTrip(tripRequest('POST', validTrip, ownerTok), env, api, 'room1')
+    expect(res.status).toBe(200)
+    expect(api.sentCount()).toBe(1)
+  })
+
+  it('rejects a view-only token (401) and does not mutate', async () => {
+    const api = makeApi() as LiveblocksApi & { sentCount(): number }
+    const res = await handlePostTrip(tripRequest('POST', validTrip, viewTok), env, api, 'room1')
+    expect(res.status).toBe(401)
+    expect(api.sentCount()).toBe(0)
+  })
+
+  it('rejects a token scoped to a different room (401) and does not mutate', async () => {
+    const api = makeApi() as LiveblocksApi & { sentCount(): number }
+    const res = await handlePostTrip(tripRequest('POST', validTrip, otherRoomTok), env, api, 'room1')
+    expect(res.status).toBe(401)
+    expect(api.sentCount()).toBe(0)
+  })
+
   it('full-replaces existing data — entities dropped by the new trip disappear', async () => {
     const api = makeApi(seededDoc())
-    await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), env, api, 'room1')
+    await handlePostTrip(tripRequest('POST', validTrip, editTok), env, api, 'room1')
 
-    const after = await handleGetTrip(tripRequest('GET', undefined, 'owner-pw'), env, api, 'room1')
+    const after = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, api, 'room1')
     const body = (await after.json()) as { cities: Array<{ id: string }>; cards: Array<{ id: string }> }
     expect(body.cities.map((c) => c.id)).toEqual(['c2'])
     expect(body.cards.map((c) => c.id)).toEqual(['k2'])
   })
 
-  it('rejects without the owner secret (401) and does not mutate', async () => {
+  it('rejects without a token (401) and does not mutate', async () => {
     const api = makeApi() as LiveblocksApi & { sentCount(): number }
     const res = await handlePostTrip(tripRequest('POST', validTrip), env, api, 'room1')
     expect(res.status).toBe(401)
@@ -187,7 +224,7 @@ describe('handlePostTrip', () => {
   it('returns 400 for malformed JSON', async () => {
     const bad = new Request('https://worker.test/api/trip/room1', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-owner-secret': 'owner-pw' },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${editTok}` },
       body: 'not json',
     })
     const api = makeApi() as LiveblocksApi & { sentCount(): number }
@@ -199,7 +236,7 @@ describe('handlePostTrip', () => {
   it('returns 400 for JSON that fails schema validation', async () => {
     const api = makeApi() as LiveblocksApi & { sentCount(): number }
     const res = await handlePostTrip(
-      tripRequest('POST', { trip: { title: 'x', startDate: 'nope', numDays: -1 } }, 'owner-pw'),
+      tripRequest('POST', { trip: { title: 'x', startDate: 'nope', numDays: -1 } }, editTok),
       env,
       api,
       'room1',
@@ -212,7 +249,7 @@ describe('handlePostTrip', () => {
     const api = makeApi(undefined, { roomExists: async () => false }) as LiveblocksApi & {
       sentCount(): number
     }
-    const res = await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), env, api, 'room1')
+    const res = await handlePostTrip(tripRequest('POST', validTrip, editTok), env, api, 'room1')
     expect(res.status).toBe(404)
     expect(api.sentCount()).toBe(0)
   })
@@ -220,7 +257,7 @@ describe('handlePostTrip', () => {
   it('records a pre-write snapshot of the current trip before applying', async () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
-    await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
 
     const snapshots = [...kv.store.values()]
     expect(snapshots).toHaveLength(1)
@@ -232,7 +269,7 @@ describe('handlePostTrip', () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
     const res = await handlePostTrip(
-      tripRequest('POST', { trip: { title: 'x', startDate: 'nope', numDays: -1 } }, 'owner-pw'),
+      tripRequest('POST', { trip: { title: 'x', startDate: 'nope', numDays: -1 } }, editTok),
       { ...env, SNAPSHOTS: kv },
       api,
       'room1',
@@ -250,7 +287,7 @@ describe('handlePostTrip', () => {
     const kv = makeKv()
     const api = makeApi(seed) as LiveblocksApi & { sentCount(): number }
 
-    const res = await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    const res = await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
 
     expect(res.status).toBe(200)
     expect(api.sentCount()).toBe(1)
@@ -267,7 +304,7 @@ describe('handlePostTrip', () => {
     }
     const api = makeApi(seededDoc()) as LiveblocksApi & { sentCount(): number }
 
-    const res = await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    const res = await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
 
     expect(res.status).toBe(200)
     expect(api.sentCount()).toBe(1)
@@ -328,7 +365,7 @@ describe('version history (link-gated)', () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
     // A write snapshots the seed ("Seed Trip") before replacing it with validTrip.
-    await handlePostTrip(tripRequest('POST', validTrip, 'owner-pw'), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
 
     const list = (await (await handleListVersions({ ...env, SNAPSHOTS: kv }, api, 'room1')).json()) as {
       versions: Array<{ id: string }>

@@ -28,9 +28,10 @@ describe('handleRequest (router + CORS)', () => {
     expect(res.status).toBe(204)
     expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
     expect(res.headers.get('access-control-allow-methods')).toContain('POST')
-    expect(res.headers.get('access-control-allow-headers')?.toLowerCase()).toContain(
-      'x-owner-secret',
-    )
+    const allowedHeaders = res.headers.get('access-control-allow-headers')?.toLowerCase() ?? ''
+    expect(allowedHeaders).toContain('authorization')
+    // The owner-secret header is gone — auth is now the Bearer capability token.
+    expect(allowedHeaders).not.toContain('x-owner-secret')
   })
 
   it('routes POST /api/auth to the auth handler and adds CORS headers', async () => {
@@ -57,10 +58,11 @@ describe('handleRequest (router + CORS)', () => {
     expect(res.status).toBe(401)
   })
 
-  it('routes GET /api/trip/:room to the trip handler (owner-gated)', async () => {
+  it('routes GET /api/trip/:room to the trip handler (view+ token, room-matched)', async () => {
+    const token = await signToken({ r: 'room1', p: 'view', v: 1 }, env.TOKEN_SECRET)
     const req = new Request('https://worker.test/api/trip/room1', {
       method: 'GET',
-      headers: { 'x-owner-secret': 'owner-pw', origin: 'https://app.example' },
+      headers: { authorization: `Bearer ${token}`, origin: 'https://app.example' },
     })
     const res = await handleRequest(req, env, makeApi())
     expect(res.status).toBe(200)
@@ -69,10 +71,10 @@ describe('handleRequest (router + CORS)', () => {
     expect(body.trip.title).toBe('')
   })
 
-  it('routes GET /api/schema to the schema handler (owner-gated) with CORS', async () => {
+  it('routes GET /api/schema to the schema handler (public) with CORS', async () => {
     const req = new Request('https://worker.test/api/schema', {
       method: 'GET',
-      headers: { 'x-owner-secret': 'owner-pw', origin: 'https://app.example' },
+      headers: { origin: 'https://app.example' },
     })
     const res = await handleRequest(req, env, makeApi())
     expect(res.status).toBe(200)
@@ -81,13 +83,7 @@ describe('handleRequest (router + CORS)', () => {
     expect(body.type).toBe('object')
   })
 
-  it('rejects GET /api/schema without the owner secret', async () => {
-    const req = new Request('https://worker.test/api/schema', { method: 'GET' })
-    const res = await handleRequest(req, env, makeApi())
-    expect(res.status).toBe(401)
-  })
-
-  it('rejects GET /api/trip/:room without the owner secret', async () => {
+  it('rejects GET /api/trip/:room without a token', async () => {
     const req = new Request('https://worker.test/api/trip/room1', { method: 'GET' })
     const res = await handleRequest(req, env, makeApi())
     expect(res.status).toBe(401)
@@ -173,9 +169,10 @@ describe('handleRequest (router + CORS)', () => {
         throw new Error('Liveblocks room lookup failed: 503')
       },
     })
+    const token = await signToken({ r: 'room1', p: 'view', v: 1 }, env.TOKEN_SECRET)
     const req = new Request('https://worker.test/api/trip/room1', {
       method: 'GET',
-      headers: { 'x-owner-secret': 'owner-pw', origin: 'https://app.example' },
+      headers: { authorization: `Bearer ${token}`, origin: 'https://app.example' },
     })
     const res = await handleRequest(req, env, api)
     expect(res.status).toBe(502)
