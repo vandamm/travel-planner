@@ -142,16 +142,16 @@ Address three of the accepted findings from the architecture/security review
 - [x] run `npm test` — must pass before Task 4.
 
 ### Task 4: Verify acceptance criteria
-- [ ] verify all three Overview items behave end to end against the fakes:
+- [x] verify all three Overview items behave end to end against the fakes:
       rotation-revocable versions (401 without token), dangling-ref board
       exports cleanly, inconsistent board reads as 409 on HTTP and a tool error
       on MCP.
-- [ ] verify edge cases: wrong-room token on versions; pruned export
+- [x] verify edge cases: wrong-room token on versions; pruned export
       re-imports; empty board still exports.
-- [ ] run full `npm test` and `npm run test:e2e`.
-- [ ] run `npm run lint` — all issues fixed (the 3 pre-existing react-refresh
+- [x] run full `npm test` and `npm run test:e2e`.
+- [x] run `npm run lint` — all issues fixed (the 3 pre-existing react-refresh
       warnings are known and out of scope).
-- [ ] run `npm run coverage` — maintain the repo's ~90% `src/data`/logic standard;
+- [x] run `npm run coverage` — maintain the repo's ~90% `src/data`/logic standard;
       `npx tsc --noEmit` (root and `worker/`) clean.
 
 ### Task 5: Update documentation
