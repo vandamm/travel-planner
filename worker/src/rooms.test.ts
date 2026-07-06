@@ -10,7 +10,7 @@ const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET }
 
 function makeApi(overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
   return {
-    roomExists: async () => true,
+    roomExists: async () => false,
     createRoom: async (id) => ({ id }),
     mintAccessToken: async () => 'token-123',
     getYUpdate: async () => new Uint8Array(),
@@ -94,6 +94,22 @@ describe('handleCreateRoom', () => {
     // The returned token must be a valid owner token for the new room.
     const minted = await verifyToken(body.token, SECRET)
     expect(minted).toMatchObject({ r: 'rome-2027', p: 'owner', v: 1 })
+  })
+
+  it('returns 409 without creating when the requested room already exists', async () => {
+    let created = false
+    const api = makeApi({
+      roomExists: async () => true,
+      createRoom: async (id) => {
+        created = true
+        return { id }
+      },
+    })
+
+    const res = await handleCreateRoom(await roomRequest({ room: 'rome-2027' }, await ownerToken()), env, api)
+
+    expect(res.status).toBe(409)
+    expect(created).toBe(false)
   })
 
   it('generates a room id when none is supplied', async () => {

@@ -43,6 +43,15 @@ export async function handleCreateRoom(
   const requested = typeof body.room === 'string' ? body.room.trim() : ''
   const roomId = requested || crypto.randomUUID()
 
+  // Guard the "owner tokens are the only way to gain owner access" invariant at
+  // the code level: refuse to create over an existing room, so an owner-of-A can
+  // never mint a fresh owner token for a room B they don't own. Without this the
+  // invariant leans entirely on Liveblocks 409ing a duplicate create (surfaced as
+  // a misleading 502); the explicit check also returns a correct 409.
+  if (await api.roomExists(roomId)) {
+    return json({ error: 'room already exists' }, 409)
+  }
+
   const created = await api.createRoom(roomId)
   // Return a fresh owner token for the new room so the caller gets a shareable
   // owner link back (the token IS the link fragment).
