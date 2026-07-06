@@ -12,7 +12,7 @@ import type { Env, LiveblocksApi } from './liveblocks'
 import { recordSnapshot, type SnapshotKv } from './snapshots'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw' }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw' }
 
 /** In-memory KV fake — the small slice `snapshots.ts` uses. */
 function makeKv(): SnapshotKv & { store: Map<string, string> } {

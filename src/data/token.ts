@@ -23,6 +23,15 @@ export interface TokenPayload {
 
 const PERMS: readonly Perm[] = ['view', 'edit', 'owner']
 
+/**
+ * The Liveblocks access scope a capability perm grants: `view` reads,
+ * `edit`/`owner` write. Pure so it's unit-testable and shared (the Worker mints
+ * with it; Phase-2 client uses it to shape read-only UX).
+ */
+export function liveblocksAccess(perm: Perm): 'room:read' | 'room:write' {
+  return perm === 'view' ? 'room:read' : 'room:write'
+}
+
 /** base64url (no padding) of a byte array. */
 export function base64urlEncode(bytes: Uint8Array): string {
   let binary = ''

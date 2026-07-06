@@ -69,7 +69,7 @@ export async function handleRequest(
     if (pathname === '/api/auth') {
       res =
         request.method === 'POST'
-          ? await handleAuth(request, api)
+          ? await handleAuth(request, env, api)
           : json({ error: 'method not allowed' }, 405)
     } else if (pathname === '/api/rooms') {
       res =

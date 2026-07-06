@@ -11,6 +11,8 @@ import type { SnapshotKv } from './snapshots'
 export interface Env {
   /** Liveblocks project secret key — never shipped to the client. */
   LIVEBLOCKS_SECRET_KEY: string
+  /** HMAC key that signs/verifies capability tokens — the sole hidden secret. */
+  TOKEN_SECRET: string
   /** Owner secret that gates new-room creation (and, later, the agent API). */
   OWNER_SECRET: string
   /** API key gating the MCP endpoint (`/mcp`); presented as `Authorization: Bearer`. */
@@ -31,8 +33,16 @@ export interface LiveblocksApi {
   roomExists(roomId: string): Promise<boolean>
   /** Create a room and return its id. */
   createRoom(roomId: string): Promise<{ id: string }>
-  /** Mint a room-scoped access token granting full (write) access. */
-  mintAccessToken(roomId: string, userId: string): Promise<string>
+  /**
+   * Mint a room-scoped access token. `opts.access` sets the Liveblocks scope
+   * (`room:read` for view-only, `room:write` for edit/owner); `opts.name`, when
+   * present, is forwarded as `userInfo` for presence.
+   */
+  mintAccessToken(
+    roomId: string,
+    userId: string,
+    opts: { access: 'room:read' | 'room:write'; name?: string },
+  ): Promise<string>
   /**
    * Fetch the room's Yjs document encoded as a single binary update, ready for
    * `Y.applyUpdate`. Returns an empty array when the room has no Yjs data yet.
@@ -74,14 +84,15 @@ export function createLiveblocksApi(env: Env): LiveblocksApi {
       return { id: room.id }
     },
 
-    async mintAccessToken(roomId, userId) {
+    async mintAccessToken(roomId, userId, opts) {
       const res = await fetch(`${LIVEBLOCKS_API}/authorize-user`, {
         method: 'POST',
         headers: { authorization: authHeader, 'content-type': 'application/json' },
         body: JSON.stringify({
           userId,
-          // Grant full (read+write) access scoped to exactly this room.
-          permissions: { [roomId]: ['room:write'] },
+          // Scope access to exactly this room at the perm the token grants.
+          permissions: { [roomId]: [opts.access] },
+          ...(opts.name ? { userInfo: { name: opts.name } } : {}),
         }),
       })
       if (!res.ok) throw new Error(`Liveblocks token mint failed: ${res.status}`)

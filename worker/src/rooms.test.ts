@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { handleCreateRoom } from './rooms'
 import type { Env, LiveblocksApi } from './liveblocks'
 
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw' }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw' }
 
 function makeApi(overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
   return {

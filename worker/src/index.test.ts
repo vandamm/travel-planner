@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
 import { handleRequest } from './index'
+import { signToken } from './token'
 import type { Env, LiveblocksApi } from './liveblocks'
 
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw' }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw' }
 
 function makeApi(overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
   return {
@@ -33,10 +34,11 @@ describe('handleRequest (router + CORS)', () => {
   })
 
   it('routes POST /api/auth to the auth handler and adds CORS headers', async () => {
+    const token = await signToken({ r: 'r1', p: 'edit', v: 1 }, env.TOKEN_SECRET)
     const req = new Request('https://worker.test/api/auth', {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: 'https://app.example' },
-      body: JSON.stringify({ room: 'r1' }),
+      body: JSON.stringify({ token }),
     })
     const res = await handleRequest(req, env, makeApi())
 

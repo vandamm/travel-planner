@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { encodePayload, decodePayload, parseToken, type TokenPayload } from './token'
+import {
+  encodePayload,
+  decodePayload,
+  parseToken,
+  liveblocksAccess,
+  type TokenPayload,
+} from './token'
 
 const payload: TokenPayload = { r: 'paris-2026', p: 'edit', v: 1 }
 
@@ -25,6 +31,14 @@ describe('encodePayload / decodePayload', () => {
     expect(decodePayload(enc({ r: 'x', p: 'edit', v: 2 }))).toBeNull() // bad version
     expect(decodePayload(enc({ r: 'x', p: 'admin', v: 1 }))).toBeNull() // bad perm
     expect(decodePayload(enc({ r: 'x', p: 'view', n: 5, v: 1 }))).toBeNull() // bad name type
+  })
+})
+
+describe('liveblocksAccess', () => {
+  it('maps view → room:read and edit/owner → room:write', () => {
+    expect(liveblocksAccess('view')).toBe('room:read')
+    expect(liveblocksAccess('edit')).toBe('room:write')
+    expect(liveblocksAccess('owner')).toBe('room:write')
   })
 })
 

@@ -7,7 +7,7 @@ import type { SnapshotKv } from './snapshots'
 import { addCard, addCity, setTrip } from '../../src/data/doc'
 import { exportTrip } from '../../src/data/exportTrip'
 
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw', MCP_API_KEY: 'mcp-key' }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw', MCP_API_KEY: 'mcp-key' }
 
 type TestApi = LiveblocksApi & { sentCount(): number; lastUpdate(): Uint8Array | null }
 
@@ -157,7 +157,7 @@ describe('handleMcp — auth', () => {
   })
 
   it('rejects when MCP_API_KEY is unset on the Worker (401)', async () => {
-    const noKeyEnv: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', OWNER_SECRET: 'owner-pw' }
+    const noKeyEnv: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: 'test-token-secret', OWNER_SECRET: 'owner-pw' }
     const res = await handleMcp(mcpRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' }), noKeyEnv, makeApi())
     expect(res.status).toBe(401)
   })
