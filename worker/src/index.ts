@@ -7,8 +7,8 @@
 //   GET  /api/schema        → JSON Schema for the trip document (public)
 //   GET  /api/trip/:room    → read the room's trip as JSON (view+ token, room-matched)
 //   POST /api/trip/:room    → write trip JSON into the room (edit+ token, room-matched)
-//   GET  /api/versions/:room       → list a room's snapshots (link-gated)
-//   GET  /api/versions/:room/:id   → read one snapshot's trip JSON (link-gated)
+//   GET  /api/versions/:room       → list a room's snapshots (view+ token, room-matched)
+//   GET  /api/versions/:room/:id   → read one snapshot's trip JSON (view+ token, room-matched)
 //   POST /mcp               → MCP-over-HTTP tools endpoint (per-tool token-gated via the link)
 //
 // The handlers depend on the `LiveblocksApi` abstraction; production builds the
@@ -102,9 +102,9 @@ export async function handleRequest(
         if (!roomId) {
           res = json({ error: 'missing room id' }, 400)
         } else if (!versionId) {
-          res = await handleListVersions(env, api, roomId)
+          res = await handleListVersions(request, env, api, roomId)
         } else {
-          res = await handleGetVersion(env, api, roomId, versionId)
+          res = await handleGetVersion(request, env, api, roomId, versionId)
         }
       }
     } else if (pathname.startsWith('/api/trip/')) {

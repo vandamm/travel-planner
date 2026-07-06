@@ -112,10 +112,11 @@ describe('handleRequest (router + CORS)', () => {
     expect(res.status).toBe(405)
   })
 
-  it('routes GET /api/versions/:room to the list handler (link-gated, no owner secret) with CORS', async () => {
+  it('routes GET /api/versions/:room to the list handler (view+ token, room-matched) with CORS', async () => {
+    const token = await signToken({ r: 'room1', p: 'view', v: 1 }, env.TOKEN_SECRET)
     const req = new Request('https://worker.test/api/versions/room1', {
       method: 'GET',
-      headers: { origin: 'https://app.example' },
+      headers: { authorization: `Bearer ${token}`, origin: 'https://app.example' },
     })
     const res = await handleRequest(req, env, makeApi())
     expect(res.status).toBe(200)
@@ -123,8 +124,18 @@ describe('handleRequest (router + CORS)', () => {
     expect((await res.json()) as { versions: unknown[] }).toEqual({ versions: [] })
   })
 
+  it('rejects GET /api/versions/:room without a token', async () => {
+    const req = new Request('https://worker.test/api/versions/room1', { method: 'GET' })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(401)
+  })
+
   it('routes GET /api/versions/:room/:id to the snapshot handler (404 when absent)', async () => {
-    const req = new Request('https://worker.test/api/versions/room1/1000', { method: 'GET' })
+    const token = await signToken({ r: 'room1', p: 'view', v: 1 }, env.TOKEN_SECRET)
+    const req = new Request('https://worker.test/api/versions/room1/1000', {
+      method: 'GET',
+      headers: { authorization: `Bearer ${token}` },
+    })
     const res = await handleRequest(req, env, makeApi())
     expect(res.status).toBe(404)
   })

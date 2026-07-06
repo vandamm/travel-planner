@@ -120,7 +120,8 @@ export async function handleGetTrip(
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
-  if (!(await tokenAuthorized(request, env, roomId, 'view'))) return json({ error: 'unauthorized' }, 401)
+  if (!(await tokenAuthorized(request, env, roomId, 'view')))
+    return json({ error: 'unauthorized' }, 401)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
 
   const doc = await loadRoomDoc(api, roomId)
@@ -131,30 +132,38 @@ export async function handleGetTrip(
 }
 
 /**
- * Version history is **room-id-gated**: knowing the room id alone is the
- * capability — these endpoints verify NO token (unlike `/api/auth` and
- * `/api/trip`, which now verify a signed capability token). So anyone who ever
- * held a link can still list/restore snapshots, and rotating `TOKEN_SECRET` does
- * NOT revoke this history access. Unknown room → 404 (mirrors the trip handlers).
- * When KV isn't bound there's simply no history: list is empty.
+ * Version history is gated by the same signed capability token as `/api/trip`:
+ * `view`+ can read snapshots, the token's room must match `:room`, and rotating
+ * `TOKEN_SECRET` revokes history access too. Unknown room → 404 after auth
+ * (mirrors the trip handlers). When KV isn't bound there's simply no history:
+ * list is empty.
  */
 export async function handleListVersions(
+  request: Request,
   env: Env,
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
+  if (!(await tokenAuthorized(request, env, roomId, 'view')))
+    return json({ error: 'unauthorized' }, 401)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
   const versions = env.SNAPSHOTS ? await listSnapshots(env.SNAPSHOTS, roomId) : []
   return json({ versions }, 200)
 }
 
-/** Return a single snapshot's trip JSON verbatim (it is already a trip document). */
+/**
+ * Return a single snapshot's trip JSON verbatim (it is already a trip document).
+ * Requires the same room-matched `view`+ capability as snapshot listing.
+ */
 export async function handleGetVersion(
+  request: Request,
   env: Env,
   api: LiveblocksApi,
   roomId: string,
   id: string,
 ): Promise<Response> {
+  if (!(await tokenAuthorized(request, env, roomId, 'view')))
+    return json({ error: 'unauthorized' }, 401)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
   const snapshot = env.SNAPSHOTS ? await getSnapshot(env.SNAPSHOTS, roomId, id) : null
   if (snapshot === null) return json({ error: 'version not found' }, 404)
@@ -167,7 +176,8 @@ export async function handlePostTrip(
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
-  if (!(await tokenAuthorized(request, env, roomId, 'edit'))) return json({ error: 'unauthorized' }, 401)
+  if (!(await tokenAuthorized(request, env, roomId, 'edit')))
+    return json({ error: 'unauthorized' }, 401)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
 
   let input: unknown

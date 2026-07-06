@@ -6,26 +6,32 @@ import { addCity, listCities } from './doc'
 import { encodePayload } from './token'
 
 function Consumer() {
-  const { doc, status, roomId } = useRoom()
+  const { doc, status, roomId, token } = useRoom()
   // Exercise the doc to prove it is a real, mutable Y.Doc.
   if (listCities(doc).length === 0) addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="room">{roomId ?? 'none'}</span>
-      <span data-testid="cities">{listCities(doc).map((c) => c.name).join(',')}</span>
+      <span data-testid="token">{token ?? 'none'}</span>
+      <span data-testid="cities">
+        {listCities(doc)
+          .map((c) => c.name)
+          .join(',')}
+      </span>
     </div>
   )
 }
 
 // Surfaces the capability values the provider decodes from the token.
 function PermProbe() {
-  const { roomId, perm, name } = useRoom()
+  const { roomId, perm, name, token } = useRoom()
   return (
     <div>
       <span data-testid="room">{roomId ?? '∅'}</span>
       <span data-testid="perm">{perm ?? '∅'}</span>
       <span data-testid="name">{name ?? '∅'}</span>
+      <span data-testid="token">{token ?? '∅'}</span>
     </div>
   )
 }
@@ -39,10 +45,11 @@ describe('RoomProvider', () => {
     )
     expect(screen.getByTestId('status')).toHaveTextContent('local')
     expect(screen.getByTestId('room')).toHaveTextContent('none')
+    expect(screen.getByTestId('token')).toHaveTextContent('none')
     expect(screen.getByTestId('cities')).toHaveTextContent('Rome')
   })
 
-  it('decodes room, perm and name from a passed token', () => {
+  it('decodes room, perm and name from a passed token and exposes the raw token', () => {
     const token = encodePayload({ r: 'rome-2027', p: 'view', n: 'Ada', v: 1 })
     render(
       <RoomProvider workerUrl="" token={token} enableSync={false}>
@@ -52,10 +59,12 @@ describe('RoomProvider', () => {
     expect(screen.getByTestId('room')).toHaveTextContent('rome-2027')
     expect(screen.getByTestId('perm')).toHaveTextContent('view')
     expect(screen.getByTestId('name')).toHaveTextContent('Ada')
+    expect(screen.getByTestId('token')).toHaveTextContent(token)
   })
 
   it('accepts a `#<token>` fragment and defaults an absent name to null', () => {
-    const token = '#' + encodePayload({ r: 'e2e', p: 'edit', v: 1 })
+    const rawToken = encodePayload({ r: 'e2e', p: 'edit', v: 1 })
+    const token = '#' + rawToken
     render(
       <RoomProvider workerUrl="" token={token} enableSync={false}>
         <PermProbe />
@@ -64,6 +73,19 @@ describe('RoomProvider', () => {
     expect(screen.getByTestId('room')).toHaveTextContent('e2e')
     expect(screen.getByTestId('perm')).toHaveTextContent('edit')
     expect(screen.getByTestId('name')).toHaveTextContent('∅')
+    expect(screen.getByTestId('token')).toHaveTextContent(rawToken)
+  })
+
+  it('exposes a null token when there is no hash', () => {
+    window.history.replaceState(null, '', '/')
+    render(
+      <RoomProvider workerUrl="" enableSync={false}>
+        <PermProbe />
+      </RoomProvider>,
+    )
+    expect(screen.getByTestId('room')).toHaveTextContent('∅')
+    expect(screen.getByTestId('perm')).toHaveTextContent('∅')
+    expect(screen.getByTestId('token')).toHaveTextContent('∅')
   })
 
   it('exposes null room/perm for an undecodable (legacy `#room=…`) token', () => {

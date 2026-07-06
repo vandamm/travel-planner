@@ -10,6 +10,8 @@ import { parseToken, tokenFromLink, type Perm } from './token'
 
 export interface RoomContextValue {
   doc: Y.Doc
+  /** Raw capability token from the URL fragment, if present. */
+  token: string | null
   roomId: string | null
   /** Capability level decoded (NOT verified) from the token — shapes local UX. */
   perm: Perm | null
@@ -54,7 +56,7 @@ export function RoomProvider({
   children,
 }: RoomProviderProps) {
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ''
-  const token = tokenProp !== undefined ? tokenProp : tokenFromLink(currentHash()) || null
+  const token = tokenProp === null ? null : tokenFromLink(tokenProp ?? currentHash()) || null
   const payload = token ? parseToken(token) : null
   const roomId = payload?.r ?? null
   const perm = payload?.p ?? null
@@ -92,8 +94,8 @@ export function RoomProvider({
   }, [doc, roomId, token, workerBase, enableSync])
 
   const value = useMemo<RoomContextValue>(
-    () => ({ doc, roomId, perm, name, status, workerUrl: workerBase }),
-    [doc, roomId, perm, name, status, workerBase],
+    () => ({ doc, token, roomId, perm, name, status, workerUrl: workerBase }),
+    [doc, token, roomId, perm, name, status, workerBase],
   )
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>

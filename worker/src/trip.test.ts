@@ -77,6 +77,13 @@ function tripRequest(method: string, body?: unknown, token?: string): Request {
   })
 }
 
+/** A request to `/api/versions/room1...` carrying `token` as a Bearer credential. */
+function versionRequest(path = '/api/versions/room1', token?: string): Request {
+  const headers: Record<string, string> = {}
+  if (token !== undefined) headers['authorization'] = `Bearer ${token}`
+  return new Request(`https://worker.test${path}`, { method: 'GET', headers })
+}
+
 function seededDoc(): Y.Doc {
   const doc = new Y.Doc()
   setTrip(doc, { title: 'Seed Trip', startDate: '2027-01-01', numDays: 2 })
@@ -95,7 +102,12 @@ const validTrip = {
 
 describe('handleGetTrip', () => {
   it('serializes the room Yjs doc to trip JSON with a view token', async () => {
-    const res = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, makeApi(seededDoc()), 'room1')
+    const res = await handleGetTrip(
+      tripRequest('GET', undefined, viewTok),
+      env,
+      makeApi(seededDoc()),
+      'room1',
+    )
 
     expect(res.status).toBe(200)
     const body = (await res.json()) as { trip: unknown; cities: unknown[]; cards: unknown[] }
@@ -112,7 +124,12 @@ describe('handleGetTrip', () => {
 
   it('accepts an edit or owner token too (view+ grants read)', async () => {
     for (const tok of [editTok, ownerTok]) {
-      const res = await handleGetTrip(tripRequest('GET', undefined, tok), env, makeApi(seededDoc()), 'room1')
+      const res = await handleGetTrip(
+        tripRequest('GET', undefined, tok),
+        env,
+        makeApi(seededDoc()),
+        'room1',
+      )
       expect(res.status).toBe(200)
     }
   })
@@ -122,7 +139,13 @@ describe('handleGetTrip', () => {
 
     expect(res.status).toBe(200)
     const body = (await res.json()) as { trip: unknown; cities: unknown[] }
-    expect(body.trip).toEqual({ title: '', startDate: '', numDays: 0, dayStart: '06:00', dayEnd: '21:00' })
+    expect(body.trip).toEqual({
+      title: '',
+      startDate: '',
+      numDays: 0,
+      dayStart: '06:00',
+      dayEnd: '21:00',
+    })
     expect(body.cities).toEqual([])
   })
 
@@ -138,12 +161,22 @@ describe('handleGetTrip', () => {
   })
 
   it('rejects an invalid/tampered token (401)', async () => {
-    const res = await handleGetTrip(tripRequest('GET', undefined, 'garbage.sig'), env, makeApi(seededDoc()), 'room1')
+    const res = await handleGetTrip(
+      tripRequest('GET', undefined, 'garbage.sig'),
+      env,
+      makeApi(seededDoc()),
+      'room1',
+    )
     expect(res.status).toBe(401)
   })
 
   it('rejects a token scoped to a different room (401)', async () => {
-    const res = await handleGetTrip(tripRequest('GET', undefined, otherRoomTok), env, makeApi(seededDoc()), 'room1')
+    const res = await handleGetTrip(
+      tripRequest('GET', undefined, otherRoomTok),
+      env,
+      makeApi(seededDoc()),
+      'room1',
+    )
     expect(res.status).toBe(401)
   })
 
@@ -199,7 +232,12 @@ describe('handlePostTrip', () => {
 
   it('rejects a token scoped to a different room (401) and does not mutate', async () => {
     const api = makeApi() as LiveblocksApi & { sentCount(): number }
-    const res = await handlePostTrip(tripRequest('POST', validTrip, otherRoomTok), env, api, 'room1')
+    const res = await handlePostTrip(
+      tripRequest('POST', validTrip, otherRoomTok),
+      env,
+      api,
+      'room1',
+    )
     expect(res.status).toBe(401)
     expect(api.sentCount()).toBe(0)
   })
@@ -209,7 +247,10 @@ describe('handlePostTrip', () => {
     await handlePostTrip(tripRequest('POST', validTrip, editTok), env, api, 'room1')
 
     const after = await handleGetTrip(tripRequest('GET', undefined, viewTok), env, api, 'room1')
-    const body = (await after.json()) as { cities: Array<{ id: string }>; cards: Array<{ id: string }> }
+    const body = (await after.json()) as {
+      cities: Array<{ id: string }>
+      cards: Array<{ id: string }>
+    }
     expect(body.cities.map((c) => c.id)).toEqual(['c2'])
     expect(body.cards.map((c) => c.id)).toEqual(['k2'])
   })
@@ -257,7 +298,12 @@ describe('handlePostTrip', () => {
   it('records a pre-write snapshot of the current trip before applying', async () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
-    await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    await handlePostTrip(
+      tripRequest('POST', validTrip, editTok),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+    )
 
     const snapshots = [...kv.store.values()]
     expect(snapshots).toHaveLength(1)
@@ -287,7 +333,12 @@ describe('handlePostTrip', () => {
     const kv = makeKv()
     const api = makeApi(seed) as LiveblocksApi & { sentCount(): number }
 
-    const res = await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    const res = await handlePostTrip(
+      tripRequest('POST', validTrip, editTok),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+    )
 
     expect(res.status).toBe(200)
     expect(api.sentCount()).toBe(1)
@@ -304,60 +355,142 @@ describe('handlePostTrip', () => {
     }
     const api = makeApi(seededDoc()) as LiveblocksApi & { sentCount(): number }
 
-    const res = await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    const res = await handlePostTrip(
+      tripRequest('POST', validTrip, editTok),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+    )
 
     expect(res.status).toBe(200)
     expect(api.sentCount()).toBe(1)
   })
 })
 
-describe('version history (link-gated)', () => {
-  it('lists a room’s snapshots newest first — no owner secret needed', async () => {
+describe('version history (view+ token, room-matched)', () => {
+  it('lists a room’s snapshots newest first with a view token', async () => {
     const kv = makeKv()
     await recordSnapshot(kv, 'room1', '{"trip":{"title":"v1"}}', 1000)
     await recordSnapshot(kv, 'room1', '{"trip":{"title":"v2"}}', 2000)
 
-    const res = await handleListVersions({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1')
+    const res = await handleListVersions(
+      versionRequest('/api/versions/room1', viewTok),
+      { ...env, SNAPSHOTS: kv },
+      makeApi(),
+      'room1',
+    )
     expect(res.status).toBe(200)
     const body = (await res.json()) as { versions: Array<{ id: string; timestamp: number }> }
     expect(body.versions.map((v) => v.timestamp)).toEqual([2000, 1000])
   })
 
+  it('accepts edit and owner tokens for listing too (view+ grants history reads)', async () => {
+    const kv = makeKv()
+    await recordSnapshot(kv, 'room1', '{"trip":{"title":"v1"}}', 1000)
+
+    for (const tok of [editTok, ownerTok]) {
+      const res = await handleListVersions(
+        versionRequest('/api/versions/room1', tok),
+        { ...env, SNAPSHOTS: kv },
+        makeApi(),
+        'room1',
+      )
+      expect(res.status).toBe(200)
+    }
+  })
+
   it('returns an empty list when KV is not bound', async () => {
-    const res = await handleListVersions(env, makeApi(), 'room1')
+    const res = await handleListVersions(
+      versionRequest('/api/versions/room1', viewTok),
+      env,
+      makeApi(),
+      'room1',
+    )
     expect(res.status).toBe(200)
     expect((await res.json()) as { versions: unknown[] }).toEqual({ versions: [] })
   })
 
-  it('404s the list for a room that does not exist', async () => {
+  it('rejects list requests without a valid room-matched token', async () => {
+    for (const tok of [undefined, 'garbage.sig', otherRoomTok]) {
+      const res = await handleListVersions(
+        versionRequest('/api/versions/room1', tok),
+        env,
+        makeApi(),
+        'room1',
+      )
+      expect(res.status).toBe(401)
+    }
+  })
+
+  it('404s the list for a room that does not exist after token auth passes', async () => {
     const kv = makeKv()
     const api = makeApi(undefined, { roomExists: async () => false })
-    const res = await handleListVersions({ ...env, SNAPSHOTS: kv }, api, 'room1')
+    const res = await handleListVersions(
+      versionRequest('/api/versions/room1', viewTok),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+    )
     expect(res.status).toBe(404)
   })
 
-  it('returns a single snapshot’s trip JSON verbatim', async () => {
+  it('returns a single snapshot’s trip JSON verbatim with view, edit, and owner tokens', async () => {
     const kv = makeKv()
     const { id } = await recordSnapshot(kv, 'room1', '{"trip":{"title":"Snapshotted"}}', 1000)
 
-    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1', id)
-    expect(res.status).toBe(200)
-    expect(res.headers.get('content-type')).toContain('application/json')
-    expect((await res.json()) as { trip: { title: string } }).toEqual({ trip: { title: 'Snapshotted' } })
+    for (const tok of [viewTok, editTok, ownerTok]) {
+      const res = await handleGetVersion(
+        versionRequest(`/api/versions/room1/${id}`, tok),
+        { ...env, SNAPSHOTS: kv },
+        makeApi(),
+        'room1',
+        id,
+      )
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toContain('application/json')
+      expect((await res.json()) as { trip: { title: string } }).toEqual({
+        trip: { title: 'Snapshotted' },
+      })
+    }
+  })
+
+  it('rejects snapshot fetches without a valid room-matched token', async () => {
+    for (const tok of [undefined, 'garbage.sig', otherRoomTok]) {
+      const res = await handleGetVersion(
+        versionRequest('/api/versions/room1/1000', tok),
+        env,
+        makeApi(),
+        'room1',
+        '1000',
+      )
+      expect(res.status).toBe(401)
+    }
   })
 
   it('404s an unknown snapshot id', async () => {
     const kv = makeKv()
     await recordSnapshot(kv, 'room1', '{"trip":{}}', 1000)
-    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, makeApi(), 'room1', '9999')
+    const res = await handleGetVersion(
+      versionRequest('/api/versions/room1/9999', viewTok),
+      { ...env, SNAPSHOTS: kv },
+      makeApi(),
+      'room1',
+      '9999',
+    )
     expect(res.status).toBe(404)
   })
 
-  it('404s a snapshot fetch for a room that does not exist', async () => {
+  it('404s a snapshot fetch for a room that does not exist after token auth passes', async () => {
     const kv = makeKv()
     await recordSnapshot(kv, 'room1', '{"trip":{}}', 1000)
     const api = makeApi(undefined, { roomExists: async () => false })
-    const res = await handleGetVersion({ ...env, SNAPSHOTS: kv }, api, 'room1', '1000')
+    const res = await handleGetVersion(
+      versionRequest('/api/versions/room1/1000', viewTok),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+      '1000',
+    )
     expect(res.status).toBe(404)
   })
 
@@ -365,15 +498,33 @@ describe('version history (link-gated)', () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
     // A write snapshots the seed ("Seed Trip") before replacing it with validTrip.
-    await handlePostTrip(tripRequest('POST', validTrip, editTok), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    await handlePostTrip(
+      tripRequest('POST', validTrip, editTok),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+    )
 
-    const list = (await (await handleListVersions({ ...env, SNAPSHOTS: kv }, api, 'room1')).json()) as {
+    const list = (await (
+      await handleListVersions(
+        versionRequest('/api/versions/room1', viewTok),
+        { ...env, SNAPSHOTS: kv },
+        api,
+        'room1',
+      )
+    ).json()) as {
       versions: Array<{ id: string }>
     }
     expect(list.versions).toHaveLength(1)
 
     const snap = (await (
-      await handleGetVersion({ ...env, SNAPSHOTS: kv }, api, 'room1', list.versions[0].id)
+      await handleGetVersion(
+        versionRequest(`/api/versions/room1/${list.versions[0].id}`, viewTok),
+        { ...env, SNAPSHOTS: kv },
+        api,
+        'room1',
+        list.versions[0].id,
+      )
     ).json()) as { trip: { title: string } }
     expect(snap.trip.title).toBe('Seed Trip')
   })

@@ -27,7 +27,7 @@ interface VersionMeta {
 }
 
 export function TripModal({ onClose }: TripModalProps) {
-  const { doc, roomId, workerUrl } = useRoom()
+  const { doc, roomId, token, workerUrl } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
 
@@ -48,12 +48,16 @@ export function TripModal({ onClose }: TripModalProps) {
   const [copied, setCopied] = useState(false)
 
   // "Recent versions" — pre-write snapshots the Worker records on each AI/owner
-  // write. Link-gated (knowing the room id is the capability), so no secret here.
+  // write. Token-gated with the share-link capability; the Worker verifies it.
   const [versions, setVersions] = useState<VersionMeta[]>([])
   const [versionsError, setVersionsError] = useState<string | null>(null)
 
   function versionsBase(): string {
     return `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId ?? '')}`
+  }
+
+  function versionFetchInit(): RequestInit {
+    return token ? { headers: { authorization: `Bearer ${token}` } } : {}
   }
 
   function handleCopy() {
@@ -72,7 +76,12 @@ export function TripModal({ onClose }: TripModalProps) {
       setApplyError(result.error)
       return
     }
-    if (!window.confirm('Replace the whole trip with this JSON? This overwrites every city, stay, and card.')) return
+    if (
+      !window.confirm(
+        'Replace the whole trip with this JSON? This overwrites every city, stay, and card.',
+      )
+    )
+      return
     applyTrip(doc, result.data)
     setApplyError(null)
     setPasteText('')
@@ -86,7 +95,7 @@ export function TripModal({ onClose }: TripModalProps) {
     if (!roomId) return
     setVersionsError(null)
     try {
-      const res = await fetch(versionsBase())
+      const res = await fetch(versionsBase(), versionFetchInit())
       if (!res.ok) throw new Error(String(res.status))
       const body = (await res.json()) as { versions?: VersionMeta[] }
       setVersions(body.versions ?? [])
@@ -98,7 +107,7 @@ export function TripModal({ onClose }: TripModalProps) {
   async function restoreVersion(id: string) {
     setVersionsError(null)
     try {
-      const res = await fetch(`${versionsBase()}/${encodeURIComponent(id)}`)
+      const res = await fetch(`${versionsBase()}/${encodeURIComponent(id)}`, versionFetchInit())
       if (!res.ok) throw new Error(String(res.status))
       applyJsonText(await res.text())
     } catch {
@@ -110,7 +119,11 @@ export function TripModal({ onClose }: TripModalProps) {
   const fieldInput = 'rounded-card border border-edge px-3 py-2 text-base text-ink'
 
   return (
-    <Modal label="Trip details" onClose={onClose} className="flex w-full flex-col gap-4 lg:max-w-md">
+    <Modal
+      label="Trip details"
+      onClose={onClose}
+      className="flex w-full flex-col gap-4 lg:max-w-md"
+    >
       <div className="flex items-center gap-3 border-b border-edge pb-3">
         {/* Vermilion seal — mirrors the header mark, per the mock. */}
         <div
@@ -161,7 +174,10 @@ export function TripModal({ onClose }: TripModalProps) {
 
       <div className="flex flex-col gap-1.5">
         <span className={sectionLabel}>
-          Day window <span className="font-medium normal-case tracking-normal text-ink-300">— how tall a day feels</span>
+          Day window{' '}
+          <span className="font-medium normal-case tracking-normal text-ink-300">
+            — how tall a day feels
+          </span>
         </span>
         <div className="flex items-center gap-2">
           <TimePicker
