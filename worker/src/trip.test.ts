@@ -92,6 +92,23 @@ function seededDoc(): Y.Doc {
   return doc
 }
 
+function sync(from: Y.Doc, to: Y.Doc) {
+  Y.applyUpdate(to, Y.encodeStateAsUpdate(from, Y.encodeStateVector(to)))
+}
+
+function docWithMergedInvertedWindow(): Y.Doc {
+  const a = seededDoc()
+  const b = new Y.Doc()
+  sync(a, b)
+
+  setTrip(a, { dayStart: '20:00' })
+  setTrip(b, { dayEnd: '07:00' })
+  sync(a, b)
+  sync(b, a)
+
+  return a
+}
+
 const validTrip = {
   trip: { title: 'Italy', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'c2', name: 'Rome', color: '#ff0000' }],
@@ -325,11 +342,9 @@ describe('handlePostTrip', () => {
   })
 
   it('still writes (skipping the snapshot) when the current state is unserializable', async () => {
-    // Simulate the post-merge dangling reference a concurrent remove-city can
-    // leave: a dayOverride pointing at a city that no longer exists, which makes
-    // `exportTrip` throw. The corrective write must still land.
-    const seed = seededDoc()
-    seed.getMap('dayOverrides').set('2027-01-01', 'ghost-city')
+    // Concurrent, individually valid day-window edits can merge into an
+    // inverted window. The corrective write must still land.
+    const seed = docWithMergedInvertedWindow()
     const kv = makeKv()
     const api = makeApi(seed) as LiveblocksApi & { sentCount(): number }
 

@@ -5,6 +5,7 @@ import {
   addAccommodation,
   addCard,
   addCity,
+  removeCity,
   setDayCityOverride,
   setTrip,
 } from './doc'
@@ -24,6 +25,25 @@ function seed(doc: Y.Doc) {
   addCard(doc, { id: 'card-2', dayKey: '2027-05-01', title: 'Train', order: 1, startTime: '18:30' })
   addCard(doc, { id: 'card-1', dayKey: '2027-05-01', title: 'Colosseum', order: 0 })
   setDayCityOverride(doc, '2027-05-03', 'rome')
+}
+
+function sync(from: Y.Doc, to: Y.Doc) {
+  Y.applyUpdate(to, Y.encodeStateAsUpdate(from, Y.encodeStateVector(to)))
+}
+
+function docWithMergedCityRemoval(setDanglingRef: (doc: Y.Doc) => void) {
+  const removeDoc = new Y.Doc()
+  const addRefDoc = new Y.Doc()
+  setTrip(removeDoc, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  addCity(removeDoc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+  sync(removeDoc, addRefDoc)
+
+  removeCity(removeDoc, 'rome')
+  setDanglingRef(addRefDoc)
+  sync(removeDoc, addRefDoc)
+  sync(addRefDoc, removeDoc)
+
+  return removeDoc
 }
 
 describe('exportTrip', () => {
@@ -65,6 +85,51 @@ describe('exportTrip', () => {
     const text = exportTripJSON(doc)
     expect(text).toContain('\n')
     expect(JSON.parse(text)).toEqual(exportTrip(doc))
+  })
+
+  it('drops a dangling accommodation cityId after a concurrent remove-city merge', () => {
+    const doc = docWithMergedCityRemoval((d) => {
+      addAccommodation(d, {
+        id: 'stay-1',
+        label: 'Hotel Roma',
+        cityId: 'rome',
+        startNight: '2027-05-01',
+        endNight: '2027-05-02',
+      })
+    })
+
+    expect(exportTrip(doc).accommodations).toEqual([
+      {
+        id: 'stay-1',
+        label: 'Hotel Roma',
+        startNight: '2027-05-01',
+        endNight: '2027-05-02',
+      },
+    ])
+  })
+
+  it('drops a dangling day override after a concurrent remove-city merge', () => {
+    const doc = docWithMergedCityRemoval((d) => setDayCityOverride(d, '2027-05-02', 'rome'))
+
+    expect(exportTrip(doc).dayOverrides).toEqual({})
+  })
+
+  it('leaves valid city references untouched', () => {
+    const doc = new Y.Doc()
+    seed(doc)
+
+    expect(exportTrip(doc)).toMatchObject({
+      accommodations: [
+        {
+          id: 'stay-1',
+          label: 'Hotel Roma',
+          cityId: 'rome',
+          startNight: '2027-05-01',
+          endNight: '2027-05-02',
+        },
+      ],
+      dayOverrides: { '2027-05-03': 'rome' },
+    })
   })
 })
 
@@ -111,6 +176,24 @@ describe('export → import round-trip', () => {
     addCard(source, { id: 'tall', dayKey: '2027-05-01', title: 'All day', order: 0, size: 'full' })
     const exported = exportTrip(source)
     expect(exported.cards[0].size).toBe('full')
+
+    const target = new Y.Doc()
+    applyTrip(target, exported)
+    expect(exportTrip(target)).toEqual(exported)
+  })
+
+  it('round-trips a pruned export', () => {
+    const source = docWithMergedCityRemoval((d) => {
+      addAccommodation(d, {
+        id: 'stay-1',
+        label: 'Hotel Roma',
+        cityId: 'rome',
+        startNight: '2027-05-01',
+        endNight: '2027-05-02',
+      })
+      setDayCityOverride(d, '2027-05-02', 'rome')
+    })
+    const exported = exportTrip(source)
 
     const target = new Y.Doc()
     applyTrip(target, exported)

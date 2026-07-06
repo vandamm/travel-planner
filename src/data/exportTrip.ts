@@ -20,19 +20,32 @@ const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id)
 
 export function exportTrip(doc: Y.Doc): TripDocument {
   const cities = listCities(doc).slice().sort(byId)
+  const cityIds = new Set(cities.map((c) => c.id))
   const accommodations = listAccommodations(doc)
+    .map((acc) => {
+      if (acc.cityId === undefined || cityIds.has(acc.cityId)) return acc
+      return {
+        id: acc.id,
+        label: acc.label,
+        startNight: acc.startNight,
+        endNight: acc.endNight,
+      }
+    })
     .slice()
     .sort((a, b) => a.startNight.localeCompare(b.startNight) || byId(a, b))
   const cards = listCards(doc)
     .slice()
     .sort((a, b) => a.dayKey.localeCompare(b.dayKey) || a.order - b.order || byId(a, b))
+  const dayOverrides = Object.fromEntries(
+    Object.entries(listDayOverrides(doc)).filter(([, cityId]) => cityIds.has(cityId)),
+  )
 
   return tripDocumentSchema.parse({
     trip: getTrip(doc),
     cities,
     accommodations,
     cards,
-    dayOverrides: listDayOverrides(doc),
+    dayOverrides,
   })
 }
 

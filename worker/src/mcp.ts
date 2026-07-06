@@ -149,9 +149,9 @@ async function readBoard(env: Env, api: LiveblocksApi, link: string): Promise<To
   const room = await resolveRoom(env, api, link, 'view')
   if ('error' in room) return room.error
   const doc = await loadRoomDoc(api, room.roomId)
-  // `exportTrip` re-validates and throws on an inconsistent doc (e.g. a dangling
-  // cityId a concurrent remove-city + add-referencing-it merge can leave) — the
-  // same class of state `applyTripToRoom` and the client panel already handle.
+  // `exportTrip` re-validates and throws on an inconsistent doc (e.g. concurrent
+  // day-window edits that merge into dayEnd <= dayStart) — the same class of
+  // state `applyTripToRoom` and the client panel already handle.
   // Surface it as a tool error, not an uncaught throw that becomes a bare 502.
   try {
     return toolText(JSON.stringify(exportTrip(doc), null, 2))

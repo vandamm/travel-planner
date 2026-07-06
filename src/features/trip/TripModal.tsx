@@ -32,7 +32,7 @@ export function TripModal({ onClose }: TripModalProps) {
   const trip = getTrip(doc)
 
   // `exportTrip` re-validates the live doc and throws on an inconsistent state
-  // (e.g. a dangling cityId a concurrent remove-city merge can leave). Guard so
+  // (e.g. concurrent day-window edits that merge into dayEnd <= dayStart). Guard so
   // an unserializable board shows a message rather than throwing here in render
   // — this runs on every doc change (useDocVersion) — and white-screening.
   let currentJson: string | null

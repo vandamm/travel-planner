@@ -65,6 +65,23 @@ function seededDoc(): Y.Doc {
   return doc
 }
 
+function sync(from: Y.Doc, to: Y.Doc) {
+  Y.applyUpdate(to, Y.encodeStateAsUpdate(from, Y.encodeStateVector(to)))
+}
+
+function docWithMergedInvertedWindow(): Y.Doc {
+  const a = seededDoc()
+  const b = new Y.Doc()
+  sync(a, b)
+
+  setTrip(a, { dayStart: '20:00' })
+  setTrip(b, { dayEnd: '07:00' })
+  sync(a, b)
+  sync(b, a)
+
+  return a
+}
+
 /** A share link whose # fragment is a signed capability token for a room. */
 async function linkFor(perm: Perm, room = 'room1', secret = SECRET): Promise<string> {
   return `https://app/#${await signToken({ r: room, p: perm, v: 1 }, secret)}`
@@ -215,10 +232,9 @@ describe('handleMcp — read_board', () => {
   })
 
   it('returns an isError result (not an uncaught 502) when the doc is inconsistent', async () => {
-    // A post-merge dangling reference makes `exportTrip` throw; read_board must
-    // surface that as a tool error, not let it escape as a bare Worker 502.
-    const seed = seededDoc()
-    seed.getMap('dayOverrides').set('2027-01-01', 'ghost-city')
+    // A post-merge inverted day window makes `exportTrip` throw; read_board
+    // must surface that as a tool error, not let it escape as a bare Worker 502.
+    const seed = docWithMergedInvertedWindow()
     const res = await callRead(await linkFor('view'), makeApi(seed))
     const body = (await res.json()) as RpcResponse
     const tool = body.result as ToolResult

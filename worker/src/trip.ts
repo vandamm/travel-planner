@@ -81,8 +81,8 @@ export async function applyTripToRoom(
   const doc = await loadRoomDoc(api, roomId)
   // Record history before mutating — best-effort. Skipped if KV isn't bound, if
   // the current state can't be serialized (`exportTrip` re-validates and throws
-  // on an inconsistent doc — e.g. a dangling cityId a concurrent remove-city +
-  // add-referencing-it merge can leave), or if the KV write itself errors
+  // on an inconsistent doc — e.g. concurrent day-window edits that merge into
+  // dayEnd <= dayStart), or if the KV write itself errors
   // (transient outage/rate-limit). A board that drifted into any of those states
   // must stay writable — otherwise `write_board`, the very tool used to repair
   // it, would 502 (and only in prod, where KV is bound). We report whether a

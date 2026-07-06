@@ -112,21 +112,21 @@ Address three of the accepted findings from the architecture/security review
 - [x] run `npm test` + `npm run test:e2e` — must pass before Task 2.
 
 ### Task 2: `exportTrip` prunes dangling city refs (self-heal the merge artifact)
-- [ ] `src/data/exportTrip.ts`: before the final `tripDocumentSchema.parse`,
+- [x] `src/data/exportTrip.ts`: before the final `tripDocumentSchema.parse`,
       compute the exported city-id set and (a) drop `cityId` from any
       accommodation whose city is missing (keep the accommodation), (b) drop any
       `dayOverrides` entry pointing at a missing city — the same cascade
       semantics `removeCity` applies at delete time. Keep the final parse as the
       backstop for anything else.
-- [ ] keep the existing consumer guards (MCP `read_board`, `TripModal`,
+- [x] keep the existing consumer guards (MCP `read_board`, `TripModal`,
       snapshot-skip) untouched — they still cover the residual failure modes.
-- [ ] write tests (`src/data/exportTrip.test.ts`): a doc with a dangling
+- [x] write tests (`src/data/exportTrip.test.ts`): a doc with a dangling
       accommodation `cityId` (seed the dangling state via a two-doc merge of
       remove-city and add-referencing-it, per repo convention) exports with the
       `cityId` dropped and the accommodation kept; a dangling override entry is
       dropped; valid references are untouched; the pruned export round-trips
       through `applyTrip`.
-- [ ] run `npm test` — must pass before Task 3.
+- [x] run `npm test` — must pass before Task 3.
 
 ### Task 3: guard `exportTrip` in `GET /api/trip/:room`
 - [ ] `worker/src/trip.ts` `handleGetTrip`: wrap the `exportTrip(doc)` call in
