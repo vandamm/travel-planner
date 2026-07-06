@@ -135,12 +135,15 @@ URL and redeploy the Worker.
 ## 3. Genesis room and sharing capability links
 
 Creating a room needs an `owner` token, so bootstrap the first ("genesis") one
-locally with the mint CLI (it signs with `TOKEN_SECRET` from `worker/.dev.vars`
-or the environment). Pick a room id, then:
+locally with the mint CLI. **Sign it with the exact `TOKEN_SECRET` you set on the
+target Worker** (step 1) — a token signed with any other value (e.g. a different
+`worker/.dev.vars` secret) is rejected by the deployed Worker with a 401. Pick a
+room id, then:
 
 ```sh
 ROOM=$(uuidgen)                                   # or any string you like
-OWNER=$(npx tsx scripts/mint-token.ts "$ROOM" owner)   # signs an owner token
+# Sign with the SAME secret set on the target Worker (step 1), else /api/rooms 401s.
+OWNER=$(TOKEN_SECRET='<the value you set in step 1>' npx tsx scripts/mint-token.ts "$ROOM" owner)
 
 # Create the Liveblocks room with that owner token
 curl -X POST https://<worker-url>/api/rooms \

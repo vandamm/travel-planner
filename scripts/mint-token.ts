@@ -40,7 +40,14 @@ export function parseDevVar(text: string, key: string): string | undefined {
     if (!trimmed || trimmed.startsWith('#')) continue
     const eq = trimmed.indexOf('=')
     if (eq === -1) continue
-    if (trimmed.slice(0, eq).trim() === key) return trimmed.slice(eq + 1).trim()
+    if (trimmed.slice(0, eq).trim() !== key) continue
+    const val = trimmed.slice(eq + 1).trim()
+    // Match wrangler/dotenv: strip one pair of matching surrounding quotes, so a
+    // quoted `TOKEN_SECRET="a b c"` signs with the same value the Worker verifies.
+    if (val.length >= 2 && (val[0] === '"' || val[0] === "'") && val[val.length - 1] === val[0]) {
+      return val.slice(1, -1)
+    }
+    return val
   }
   return undefined
 }

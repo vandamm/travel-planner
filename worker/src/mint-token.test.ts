@@ -43,4 +43,11 @@ describe('parseDevVar', () => {
     expect(parseDevVar(text, 'TOKEN_SECRET')).toBe('super-secret')
     expect(parseDevVar(text, 'MISSING')).toBeUndefined()
   })
+
+  it('strips matching surrounding quotes like wrangler/dotenv', () => {
+    expect(parseDevVar('TOKEN_SECRET="a b c"\n', 'TOKEN_SECRET')).toBe('a b c')
+    expect(parseDevVar("TOKEN_SECRET='a b c'\n", 'TOKEN_SECRET')).toBe('a b c')
+    // A lone/mismatched quote is not a quoted value — leave it verbatim.
+    expect(parseDevVar('TOKEN_SECRET="a b c\n', 'TOKEN_SECRET')).toBe('"a b c')
+  })
 })
