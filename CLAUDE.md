@@ -15,13 +15,13 @@ deployment.
 
 Everything persistent lives on one shared `Y.Doc`. Top-level containers:
 
-| Container | Yjs type | Holds |
-| --- | --- | --- |
-| `trip` | `Y.Map` | `title`, `startDate` (`YYYY-MM-DD`), `numDays`, `dayStart`/`dayEnd` (`HH:mm`, the day's timeline window, default `06:00`/`21:00`) (plain values) |
-| `cities` | `Y.Map<Y.Map>` | id → `{ id, name, color }` |
-| `dayOverrides` | `Y.Map` | `YYYY-MM-DD` → `cityId` (manual per-day city) |
-| `cards` | `Y.Map<Y.Map>` | id → `Card` fields |
-| `accommodations` | `Y.Map<Y.Map>` | id → `Accommodation` fields |
+| Container        | Yjs type       | Holds                                                                                                                                            |
+| ---------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `trip`           | `Y.Map`        | `title`, `startDate` (`YYYY-MM-DD`), `numDays`, `dayStart`/`dayEnd` (`HH:mm`, the day's timeline window, default `06:00`/`21:00`) (plain values) |
+| `cities`         | `Y.Map<Y.Map>` | id → `{ id, name, color }`                                                                                                                       |
+| `dayOverrides`   | `Y.Map`        | `YYYY-MM-DD` → `cityId` (manual per-day city)                                                                                                    |
+| `cards`          | `Y.Map<Y.Map>` | id → `Card` fields                                                                                                                               |
+| `accommodations` | `Y.Map<Y.Map>` | id → `Accommodation` fields                                                                                                                      |
 
 Entities are stored as **nested `Y.Map`s** (not plain objects) so concurrent
 edits to different fields of the same entity merge field-by-field instead of
@@ -40,7 +40,7 @@ them, wrapped in a `doc.transact(...)` so it lands as one atomic update for both
 local persistence and remote sync. Do **not** poke `Y.Map`s directly from
 features or the Worker.
 
-Patch semantics: in an update patch an explicit `undefined` value *clears* that
+Patch semantics: in an update patch an explicit `undefined` value _clears_ that
 field (e.g. untiming a card); absent keys are left untouched.
 
 Referential integrity: `removeCity` cascades — it also deletes any `dayOverrides`
@@ -54,14 +54,14 @@ while keeping the stay.
 
 ## Shared between client and Worker — never duplicate
 
-These `src/data/` modules are **environment-agnostic** and imported by *both* the
+These `src/data/` modules are **environment-agnostic** and imported by _both_ the
 client and the Worker so the agent API and the UI can never drift. Keep them free
 of browser- or Worker-only APIs:
 
 - `schema.ts` — plain-JS domain types (`Trip`, `City`, `Day`, `Card`, `Accommodation`).
 - `doc.ts` — the Y.Doc shape + typed mutators.
 - `tripSchema.ts` — the **zod schema**, the single source of truth for the trip
-  JSON *and* the agent API (`GET /api/schema` publishes it as JSON Schema).
+  JSON _and_ the agent API (`GET /api/schema` publishes it as JSON Schema).
   Validation lives here (`parseTripText`, `formatTripErrors`).
 - `applyTrip.ts` — validated trip JSON → doc mutations (a full replace: clear,
   then re-add via the mutators). Used by `POST /api/trip/:room`, the MCP
@@ -80,18 +80,26 @@ of browser- or Worker-only APIs:
   parse logic, no drift. Signing/verifying is Worker-only (`worker/src/token.ts`).
 
 `days.ts` (day generation) and `cityResolution.ts` are also pure shared logic.
-`cityResolution.ts` resolves a day's city/color (`resolveDayCity`) *and* exposes
+`cityResolution.ts` resolves a day's city/color (`resolveDayCity`) _and_ exposes
 the stay-coverage helpers — `uncoveredDays`, `firstUncoveredDay`, `uncoveredGaps`
 (contiguous gap ranges) — that drive the lane's per-gap "Add stay" buttons and the
 preselected start date. `dateFormat.ts` holds the European display formatters
 (`formatDay` → `dd.MM`, `formatDayLong` → `dd.MM.yyyy`, `formatTimeRange` →
-24-hour `HH:mm`); stored values stay ISO, only the *display* is European. Date and
+24-hour `HH:mm`); stored values stay ISO, only the _display_ is European. Date and
 time entry uses the app's own pickers (see Styling), so display is European
 everywhere — there are no native `<input type="date/time">` widgets that would
 follow the OS locale.
 
 When a value or rule needs to be known in two places, derive it from these
 modules rather than re-stating it.
+
+Client room state is split between `src/data/RoomProvider.tsx` and
+`src/data/RoomContext.ts`: `RoomProvider` owns the Y.Doc/connection lifecycle and
+provides the context, while `RoomContext.ts` owns `RoomContextValue` and
+`useRoom()`. UI consumers should import `useRoom` from `RoomContext`, not from
+the provider. `RoomContextValue.token` is the raw URL-fragment capability token
+used for Worker Bearer calls; the client only decodes it for local UX, and the
+Worker remains the verifier.
 
 ## City resolution (hybrid)
 
@@ -120,14 +128,14 @@ editor rewrites to `category` and drops `transport` on the card's next save).
 A card may also carry an optional `size?: 'auto' | 'small' | 'half' | 'full'`
 height preset (absent = `auto` = sized from its start/end time). `half`/`full`
 are relative to the day's `dayStart`–`dayEnd` window. The height math is pure and
-unit-tested in `src/features/cards/cardHeight.ts`. Dragging an *untimed* card next
+unit-tested in `src/features/cards/cardHeight.ts`. Dragging an _untimed_ card next
 to timed cards infers a `startTime` from the drop position (snapped to 15 min) —
 see `src/features/board/dndHandlers.ts`.
 
 ## Synced vs. per-user state
 
 Not everything is on the doc. The **time-direction** view preference
-(morning→evening top-to-bottom vs. bottom-to-top) is a *local* preference in
+(morning→evening top-to-bottom vs. bottom-to-top) is a _local_ preference in
 `localStorage`, deliberately **not** synced — each person sees their own
 direction without affecting the other. It reverses the visual order of every card
 in every day. See `src/features/board/timeDirection.ts`.
@@ -135,7 +143,7 @@ in every day. See `src/features/board/timeDirection.ts`.
 Rule of thumb: trip content is synced (doc); per-viewer display preferences are
 local (localStorage).
 
-**Undo/redo** is likewise per-viewer and *in-memory only* (not synced, not
+**Undo/redo** is likewise per-viewer and _in-memory only_ (not synced, not
 durable). `src/features/board/undoManager.ts` (`createTripUndoManager` +
 `useUndoManager`, wired in `Board.tsx`) scopes a `Y.UndoManager` to the five
 top-level types and keeps the default `trackedOrigins` of `{null}` — so only the
@@ -143,7 +151,7 @@ local keystroke mutators (null origin) are undoable; remote sync (Liveblocks'
 origin) and full-replace/restore (`APPLY_TRIP_ORIGIN`) are excluded by
 construction. Cmd/Ctrl+Z / Shift+Cmd/Ctrl+Z and the ↶/↷ toolbar buttons drive it;
 the keydown listener skips text fields so native input-undo still works. The
-*durable* history is the Worker's snapshot log (below), not this stack.
+_durable_ history is the Worker's snapshot log (below), not this stack.
 
 ## Styling / design tokens
 
@@ -187,13 +195,14 @@ trip?" confirm (invalid input renders `formatTripErrors`), and — when a room i
 present — a "Recent versions" restore list backed by the version endpoints above.
 
 Field pop-overs (the date/time pickers) use a **different** shell,
-`src/components/Popover.tsx` — an *anchored* floating panel pinned just below its
+`src/components/Popover.tsx` — an _anchored_ floating panel pinned just below its
 trigger (pure `popoverPosition` helper measuring rects; **no positioning
 library**), with click-outside/Escape close and `role="dialog"`. On the mobile
 viewport it falls back to the shared `Modal` sheet (reuse, not a second sheet).
 `Modal` is centered/full-screen — for a field dropdown you want `Popover`.
 
 Date and time entry is **custom, not native** (no `<input type="date/time">`):
+
 - `src/features/pickers/DatePicker.tsx` — a calendar pop-over. Single-date mode
   (trip start in `TripModal`) and first→last **range** mode (a stay's nights in
   `AccommodationEditor`, one control replacing the two night inputs). Grid + range
@@ -206,7 +215,7 @@ Date and time entry is **custom, not native** (no `<input type="date/time">`):
   when an `onClear` is passed — required trip-window fields have none) untimes a
   card by committing empty → the consumer patches `undefined` (doc.ts
   clear-semantics).
-Both keep storage ISO (`YYYY-MM-DD`) / `HH:mm` and write through the doc mutators.
+  Both keep storage ISO (`YYYY-MM-DD`) / `HH:mm` and write through the doc mutators.
 
 The desktop multi-week board carries navigation affordances in
 `src/features/board/multiWeekNav.ts` (pure, unit-tested): a right-edge white fade
@@ -242,7 +251,7 @@ nest: `view` ⊂ `edit` ⊂ `owner`. There is **one hidden secret**, `TOKEN_SECR
   joins at its perm level, no login.
 - `POST /api/rooms` creates a room and is gated by a valid **`owner`** token
   (`Authorization: Bearer`); it returns `{ id, token }` — a fresh **owner** link
-  for the new room. This is the *only* way rooms are created, and it chains
+  for the new room. This is the _only_ way rooms are created, and it chains
   (create-from-in-a-room). Genesis (room #0) is minted once locally with
   `scripts/mint-token.ts` (see below). `view`/`edit`/absent/invalid → 401.
 - The agent HTTP API `GET`/`POST /api/trip/:room` is gated by a **Bearer
@@ -253,25 +262,27 @@ nest: `view` ⊂ `edit` ⊂ `owner`. There is **one hidden secret**, `TOKEN_SECR
   read/write surface to an MCP client (e.g. Perplexity Pro) as three tools —
   `get_schema`, `read_board(link)`, `write_board(link, trip)` — over a
   hand-rolled JSON-RPC 2.0 handshake (no `@modelcontextprotocol/sdk`; its
-  Streamable-HTTP *server* transport targets Node http, not the Workers Fetch
+  Streamable-HTTP _server_ transport targets Node http, not the Workers Fetch
   runtime). **No endpoint key**: `initialize`/`tools/list` are open (discovery is
   harmless), and each acting tool authorizes itself from the **token in the pasted
   link** — `read_board` needs `view`+, `write_board` needs `edit`+. The tools take
-  the share link *as a string argument* (never sent otherwise), verify it with
+  the share link _as a string argument_ (never sent otherwise), verify it with
   `tokenFromLink` + `verifyToken`, reuse `loadRoomDoc`/`exportTrip`/`applyTrip`,
   and share the write path (`applyTripToRoom` in `trip.ts`) with the owner `POST`.
 - **Snapshot history & restore** (`worker/src/snapshots.ts`, Cloudflare **KV**
   binding `SNAPSHOTS`): every Worker-mediated write (owner `POST /api/trip` and MCP
   `write_board`, both via `applyTripToRoom`) records the room's current trip JSON
-  *before* mutating, keyed by room + timestamp, **keep-all**. Snapshotting is guarded
+  _before_ mutating, keyed by room + timestamp, **keep-all**. Snapshotting is guarded
   on the KV binding being present, so handlers still work unbound. Two
   **token-gated** endpoints expose the log: `GET /api/versions/:room` (list
   `{id, timestamp}`) and `GET /api/versions/:room/:id` (that snapshot's JSON).
   Both require a Bearer capability token with `view`+ permission whose `r` matches
-  the room. The Trip-settings panel lists recent versions and restores one by
-  feeding its JSON through the same paste-apply path (a restore is itself
-  snapshotted on the next write). `UndoManager` is the session-local undo; this KV
-  log is the durable history.
+  the room. These endpoints are read-only: a `view` link can inspect history, but
+  persisting a restore back to the shared board is a write through the normal sync
+  or API path and requires `edit`+. The Trip-settings panel lists recent versions
+  and restores one by feeding its JSON through the same paste-apply path (a
+  restore is itself snapshotted on the next write). `UndoManager` is the
+  session-local undo; this KV log is the durable history.
 - Only `LIVEBLOCKS_SECRET_KEY` and `TOKEN_SECRET` live on the Worker (the old
   `OWNER_SECRET`/`MCP_API_KEY` are gone — collapsed into `TOKEN_SECRET`). Rotating
   `TOKEN_SECRET` invalidates every token-verified capability: sync join via

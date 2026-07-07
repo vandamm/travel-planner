@@ -5,7 +5,7 @@ import App from './App'
 import { encodePayload } from './data/token'
 
 // A board link is a `#<token>` fragment; build one for the board-focused tests.
-const TOKEN_HASH = '#' + encodePayload({ r: 'test-room', p: 'edit', v: 1 })
+const TOKEN_HASH = '#' + encodePayload({ r: 'test-room', p: 'edit', v: 1 }) + '.dummySig'
 
 // The app only mounts when a decodable token is present in the URL hash; give the
 // board-focused tests one, and reset the hash after each test.

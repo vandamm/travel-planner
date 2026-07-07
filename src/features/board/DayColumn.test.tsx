@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
+import { DragOverDayContext } from './dragOverDayContext'
 
 const day: Day = { key: '2027-05-01', index: 0 }
 const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
@@ -10,7 +11,14 @@ const florence: City = { id: 'florence', name: 'Florence', color: '#3b82f6' }
 const cards: Card[] = [
   { id: 'a', dayKey: '2027-05-01', title: 'Stroll', order: 0 },
   { id: 'b', dayKey: '2027-05-01', title: 'Breakfast', order: 5, startTime: '08:00' },
-  { id: 'c', dayKey: '2027-05-01', title: 'Dinner', order: 1, startTime: '19:00', endTime: '21:00' },
+  {
+    id: 'c',
+    dayKey: '2027-05-01',
+    title: 'Dinner',
+    order: 1,
+    startTime: '19:00',
+    endTime: '21:00',
+  },
 ]
 
 function titles() {
@@ -73,8 +81,7 @@ describe('DayColumn', () => {
 
   it('scales each card by its duration; untimed and end-less cards get one block', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
-    const li = (title: string) =>
-      screen.getByText(title).closest('li') as HTMLElement
+    const li = (title: string) => screen.getByText(title).closest('li') as HTMLElement
     expect(li('Dinner')).toHaveStyle({ minHeight: '88px' }) // 19:00–21:00 = 2h
     expect(li('Breakfast')).toHaveStyle({ minHeight: '44px' }) // timed, no end = 1h
     expect(li('Stroll')).toHaveStyle({ minHeight: '44px' }) // untimed = 1 block
@@ -105,7 +112,9 @@ describe('DayColumn', () => {
   })
 
   it('shows no manual indicator for an accommodation-resolved city', () => {
-    render(<DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />)
+    render(
+      <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
+    )
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
@@ -168,6 +177,17 @@ describe('DayColumn', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const noon = within(screen.getByTestId('day-body')).getByTestId('noon-divider')
     expect(noon).toHaveTextContent('NOON')
+  })
+
+  it('highlights the column when the drag context marks this day as the drop target', () => {
+    render(
+      <DragOverDayContext.Provider value={day.key}>
+        <DayColumn day={day} city={rome} cards={[]} direction="down" />
+      </DragOverDayContext.Provider>,
+    )
+    const column = screen.getByTestId('day-column')
+    expect(column).toHaveAttribute('data-drag-over', '')
+    expect(column).toHaveClass('border-sky-400', 'ring-2', 'ring-sky-300')
   })
 
   it('anchors the NOON divider at noon’s fraction — top when down, bottom when up', () => {

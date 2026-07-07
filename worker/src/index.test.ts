@@ -188,6 +188,22 @@ describe('handleRequest (router + CORS)', () => {
     expect((await res.json()) as { error: string }).toEqual({ error: 'server misconfigured' })
   })
 
+  it('returns the same CORS-bearing 500 for version routes when TOKEN_SECRET is missing', async () => {
+    const misconfigured: Env = { ...env, TOKEN_SECRET: '' }
+    const token = await signToken({ r: 'room1', p: 'view', v: 1 }, env.TOKEN_SECRET)
+
+    for (const path of ['/api/versions/room1', '/api/versions/room1/1000']) {
+      const req = new Request(`https://worker.test${path}`, {
+        method: 'GET',
+        headers: { authorization: `Bearer ${token}`, origin: 'https://app.example' },
+      })
+      const res = await handleRequest(req, misconfigured, makeApi())
+      expect(res.status).toBe(500)
+      expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
+      expect((await res.json()) as { error: string }).toEqual({ error: 'server misconfigured' })
+    }
+  })
+
   it('returns a CORS-bearing 502 when the Liveblocks layer throws, not a bare 500', async () => {
     // The REST layer throws on any non-2xx (outage, 429, 5xx). The router must
     // catch it and still answer with CORS headers, or the browser sees an opaque

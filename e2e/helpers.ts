@@ -2,12 +2,13 @@ import { expect, type Locator, type Page } from '@playwright/test'
 import { encodePayload, type Perm } from '../src/data/token'
 
 /**
- * Build a `#<token>` link fragment for e2e. The payload is UNSIGNED (no `.sig`
- * segment) — fine because offline e2e never hits `/api/auth`; the client only
- * decodes the token to derive the room + perms. Mirrors the production link format.
+ * Build a `#<token>` link fragment for e2e. The signature segment is a dummy:
+ * offline e2e never hits `/api/auth`, and the client only decodes the payload to
+ * derive room + perms. Keeping the two-segment shape mirrors production links
+ * and catches client code that would accidentally drop the signature.
  */
 export function tokenHash(roomId: string, perm: Perm = 'edit'): string {
-  return `#${encodePayload({ r: roomId, p: perm, v: 1 })}`
+  return `#${encodePayload({ r: roomId, p: perm, v: 1 })}.dummySig`
 }
 
 /** The default e2e board link (edit perms on room "e2e"). */
@@ -27,7 +28,8 @@ async function clickCalendarDay(cal: Locator, iso: string) {
   for (let guard = 0; guard < 120; guard++) {
     const cur = await cal.locator('[data-month]').getAttribute('data-month')
     if (!cur) break
-    const diff = (targetYear - Number(cur.slice(0, 4))) * 12 + (targetMonth - Number(cur.slice(5, 7)))
+    const diff =
+      (targetYear - Number(cur.slice(0, 4))) * 12 + (targetMonth - Number(cur.slice(5, 7)))
     if (diff === 0) break
     await cal.getByRole('button', { name: diff > 0 ? 'Next month' : 'Previous month' }).click()
   }
@@ -71,7 +73,11 @@ function isMobile(page: Page): boolean {
 }
 
 /** Open Trip / Cities, handling the mobile ≡ menu vs. the desktop inline button. */
-async function openEditor(page: Page, menuItem: 'Trip setup' | 'Cities & colours', inline: 'Trip' | 'Cities') {
+async function openEditor(
+  page: Page,
+  menuItem: 'Trip setup' | 'Cities & colours',
+  inline: 'Trip' | 'Cities',
+) {
   if (isMobile(page)) {
     await page.getByRole('button', { name: 'Menu' }).click()
     await page.getByRole('dialog', { name: 'Menu' }).getByRole('button', { name: menuItem }).click()

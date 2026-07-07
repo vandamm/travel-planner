@@ -82,12 +82,12 @@ the Worker's `TOKEN_SECRET`. Perms nest (`view` ⊂ `edit` ⊂ `owner`):
 
 - **Anyone with a link joins at its perm level, no login.** The client posts the
   token to the Worker's `/api/auth`, which verifies it and mints a room-scoped
-  Liveblocks token *only if the room already exists* — scoped `room:read` for
+  Liveblocks token _only if the room already exists_ — scoped `room:read` for
   `view`, `room:write` for `edit`/`owner`, so view-only is enforced by Liveblocks.
 - **Creating a new room requires an `owner` token** (`POST /api/rooms`,
   `Authorization: Bearer <token>`); it returns a fresh **owner** link for the new
   room, so ownership chains (create-from-in-a-room). The very first (genesis) link
-  is minted locally with `scripts/mint-token.ts`. The client only *decodes* a token
+  is minted locally with `scripts/mint-token.ts`. The client only _decodes_ a token
   (never verifies) to shape rendering — no security rests on the client.
 
 ### Shared data modules
@@ -133,32 +133,32 @@ The only client variable is the Worker base URL. Copy `.env.example` to `.env`:
 cp .env.example .env
 ```
 
-| Variable | Where | Notes |
-| --- | --- | --- |
-| `VITE_WORKER_URL` | client (`.env`) | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret. |
-| `LIVEBLOCKS_SECRET_KEY` | Worker secret | Liveblocks project secret key (`sk_...`). Never shipped to the client. |
-| `TOKEN_SECRET` | Worker secret | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates all token-verified access: sync join, room creation, trip API + MCP, and version-history reads. |
-| `ALLOWED_ORIGIN` | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset. |
+| Variable                | Where                 | Notes                                                                                                                                                                                                                        |
+| ----------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_WORKER_URL`       | client (`.env`)       | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret.                                                            |
+| `LIVEBLOCKS_SECRET_KEY` | Worker secret         | Liveblocks project secret key (`sk_...`). Never shipped to the client.                                                                                                                                                       |
+| `TOKEN_SECRET`          | Worker secret         | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates all token-verified access: sync join, room creation, trip API + MCP, and version-history reads. |
+| `ALLOWED_ORIGIN`        | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset.                                                                                                                                         |
 
 For local Worker dev, copy `worker/.dev.vars.example` to `worker/.dev.vars`
 (gitignored) and fill in real values.
 
 ## Scripts
 
-| Script | Does |
-| --- | --- |
-| `npm run dev` | Vite dev server |
-| `npm run build` | `tsc --noEmit && vite build` → `dist/` |
-| `npm run preview` | Preview the production build |
-| `npm test` | Vitest unit/integration suite (single run) |
-| `npm run test:watch` | Vitest in watch mode |
-| `npm run test:e2e` | Playwright end-to-end suite |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier (write) |
-| `npm run coverage` | Vitest with coverage |
-| `npm run worker:dev` | `wrangler dev` for the Worker (http://localhost:8787) |
-| `npm run deploy:worker` | Deploy the default/test Worker |
-| `npm run deploy:worker:prod` | Deploy the production Worker |
+| Script                       | Does                                                  |
+| ---------------------------- | ----------------------------------------------------- |
+| `npm run dev`                | Vite dev server                                       |
+| `npm run build`              | `tsc --noEmit && vite build` → `dist/`                |
+| `npm run preview`            | Preview the production build                          |
+| `npm test`                   | Vitest unit/integration suite (single run)            |
+| `npm run test:watch`         | Vitest in watch mode                                  |
+| `npm run test:e2e`           | Playwright end-to-end suite                           |
+| `npm run lint`               | ESLint                                                |
+| `npm run format`             | Prettier (write)                                      |
+| `npm run coverage`           | Vitest with coverage                                  |
+| `npm run worker:dev`         | `wrangler dev` for the Worker (http://localhost:8787) |
+| `npm run deploy:worker`      | Deploy the default/test Worker                        |
+| `npm run deploy:worker:prod` | Deploy the production Worker                          |
 
 ## Testing
 
@@ -198,7 +198,7 @@ There are three ways to drive a board with an agent:
 - **MCP connector** (`POST /mcp`) — for an MCP client such as **Perplexity Pro**.
   Add the connector with just the Worker's `/mcp` URL (no separate key), then paste
   a board's share link into the chat. It exposes three tools: `get_schema`,
-  `read_board(link)`, and `write_board(link, trip)` — the link *is* the credential
+  `read_board(link)`, and `write_board(link, trip)` — the link _is_ the credential
   (its `#` fragment is the token), passed as a string, and each tool authorizes
   itself from it (`read_board` needs a `view`+ link, `write_board` an `edit`+ link).
   `write_board` snapshots the current board before replacing it, so any AI edit is
@@ -210,11 +210,12 @@ There are three ways to drive a board with an agent:
 **Version history & restore.** Every Worker-mediated write (`POST /api/trip` and MCP
 `write_board`) records the room's prior trip JSON to Cloudflare **KV** first
 (keep-all, keyed by room + timestamp). The Trip panel's "Recent versions" list
-restores any earlier version through `GET /api/versions/:room` and
-`GET /api/versions/:room/:id`; both endpoints require
-`Authorization: Bearer <token>` with a `view`+ capability token whose room matches
-the path. Rotating `TOKEN_SECRET` revokes history access along with sync, room
-creation, and the trip APIs.
+uses `GET /api/versions/:room` and `GET /api/versions/:room/:id` to list and
+fetch snapshots; both read-only endpoints require `Authorization: Bearer <token>`
+with a `view`+ capability token whose room matches the path. Writing a fetched
+snapshot back to the shared board still requires `edit`+ permission through the
+normal sync/API write path. Rotating `TOKEN_SECRET` revokes history access along
+with sync, room creation, and the trip APIs.
 For live hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within
 the session; agent writes and restores are kept off that keystroke stack. Provision
 the `SNAPSHOTS` KV namespace and set `TOKEN_SECRET` per the notes in

@@ -1,16 +1,17 @@
 # Trip JSON schema
 
 A whole trip serializes to a single JSON object — the format the agent API
-(`GET`/`POST /api/trip/:room`) reads and writes. (There is no on-page
-import/export UI; this format is agent-only.) It is the *single source of
-truth*: the same zod schema (`src/data/tripSchema.ts`) validates every path, and
+(`GET`/`POST /api/trip/:room`) and the Trip modal's "Trip JSON (for AI)" panel
+read and write. Applying pasted JSON uses the same full-replace document flow;
+there is no separate file import/export feature. It is the _single source of
+truth_: the same zod schema (`src/data/tripSchema.ts`) validates every path, and
 `GET /api/schema` publishes the matching JSON Schema, so a trip an agent posts is
 held to exactly the rules the schema advertises.
 
 Importing or posting a document is a **full replace**: the doc is cleared and
 rebuilt from the payload, so what you send is what the board shows. (The replace
 is taken against the snapshot the Worker reads; see the concurrency note under
-[Agent HTTP API](#agent-http-api) — an entity a collaborator creates *during* the
+[Agent HTTP API](#agent-http-api) — an entity a collaborator creates _during_ the
 write can survive it.)
 
 ## Shape
@@ -18,66 +19,64 @@ write can survive it.)
 ```jsonc
 {
   "trip": {
-    "title": "Italy 2027",      // string (may be empty)
-    "startDate": "2027-05-01",  // "YYYY-MM-DD", or "" when not set up
-    "numDays": 14,              // integer 0–730 — day columns, counted from startDate
-    "dayStart": "06:00",        // "HH:mm" — top of each day's timeline window (default "06:00")
-    "dayEnd": "21:00"           // "HH:mm" — bottom of the window (default "21:00")
+    "title": "Italy 2027", // string (may be empty)
+    "startDate": "2027-05-01", // "YYYY-MM-DD", or "" when not set up
+    "numDays": 14, // integer 0–730 — day columns, counted from startDate
+    "dayStart": "06:00", // "HH:mm" — top of each day's timeline window (default "06:00")
+    "dayEnd": "21:00", // "HH:mm" — bottom of the window (default "21:00")
   },
-  "cities": [
-    { "id": "rome", "name": "Rome", "color": "#ef4444" }
-  ],
+  "cities": [{ "id": "rome", "name": "Rome", "color": "#ef4444" }],
   "accommodations": [
     {
       "id": "stay-1",
       "label": "Hotel Roma",
-      "cityId": "rome",           // optional; omit for a stay with no city
+      "cityId": "rome", // optional; omit for a stay with no city
       "startNight": "2027-05-01", // first night slept, "YYYY-MM-DD"
-      "endNight": "2027-05-02"    // last night slept (checkout is the next morning)
-    }
+      "endNight": "2027-05-02", // last night slept (checkout is the next morning)
+    },
   ],
   "cards": [
     {
       "id": "card-1",
-      "dayKey": "2027-05-01",     // the day column this card lives in, "YYYY-MM-DD"
+      "dayKey": "2027-05-01", // the day column this card lives in, "YYYY-MM-DD"
       "title": "Colosseum",
-      "note": "book ahead",       // optional
-      "link": "https://...",      // optional; must be an http(s) URL (or empty)
-      "startTime": "10:00",       // optional "HH:mm" — its presence makes the card time-bound
-      "endTime": "12:00",         // optional "HH:mm"
-      "order": 0,                 // integer — manual position among untimed cards in the day
-      "color": "#3b82f6",         // optional
-      "icon": "🎟️",                // optional
-      "transport": false,         // optional, legacy — true renders as the "transit" category
-      "category": "indoor",       // optional — "indoor"|"outdoor"|"transit" (supersedes transport)
-      "size": "auto"              // optional — "auto"|"small"|"half"|"full" card height (absent = "auto")
-    }
+      "note": "book ahead", // optional
+      "link": "https://...", // optional; must be an http(s) URL (or empty)
+      "startTime": "10:00", // optional "HH:mm" — its presence makes the card time-bound
+      "endTime": "12:00", // optional "HH:mm"
+      "order": 0, // integer — manual position among untimed cards in the day
+      "color": "#3b82f6", // optional
+      "icon": "🎟️", // optional
+      "transport": false, // optional, legacy — true renders as the "transit" category
+      "category": "indoor", // optional — "indoor"|"outdoor"|"transit" (supersedes transport)
+      "size": "auto", // optional — "auto"|"small"|"half"|"full" card height (absent = "auto")
+    },
   ],
   "dayOverrides": {
-    "2027-05-03": "rome"          // dayKey → cityId: pin a day's city, overriding any covering stay
-  }
+    "2027-05-03": "rome", // dayKey → cityId: pin a day's city, overriding any covering stay
+  },
 }
 ```
 
 ## Field rules
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `trip.title` | string | May be empty. |
-| `trip.startDate` | `"YYYY-MM-DD"` or `""` | Empty only before the trip is set up. |
-| `trip.numDays` | integer 0–730 | Number of day columns from `startDate` (inclusive). Bounded at 730 (~2 years) to keep the board finite; a larger count is rejected. |
-| `trip.dayStart` / `dayEnd` | `"HH:mm"`, optional | The day's timeline window — cards are scaled and placed within it. Default `"06:00"` / `"21:00"` when omitted. |
-| `cities[].id` | non-empty string | Referenced by `accommodations[].cityId` and `dayOverrides`. |
-| `cities[].color` | non-empty string | Any CSS color, e.g. `#ef4444`. |
-| `accommodations[].cityId` | string, optional | The covered days inherit this city's color. |
-| `accommodations[].startNight` / `endNight` | `"YYYY-MM-DD"` | Inclusive night span; `endNight ≥ startNight`. |
-| `cards[].dayKey` | `"YYYY-MM-DD"` | The day column the card belongs to. |
-| `cards[].link` | `"http(s)://…"` or `""`, optional | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected. |
-| `cards[].startTime` / `endTime` | `"HH:mm"`, optional | 24-hour; presence makes the card time-bound (auto-sorted by time). |
-| `cards[].order` | integer | Manual position among untimed cards in a day. |
-| `cards[].transport` | boolean, optional | Legacy transportation-leg flag. Kept valid for back-compat; `category` supersedes it and `true` is read as the `"transit"` category. |
-| `cards[].category` | `"indoor"`/`"outdoor"`/`"transit"`, optional | Activity category, shown as a colour chip. Absent = uncategorised. Takes precedence over `transport`. |
-| `cards[].size` | `"auto"`/`"small"`/`"half"`/`"full"`, optional | Card height preset. `auto` (default/absent) sizes the card from its start/end time (1h when untimed); `small` ≈ half an hour; `half`/`full` are half/all of the day's `dayStart`–`dayEnd` window. |
+| Field                                      | Type                                           | Notes                                                                                                                                                                                             |
+| ------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `trip.title`                               | string                                         | May be empty.                                                                                                                                                                                     |
+| `trip.startDate`                           | `"YYYY-MM-DD"` or `""`                         | Empty only before the trip is set up.                                                                                                                                                             |
+| `trip.numDays`                             | integer 0–730                                  | Number of day columns from `startDate` (inclusive). Bounded at 730 (~2 years) to keep the board finite; a larger count is rejected.                                                               |
+| `trip.dayStart` / `dayEnd`                 | `"HH:mm"`, optional                            | The day's timeline window — cards are scaled and placed within it. Default `"06:00"` / `"21:00"` when omitted.                                                                                    |
+| `cities[].id`                              | non-empty string                               | Referenced by `accommodations[].cityId` and `dayOverrides`.                                                                                                                                       |
+| `cities[].color`                           | non-empty string                               | Any CSS color, e.g. `#ef4444`.                                                                                                                                                                    |
+| `accommodations[].cityId`                  | string, optional                               | The covered days inherit this city's color.                                                                                                                                                       |
+| `accommodations[].startNight` / `endNight` | `"YYYY-MM-DD"`                                 | Inclusive night span; `endNight ≥ startNight`.                                                                                                                                                    |
+| `cards[].dayKey`                           | `"YYYY-MM-DD"`                                 | The day column the card belongs to.                                                                                                                                                               |
+| `cards[].link`                             | `"http(s)://…"` or `""`, optional              | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected.                                                                                            |
+| `cards[].startTime` / `endTime`            | `"HH:mm"`, optional                            | 24-hour; presence makes the card time-bound (auto-sorted by time).                                                                                                                                |
+| `cards[].order`                            | integer                                        | Manual position among untimed cards in a day.                                                                                                                                                     |
+| `cards[].transport`                        | boolean, optional                              | Legacy transportation-leg flag. Kept valid for back-compat; `category` supersedes it and `true` is read as the `"transit"` category.                                                              |
+| `cards[].category`                         | `"indoor"`/`"outdoor"`/`"transit"`, optional   | Activity category, shown as a colour chip. Absent = uncategorised. Takes precedence over `transport`.                                                                                             |
+| `cards[].size`                             | `"auto"`/`"small"`/`"half"`/`"full"`, optional | Card height preset. `auto` (default/absent) sizes the card from its start/end time (1h when untimed); `small` ≈ half an hour; `half`/`full` are half/all of the day's `dayStart`–`dayEnd` window. |
 
 ## Defaults
 
@@ -114,13 +113,13 @@ token from the board's share link, presented as `Authorization: Bearer <token>`:
 `:room` (a token for one room can't act on another). `GET /api/schema` is **public**
 — the schema is the API's shape, not a secret, so it needs no token.
 
-| Method | Path | Body | Auth | Returns |
-| --- | --- | --- | --- | --- |
-| `GET` | `/api/schema` | — | none (public) | the JSON Schema for the trip document (derived from the zod schema) |
-| `GET` | `/api/trip/:room` | — | `view`+ token, room-matched | the room's current trip as the JSON document above |
-| `POST` | `/api/trip/:room` | a trip document (above) | `edit`+ token, room-matched | the validated, default-filled document |
-| `GET` | `/api/versions/:room` | — | `view`+ token, room-matched | the room's saved version list |
-| `GET` | `/api/versions/:room/:id` | — | `view`+ token, room-matched | one saved version as a trip document |
+| Method | Path                      | Body                    | Auth                        | Returns                                                             |
+| ------ | ------------------------- | ----------------------- | --------------------------- | ------------------------------------------------------------------- |
+| `GET`  | `/api/schema`             | —                       | none (public)               | the JSON Schema for the trip document (derived from the zod schema) |
+| `GET`  | `/api/trip/:room`         | —                       | `view`+ token, room-matched | the room's current trip as the JSON document above                  |
+| `POST` | `/api/trip/:room`         | a trip document (above) | `edit`+ token, room-matched | the validated, default-filled document                              |
+| `GET`  | `/api/versions/:room`     | —                       | `view`+ token, room-matched | the room's saved version list                                       |
+| `GET`  | `/api/versions/:room/:id` | —                       | `view`+ token, room-matched | one saved version as a trip document                                |
 
 The same read/write surface is also reachable via the **MCP endpoint**
 (`POST /mcp`) as the `get_schema` / `read_board` / `write_board` tools, for MCP
@@ -130,11 +129,14 @@ takes the share link as a string and authorizes itself from the token in it
 via `POST` above snapshots the prior trip to KV first; the version endpoints
 (`GET /api/versions/:room` and `…/:room/:id`) list and read those snapshots for
 restore, gated by the same room-matched `view`+ Bearer token rule as trip reads.
+They are read-only: `view` links can inspect history, while writing a restored
+snapshot back to the shared board still requires `edit`+ permission through the
+normal sync or `POST` write path.
 See the [README](../README.md#agent-api) for the connector setup and
 version-history overview.
 
 `GET /api/schema` returns the JSON Schema generated from `tripDocumentSchema` —
-the *same* schema `POST` validates against, so the published shape can never
+the _same_ schema `POST` validates against, so the published shape can never
 drift from what the endpoint accepts. The `GET /api/trip/:room` response also
 carries a `$schema` field pointing at `/api/schema`, so an agent reading even an
 empty trip learns where to fetch the full shape. (`$schema` is informational —
@@ -142,12 +144,12 @@ it is ignored if echoed back on a `POST`.)
 
 A `POST` is a **full replace**: the document is validated, applied to the room's
 Yjs doc as a wipe-and-rebuild, and the diff is pushed to Liveblocks, so connected
-clients converge live. Because the Worker validates *before* touching the room, a
+clients converge live. Because the Worker validates _before_ touching the room, a
 bad payload is a clean error and never mutates the doc.
 
 The replace is **snapshot-relative, not atomic against live editors**: the Worker
 reads the room, computes the wipe-and-rebuild, and pushes it as a Yjs diff. An
-entity a collaborator creates *after* that read is invisible to the diff's delete
+entity a collaborator creates _after_ that read is invisible to the diff's delete
 set (Yjs can only delete items it has observed), so it survives the merge — the
 result is your payload plus anything added during the brief read-modify-write
 window. The agent API is owner-gated and not meant for use mid-collaboration, so
@@ -156,12 +158,12 @@ compare-and-swap Liveblocks doesn't expose).
 
 ### Status codes
 
-| Code | When |
-| --- | --- |
-| `200` | `GET` succeeded / `POST` applied |
-| `400` | malformed JSON or schema violation (message is path-prefixed, as above) |
-| `401` | missing, invalid, or insufficient token (wrong room, or below the required perm) |
-| `404` | the room does not exist (create it first via `POST /api/rooms`), or a requested version id does not exist |
+| Code  | When                                                                                                                                                                    |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200` | `GET` succeeded / `POST` applied                                                                                                                                        |
+| `400` | malformed JSON or schema violation (message is path-prefixed, as above)                                                                                                 |
+| `401` | missing, invalid, or insufficient token (wrong room, or below the required perm)                                                                                        |
+| `404` | the room does not exist (create it first via `POST /api/rooms`), or a requested version id does not exist                                                               |
 | `409` | authenticated `GET /api/trip/:room` found the room, but its Yjs state could not export as a valid trip; repair by `POST`ing a valid document or using MCP `write_board` |
 
 ### Examples

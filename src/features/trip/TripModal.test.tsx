@@ -7,10 +7,14 @@ import type { ReactNode } from 'react'
 import { setTrip } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import { RoomProvider } from '../../data/RoomProvider'
-import { encodePayload } from '../../data/token'
+import { encodePayload, type TokenPayload } from '../../data/token'
 import { TripModal } from './TripModal'
 
-const ROOM_TOKEN = encodePayload({ r: 'rome-2027', p: 'edit', v: 1 })
+function signedLikeToken(payload: TokenPayload): string {
+  return `${encodePayload(payload)}.dummySig`
+}
+
+const ROOM_TOKEN = signedLikeToken({ r: 'rome-2027', p: 'edit', v: 1 })
 
 function renderInRoom(
   ui: ReactNode,

@@ -4,7 +4,11 @@ import * as provider from './provider'
 import { useRoom } from './RoomContext'
 import { RoomProvider } from './RoomProvider'
 import { addCity, listCities } from './doc'
-import { encodePayload } from './token'
+import { encodePayload, type TokenPayload } from './token'
+
+function signedLikeToken(payload: TokenPayload): string {
+  return `${encodePayload(payload)}.dummySig`
+}
 
 function Consumer() {
   const { doc, status, roomId, token } = useRoom()
@@ -51,7 +55,7 @@ describe('RoomProvider', () => {
   })
 
   it('decodes room, perm and name from a passed token and exposes the raw token', () => {
-    const token = encodePayload({ r: 'rome-2027', p: 'view', n: 'Ada', v: 1 })
+    const token = signedLikeToken({ r: 'rome-2027', p: 'view', n: 'Ada', v: 1 })
     render(
       <RoomProvider workerUrl="" token={token} enableSync={false}>
         <PermProbe />
@@ -64,7 +68,7 @@ describe('RoomProvider', () => {
   })
 
   it('accepts a `#<token>` fragment and defaults an absent name to null', () => {
-    const rawToken = encodePayload({ r: 'e2e', p: 'edit', v: 1 })
+    const rawToken = signedLikeToken({ r: 'e2e', p: 'edit', v: 1 })
     const token = '#' + rawToken
     render(
       <RoomProvider workerUrl="" token={token} enableSync={false}>
