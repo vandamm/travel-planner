@@ -65,12 +65,13 @@ of browser- or Worker-only APIs:
   Validation lives here (`parseTripText`, `formatTripErrors`).
 - `applyTrip.ts` — validated trip JSON → doc mutations (a full replace: clear,
   then re-add via the mutators). Used by `POST /api/trip/:room`, the MCP
-  `write_board` tool, and the Trip-settings JSON panel. Runs its `doc.transact`
+  `write_board` tool, and the (legacy, pending removal) Trip-settings JSON panel.
+  Runs its `doc.transact`
   under the exported **`APPLY_TRIP_ORIGIN`** string origin (not the null origin the
   keystroke mutators use) so `Y.UndoManager` can exclude full-replace/restore from
   the keystroke undo stack (see below).
 - `exportTrip.ts` — doc → validated JSON. Used by `GET /api/trip/:room`, MCP
-  `read_board`, and the panel's "show current JSON".
+  `read_board`, and the (legacy) Trip-settings JSON panel's "show current JSON".
 - `token.ts` — the **capability-token codec** (see "Auth / room-creation model"):
   the `TokenPayload` type, base64url + `encodePayload`/`decodePayload`,
   `parseToken`/`tokenFromLink` (extract + **decode-only**, no signature check),
@@ -193,6 +194,10 @@ panel: it shows pretty-printed `exportTrip(doc)` with a Copy button, a paste
 textarea whose Apply runs `parseTripText` → `applyTrip` behind a "replace the whole
 trip?" confirm (invalid input renders `formatTripErrors`), and — when a room id is
 present — a "Recent versions" restore list backed by the version endpoints above.
+**The copy/paste-apply half of this panel is legacy and slated for removal — an
+AI drives a board through the MCP connector, not by pasting JSON. The "Recent
+versions" restore list stays** (it is not an AI path); when the panel is removed
+it needs rehoming into Trip settings.
 
 Field pop-overs (the date/time pickers) use a **different** shell,
 `src/components/Popover.tsx` — an _anchored_ floating panel pinned just below its

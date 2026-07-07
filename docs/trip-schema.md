@@ -1,10 +1,9 @@
 # Trip JSON schema
 
 A whole trip serializes to a single JSON object — the format the agent API
-(`GET`/`POST /api/trip/:room`) and the Trip modal's "Trip JSON (for AI)" panel
-read and write. Applying pasted JSON uses the same full-replace document flow;
-there is no separate file import/export feature. It is the _single source of
-truth_: the same zod schema (`src/data/tripSchema.ts`) validates every path, and
+(`GET`/`POST /api/trip/:room`) and the MCP connector read and write. An AI drives
+a board through MCP; the JSON here is that wire format. It is the _single source
+of truth_: the same zod schema (`src/data/tripSchema.ts`) validates every path, and
 `GET /api/schema` publishes the matching JSON Schema, so a trip an agent posts is
 held to exactly the rules the schema advertises.
 

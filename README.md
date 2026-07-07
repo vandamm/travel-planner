@@ -114,7 +114,7 @@ conventions.
 
 ## Getting started
 
-Requires Node 18+ and npm.
+Requires Node 24+ (current LTS) and npm.
 
 ```sh
 npm install
@@ -183,33 +183,32 @@ link, and sharing capability links).
 ## Agent API
 
 The trip serializes to a single JSON document — the format the agent API reads
-and writes (there is no in-app import/export). The zod schema in
-`src/data/tripSchema.ts` is the single source of truth, and `GET /api/schema`
-publishes the matching JSON Schema (public — no token). See
-[`docs/trip-schema.md`](./docs/trip-schema.md) for the schema and the agent API
-(`GET`/`POST /api/trip/:room`, `GET /api/schema`, capability token, example payloads).
+and writes. The zod schema in `src/data/tripSchema.ts` is the single source of
+truth, and `GET /api/schema` publishes the matching JSON Schema (public — no
+token). See [`docs/trip-schema.md`](./docs/trip-schema.md) for the schema and the
+agent API (`GET`/`POST /api/trip/:room`, `GET /api/schema`, capability token,
+example payloads).
 
-There are three ways to drive a board with an agent:
+An AI assistant reads and writes a board through the **MCP connector**. The HTTP
+API underneath it is the programmatic/scripting path.
 
+- **MCP connector** (`POST /mcp`) — the way an AI drives a board, for an MCP
+  client such as **Perplexity Pro**. Add the connector with just the Worker's
+  `/mcp` URL (no separate key), then paste a board's share link into the chat. It
+  exposes three tools: `get_schema`, `read_board(link)`, and
+  `write_board(link, trip)` — the link _is_ the credential (its `#` fragment is
+  the token), passed as a string, and each tool authorizes itself from it
+  (`read_board` needs a `view`+ link, `write_board` an `edit`+ link).
+  `write_board` snapshots the current board before replacing it, so any AI edit is
+  revertible.
 - **HTTP API** — `GET`/`POST /api/trip/:room`, gated by a capability token
   presented as `Authorization: Bearer <token>` (the token from the board's link):
   `GET` needs `view`+, `POST` needs `edit`+, and the token's room must match the
   path. The scripting path; see `docs/trip-schema.md`.
-- **MCP connector** (`POST /mcp`) — for an MCP client such as **Perplexity Pro**.
-  Add the connector with just the Worker's `/mcp` URL (no separate key), then paste
-  a board's share link into the chat. It exposes three tools: `get_schema`,
-  `read_board(link)`, and `write_board(link, trip)` — the link _is_ the credential
-  (its `#` fragment is the token), passed as a string, and each tool authorizes
-  itself from it (`read_board` needs a `view`+ link, `write_board` an `edit`+ link).
-  `write_board` snapshots the current board before replacing it, so any AI edit is
-  revertible.
-- **Trip JSON panel** — zero-setup manual loop for any AI: open the Trip modal,
-  copy the current board JSON, paste it into a chat, and paste the AI's reply back
-  into the panel to Apply (guarded by a replace confirm).
 
 **Version history & restore.** Every Worker-mediated write (`POST /api/trip` and MCP
 `write_board`) records the room's prior trip JSON to Cloudflare **KV** first
-(keep-all, keyed by room + timestamp). The Trip panel's "Recent versions" list
+(keep-all, keyed by room + timestamp). The Trip-settings "Recent versions" list
 uses `GET /api/versions/:room` and `GET /api/versions/:room/:id` to list and
 fetch snapshots; both read-only endpoints require `Authorization: Bearer <token>`
 with a `view`+ capability token whose room matches the path. Writing a fetched
