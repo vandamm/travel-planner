@@ -78,7 +78,7 @@ function Wheel({
   const current = formatTime({ hour, minute })
 
   return (
-    <div className="w-44">
+    <div className="mx-auto w-44 lg:mx-0">
       <div className="flex items-stretch justify-center gap-1">
         <Column label="Hour" values={HOURS} selected={hour} onSelect={setHour} />
         <span className="self-center font-serif text-lg text-ink-400">:</span>

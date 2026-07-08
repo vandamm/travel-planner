@@ -1,5 +1,5 @@
 // Pure calendar helpers for the §10 date picker: a month grid (weeks start
-// Sunday, per the spec's `S M T W T F S` row) and a first→last range-selection
+// Monday for the app's European date UI) and a first→last range-selection
 // reducer. Values are ISO 'yyyy-MM-dd', so a lexicographic string compare is
 // already chronological — range math needs no Date parsing. date-fns handles the
 // month / leap-year / year boundaries when laying out the grid. DOM-free and
@@ -24,17 +24,17 @@ export interface GridDay {
   inMonth: boolean
 }
 
-/** Weekday header labels, Sunday-first (matches the spec's `S M T W T F S`). */
-export const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const
+/** Weekday header labels, Monday-first. */
+export const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const
 
 /**
  * The calendar grid for `month` (0–11) of `year`: an array of full weeks, each 7
- * days, padded with adjacent-month days so every week starts Sunday.
+ * days, padded with adjacent-month days so every week starts Monday.
  */
 export function monthGrid(year: number, month: number): GridDay[][] {
   const first = new Date(year, month, 1)
-  const gridStart = startOfWeek(startOfMonth(first), { weekStartsOn: 0 })
-  const gridEnd = endOfWeek(endOfMonth(first), { weekStartsOn: 0 })
+  const gridStart = startOfWeek(startOfMonth(first), { weekStartsOn: 1 })
+  const gridEnd = endOfWeek(endOfMonth(first), { weekStartsOn: 1 })
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
   const weeks: GridDay[][] = []
   for (let i = 0; i < days.length; i += 7) {

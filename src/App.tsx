@@ -5,6 +5,7 @@ import { RoomProvider } from './data/RoomProvider'
 import { parseToken } from './data/token'
 import { getTrip, listCities } from './data/doc'
 import { useDocVersion } from './data/useDoc'
+import { TicketMark } from './components/TicketMark'
 import { Board } from './features/board/Board'
 import { CityModal } from './features/cities/CityModal'
 import { TripModal } from './features/trip/TripModal'
@@ -29,14 +30,7 @@ function Header({
 
   return (
     <header className="mx-auto flex w-full max-w-2xl items-center gap-3 px-6">
-      {/* Vermilion seal — a square accent with a Lora italic monogram. */}
-      <div
-        data-testid="app-seal"
-        aria-hidden
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] bg-city-vermilion font-serif text-xl font-semibold italic leading-none text-white"
-      >
-        I
-      </div>
+      <TicketMark data-testid="app-seal" className="h-9 w-9 shrink-0" />
       <h1 className="font-serif text-3xl font-semibold leading-none tracking-tight text-ink">
         {wordmark}
       </h1>
@@ -153,12 +147,7 @@ function AppShell() {
 function NoRoom() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface px-6 text-center text-ink">
-      <div
-        aria-hidden
-        className="flex h-12 w-12 items-center justify-center rounded-[2px] bg-city-vermilion font-serif text-2xl font-semibold italic leading-none text-white"
-      >
-        I
-      </div>
+      <TicketMark className="h-12 w-12" />
       <h1 className="font-serif text-2xl font-semibold text-ink">Travel Planner</h1>
       <p className="max-w-sm font-sans text-sm text-ink-500">Open a trip using its share link.</p>
     </main>

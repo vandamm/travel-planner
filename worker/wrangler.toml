@@ -41,19 +41,19 @@ id = "1ac8c7b50e2443a3b48d37ff401bd07b"
 [env.production]
 workers_dev = true
 
+[[env.production.routes]]
+pattern = "api.travel.vansach.me"
+custom_domain = true
+
 # Bind the (separately created) production KV namespace for snapshot history.
 [[env.production.kv_namespaces]]
 binding = "SNAPSHOTS"
 id = "bdadc38e2576411c9b91160631307d7d"
 
 [env.production.vars]
-# Lock CORS to the deployed SPA origin so only the Cloudflare Pages app can call
-# the Worker. Change this to your actual Pages URL (or custom domain).
-ALLOWED_ORIGIN = "https://travel-planner-86b.pages.dev"
+# Lock CORS to the deployed SPA origins so only the public app can call the
+# Worker. Comma-separated: custom production domain plus the Pages fallback URL.
+ALLOWED_ORIGIN = "https://travel.vansach.me,https://travel-planner-86b.pages.dev"
 
-# To serve the Worker from your own domain instead of *.workers.dev, attach a
-# route (requires the zone to live on your Cloudflare account) and set
-# `workers_dev = false` above:
-# [[env.production.routes]]
-# pattern = "api.example.com/*"
-# zone_name = "example.com"
+# The custom domain keeps the Worker available at https://api.travel.vansach.me.
+# Keep workers_dev enabled during rollout so the old MCP URL continues working.

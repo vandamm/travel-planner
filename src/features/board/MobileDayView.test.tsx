@@ -117,6 +117,18 @@ describe('MobileDayView', () => {
     expect(screen.getByTestId('mobile-day-position')).toHaveTextContent('Days 1–2 of 3')
   })
 
+  it('renders time scale labels in each visible day column', () => {
+    renderView({ columns: 2 })
+    expect(screen.getAllByTestId('scale-label').map((n) => n.textContent)).toEqual([
+      'Morning',
+      'Afternoon',
+      'Evening',
+      'Morning',
+      'Afternoon',
+      'Evening',
+    ])
+  })
+
   it('pages by a whole window and shows the trailing partial page', async () => {
     const user = userEvent.setup()
     renderView({ columns: 2 })

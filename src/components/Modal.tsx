@@ -42,7 +42,7 @@ export function Modal({ label, onClose, children, className = '' }: ModalProps) 
             ponytail: we add only the ‹ close control and keep each editor's
             in-body <h2> title + its existing bottom actions — folding actions
             into this header bar is deferred polish, not needed to ship mobile. */}
-        <div className="sticky top-0 -mx-6 -mt-6 mb-2 flex items-center border-b border-edge bg-white px-4 py-2 lg:hidden">
+        <div className="sticky -top-6 -mx-6 -mt-6 mb-6 flex items-center border-b border-edge bg-white px-4 py-1 lg:hidden">
           <button
             type="button"
             onClick={onClose}
@@ -51,6 +51,7 @@ export function Modal({ label, onClose, children, className = '' }: ModalProps) 
           >
             ‹
           </button>
+          <span className="min-w-0 truncate font-serif text-base font-semibold text-ink">{label}</span>
         </div>
         {children}
       </div>

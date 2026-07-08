@@ -107,7 +107,7 @@ function Calendar({
   const navButton = 'rounded-chip px-2 py-1 text-base text-ink-600 hover:bg-surface-chip'
 
   return (
-    <div data-month={format(firstOfView, 'yyyy-MM')} className="w-60">
+    <div data-month={format(firstOfView, 'yyyy-MM')} className="mx-auto w-60 lg:mx-0">
       <div className="mb-2 flex items-center justify-between">
         <button type="button" aria-label="Previous month" onClick={() => step(-1)} className={navButton}>
           ‹

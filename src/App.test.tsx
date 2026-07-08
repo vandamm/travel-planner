@@ -26,7 +26,8 @@ describe('App (with a board token in the hash)', () => {
   it('renders the vermilion seal', () => {
     render(<App />)
     const seal = screen.getByTestId('app-seal')
-    expect(seal).toHaveTextContent('I')
+    expect(seal.tagName.toLowerCase()).toBe('svg')
+    expect(seal).not.toHaveTextContent('I')
   })
 
   it('renders the meta line with day and city counts', () => {

@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import { Modal } from '../../components/Modal'
+import { TicketMark } from '../../components/TicketMark'
 import { DatePicker } from '../pickers/DatePicker'
 import { TimePicker } from '../pickers/TimePicker'
 import { getTrip, setTrip } from '../../data/doc'
@@ -122,13 +123,7 @@ export function TripModal({ onClose }: TripModalProps) {
       className="flex w-full flex-col gap-4 lg:max-w-md"
     >
       <div className="flex items-center gap-3 border-b border-edge pb-3">
-        {/* Vermilion seal — mirrors the header mark, per the mock. */}
-        <div
-          aria-hidden
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] bg-city-vermilion font-serif text-lg font-semibold italic leading-none text-white"
-        >
-          I
-        </div>
+        <TicketMark className="h-8 w-8 shrink-0" />
         <h2 className="font-serif text-xl font-semibold text-ink">Trip details</h2>
       </div>
 

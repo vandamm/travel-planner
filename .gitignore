@@ -10,6 +10,7 @@ coverage
 playwright-report
 test-results
 .playwright
+showboat-results
 
 # Local env / secrets
 .env

@@ -13,7 +13,7 @@ export interface Env {
   LIVEBLOCKS_SECRET_KEY: string
   /** HMAC key that signs/verifies capability tokens — the sole hidden secret. */
   TOKEN_SECRET: string
-  /** Optional CORS allow-list origin; defaults to reflecting/`*` when unset. */
+  /** Optional comma-separated CORS allow-list; defaults to reflecting/`*` when unset. */
   ALLOWED_ORIGIN?: string
   /**
    * KV namespace holding pre-write trip snapshots (version history). Optional so

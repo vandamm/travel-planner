@@ -34,6 +34,24 @@ describe('handleRequest (router + CORS)', () => {
     expect(allowedHeaders).not.toContain('x-owner-secret')
   })
 
+  it('allows a matching origin from a comma-separated CORS allow-list', async () => {
+    const req = new Request('https://worker.test/api/auth', {
+      method: 'OPTIONS',
+      headers: { origin: 'https://travel.vansach.me' },
+    })
+    const res = await handleRequest(
+      req,
+      {
+        ...env,
+        ALLOWED_ORIGIN: 'https://travel-planner-86b.pages.dev, https://travel.vansach.me',
+      },
+      makeApi(),
+    )
+
+    expect(res.status).toBe(204)
+    expect(res.headers.get('access-control-allow-origin')).toBe('https://travel.vansach.me')
+  })
+
   it('routes POST /api/auth to the auth handler and adds CORS headers', async () => {
     const token = await signToken({ r: 'r1', p: 'edit', v: 1 }, env.TOKEN_SECRET)
     const req = new Request('https://worker.test/api/auth', {

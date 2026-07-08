@@ -51,12 +51,26 @@ describe('DayColumn', () => {
   it('lays out cards morning→evening with the down direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     expect(titles()).toEqual(['Breakfast', 'Dinner', 'Stroll'])
-    expect(scaleLabels()).toEqual(['Morning', 'Afternoon', 'Evening'])
   })
 
-  it('reverses both the cards and the time scale with the up direction', () => {
+  it('reverses the cards with the up direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="up" />)
     expect(titles()).toEqual(['Stroll', 'Dinner', 'Breakfast'])
+  })
+
+  it('renders the vertical in-column time scale in the requested direction', () => {
+    const { rerender } = render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
+    expect(scaleLabels()).toEqual(['Morning', 'Afternoon', 'Evening'])
+    expect(screen.getAllByTestId('scale-label')[0]).toHaveClass(
+      '[writing-mode:vertical-rl]',
+      'text-[11px]',
+      'tracking-[0.28em]',
+      'top-0',
+    )
+    expect(screen.getAllByTestId('scale-label')[1]).toHaveClass('top-1/2', '-translate-y-1/2')
+    expect(screen.getAllByTestId('scale-label')[2]).toHaveClass('bottom-0')
+
+    rerender(<DayColumn day={day} city={rome} cards={cards} direction="up" />)
     expect(scaleLabels()).toEqual(['Evening', 'Afternoon', 'Morning'])
   })
 
@@ -73,10 +87,10 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('day-body')).toHaveStyle({ minHeight: '660px' })
   })
 
-  it('keeps the scale in a left gutter the cards clear, so labels are never covered', () => {
+  it('keeps labels in the narrow margin between the border and activity cards', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
-    expect(screen.getByTestId('scale')).toHaveClass('left-0', 'w-16')
-    expect(screen.getByTestId('card-list')).toHaveClass('pl-16')
+    expect(screen.getByTestId('scale')).toHaveClass('left-1.5', 'w-3')
+    expect(screen.getByTestId('card-list')).toHaveClass('pl-2')
   })
 
   it('scales each card by its duration; untimed and end-less cards get one block', () => {
@@ -166,17 +180,18 @@ describe('DayColumn', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
     for (const label of screen.getAllByTestId('scale-label')) {
       expect(label).toHaveClass('text-ink-300')
-      expect(label.className).not.toMatch(/slate-/)
+      expect(label.className).not.toMatch(/(?:text|bg|border)-slate-/)
     }
     const addCard = screen.getByRole('button', { name: /Add card/ })
     expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
     expect(addCard.className).not.toMatch(/slate-/)
   })
 
-  it('renders a labelled NOON divider in the body', () => {
+  it('renders plain divider lines in day bodies', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const noon = within(screen.getByTestId('day-body')).getByTestId('noon-divider')
-    expect(noon).toHaveTextContent('NOON')
+    expect(noon).not.toHaveTextContent('NOON')
+    expect(noon).toHaveClass('left-3', 'right-3')
   })
 
   it('highlights the column when the drag context marks this day as the drop target', () => {

@@ -39,6 +39,22 @@ describe('Board', () => {
     expect(screen.getAllByTestId('day-column')).toHaveLength(3)
   })
 
+  it('renders vertical time scale labels in each day column', () => {
+    renderBoard(<Board />)
+    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 3 }))
+    expect(screen.getAllByTestId('scale-label').map((n) => n.textContent)).toEqual([
+      'Morning',
+      'Afternoon',
+      'Evening',
+      'Morning',
+      'Afternoon',
+      'Evening',
+      'Morning',
+      'Afternoon',
+      'Evening',
+    ])
+  })
+
   it('colors a day header from its covering accommodation', () => {
     renderBoard(<Board />)
     act(() => {

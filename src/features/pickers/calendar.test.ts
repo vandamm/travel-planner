@@ -1,23 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { inRange, isEndpoint, monthGrid, nextRange } from './calendar'
+import { inRange, isEndpoint, monthGrid, nextRange, WEEKDAY_LABELS } from './calendar'
 
 describe('monthGrid', () => {
-  it('lays out full Sunday-first weeks of 7 days', () => {
+  it('uses Monday-first weekday labels', () => {
+    expect(WEEKDAY_LABELS).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+  })
+
+  it('lays out full Monday-first weeks of 7 days', () => {
     const weeks = monthGrid(2027, 4) // May 2027
     expect(weeks.length).toBeGreaterThanOrEqual(4)
     for (const week of weeks) expect(week).toHaveLength(7)
-    // Every week starts on a Sunday (JS getDay 0) — check via the ISO key.
+    // Every week starts on a Monday (JS getDay 1) — check via the ISO key.
     for (const week of weeks) {
-      expect(new Date(`${week[0].key}T00:00`).getDay()).toBe(0)
+      expect(new Date(`${week[0].key}T00:00`).getDay()).toBe(1)
     }
   })
 
   it('marks leading/trailing adjacent-month days as out-of-month', () => {
-    // May 1 2027 is a Saturday, so the first row is Apr 25–May 1: six filler days.
+    // May 1 2027 is a Saturday, so the first row is Apr 26–May 2: five filler
+    // days followed by the weekend.
     const weeks = monthGrid(2027, 4)
     const first = weeks[0]
-    expect(first.filter((d) => !d.inMonth)).toHaveLength(6)
-    expect(first[6]).toMatchObject({ key: '2027-05-01', dayOfMonth: 1, inMonth: true })
+    expect(first.filter((d) => !d.inMonth)).toHaveLength(5)
+    expect(first[5]).toMatchObject({ key: '2027-05-01', dayOfMonth: 1, inMonth: true })
+    expect(first[6]).toMatchObject({ key: '2027-05-02', dayOfMonth: 2, inMonth: true })
   })
 
   it('covers every day of the month exactly once', () => {

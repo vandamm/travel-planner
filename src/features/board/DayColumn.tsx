@@ -142,36 +142,36 @@ export function DayColumn({
           data-testid="noon-divider"
           aria-hidden
           style={noonStyle}
-          className="pointer-events-none absolute left-16 right-3 flex items-center gap-2"
+          className="pointer-events-none absolute left-3 right-3"
         >
-          <span className="h-px flex-1 bg-edge-100" />
-          <span className="font-sans text-[8px] font-bold uppercase tracking-[0.16em] text-ink-200">
-            NOON
-          </span>
-          <span className="h-px flex-1 bg-edge-100" />
+          <span className="block h-px w-full bg-edge-100" />
         </div>
 
-        {/* Continuous time scale in a left gutter — kept clear of the cards
-            (which sit in the padded column to its right) so labels never hide
-            behind a card. */}
         <ol
           data-testid="scale"
           aria-hidden
-          className="pointer-events-none absolute inset-y-2 left-0 flex w-16 flex-col"
+          className="pointer-events-none absolute inset-y-2 left-1.5 flex w-3 flex-col"
         >
           {scale.map((label) => (
-            <li
-              key={label}
-              data-testid="scale-label"
-              className="flex flex-1 items-start whitespace-nowrap px-2 text-[10px] font-medium uppercase tracking-wide text-ink-300"
-            >
-              {label}
+            <li key={label} className="relative flex flex-1">
+              <span
+                data-testid="scale-label"
+                className={`absolute -left-1 origin-left whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.28em] text-ink-300 [writing-mode:vertical-rl] ${
+                  label === 'Morning'
+                    ? 'top-0'
+                    : label === 'Evening'
+                      ? 'bottom-0'
+                      : 'top-1/2 -translate-y-1/2'
+                }`}
+              >
+                {label}
+              </span>
             </li>
           ))}
         </ol>
 
         <SortableContext items={ordered.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          <ol data-testid="card-list" className="relative flex flex-col gap-2 pl-16">
+          <ol data-testid="card-list" className="relative flex flex-col gap-2 pl-2">
             {ordered.map((c) => (
               <li key={c.id} style={{ minHeight: cardHeightPx(c, dayStart, dayEnd) }}>
                 <SortableCard card={c} onEdit={onEditCard} />

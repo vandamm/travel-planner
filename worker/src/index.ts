@@ -28,7 +28,16 @@ import { TokenConfigError } from './token'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
-  const origin = env.ALLOWED_ORIGIN ?? request.headers.get('origin') ?? '*'
+  const requestOrigin = request.headers.get('origin')
+  const allowedOrigins = env.ALLOWED_ORIGIN?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+  const origin =
+    allowedOrigins && allowedOrigins.length > 0
+      ? requestOrigin && allowedOrigins.includes(requestOrigin)
+        ? requestOrigin
+        : allowedOrigins[0]
+      : requestOrigin ?? '*'
   return {
     'access-control-allow-origin': origin,
     'access-control-allow-methods': 'GET, POST, OPTIONS',
