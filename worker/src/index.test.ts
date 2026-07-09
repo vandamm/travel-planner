@@ -124,10 +124,26 @@ describe('handleRequest (router + CORS)', () => {
     expect(res.headers.get('access-control-allow-origin')).toBeTruthy()
   })
 
-  it('returns 405 for GET /mcp (POST only)', async () => {
+  it('allows public MCP preflights from connector origins', async () => {
+    const req = new Request('https://worker.test/mcp', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://www.perplexity.ai',
+        'access-control-request-headers': 'content-type,mcp-protocol-version',
+      },
+    })
+    const res = await handleRequest(req, env, makeApi())
+    expect(res.status).toBe(204)
+    expect(res.headers.get('access-control-allow-origin')).toBe('https://www.perplexity.ai')
+    expect(res.headers.get('access-control-allow-headers')).toContain('mcp-protocol-version')
+  })
+
+  it('returns a no-op SSE stream for GET /mcp compatibility probes', async () => {
     const req = new Request('https://worker.test/mcp', { method: 'GET' })
     const res = await handleRequest(req, env, makeApi())
-    expect(res.status).toBe(405)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('text/event-stream')
+    expect(await res.text()).toBe(': ok\n\n')
   })
 
   it('routes GET /api/versions/:room to the list handler (view+ token, room-matched) with CORS', async () => {

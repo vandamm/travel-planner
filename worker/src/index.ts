@@ -9,6 +9,7 @@
 //   POST /api/trip/:room    → write trip JSON into the room (edit+ token, room-matched)
 //   GET  /api/versions/:room       → list a room's snapshots (view+ token, room-matched)
 //   GET  /api/versions/:room/:id   → read one snapshot's trip JSON (view+ token, room-matched)
+//   GET  /mcp               → no-op SSE stream for MCP client compatibility probes
 //   POST /mcp               → MCP-over-HTTP tools endpoint (per-tool token-gated via the link)
 //
 // The handlers depend on the `LiveblocksApi` abstraction; production builds the
@@ -27,13 +28,14 @@ import { handleMcp } from './mcp'
 import { TokenConfigError } from './token'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
-function corsHeaders(request: Request, env: Env): Record<string, string> {
+function corsHeaders(request: Request, env: Env, publicEndpoint = false): Record<string, string> {
   const requestOrigin = request.headers.get('origin')
   const allowedOrigins = env.ALLOWED_ORIGIN?.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean)
-  const origin =
-    allowedOrigins && allowedOrigins.length > 0
+  const origin = publicEndpoint
+    ? requestOrigin ?? '*'
+    : allowedOrigins && allowedOrigins.length > 0
       ? requestOrigin && allowedOrigins.includes(requestOrigin)
         ? requestOrigin
         : allowedOrigins[0]
@@ -41,7 +43,8 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   return {
     'access-control-allow-origin': origin,
     'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'content-type, authorization',
+    'access-control-allow-headers':
+      'content-type, authorization, accept, mcp-protocol-version, mcp-session-id, last-event-id',
     'access-control-max-age': '86400',
     vary: 'Origin',
   }
@@ -61,18 +64,26 @@ function json(data: unknown, status: number): Response {
   })
 }
 
+function sseProbe(): Response {
+  return new Response(': ok\n\n', {
+    headers: {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache',
+    },
+  })
+}
+
 export async function handleRequest(
   request: Request,
   env: Env,
   api: LiveblocksApi,
 ): Promise<Response> {
-  const cors = corsHeaders(request, env)
+  const { pathname } = new URL(request.url)
+  const cors = corsHeaders(request, env, pathname === '/mcp')
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: cors })
   }
-
-  const { pathname } = new URL(request.url)
 
   try {
     let res: Response
@@ -95,6 +106,8 @@ export async function handleRequest(
       res =
         request.method === 'POST'
           ? await handleMcp(request, env, api)
+          : request.method === 'GET'
+            ? sseProbe()
           : json({ error: 'method not allowed' }, 405)
     } else if (pathname.startsWith('/api/versions/')) {
       if (request.method !== 'GET') {
