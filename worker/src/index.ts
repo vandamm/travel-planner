@@ -28,20 +28,20 @@ import { handleMcp } from './mcp'
 import { TokenConfigError } from './token'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
 
+function corsOrigin(requestOrigin: string | null, allowedOrigins?: string[], publicEndpoint = false): string {
+  if (publicEndpoint) return requestOrigin ?? '*'
+  if (!allowedOrigins || allowedOrigins.length === 0) return requestOrigin ?? '*'
+  return requestOrigin && allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0]
+}
+
 function corsHeaders(request: Request, env: Env, publicEndpoint = false): Record<string, string> {
   const requestOrigin = request.headers.get('origin')
   const allowedOrigins = env.ALLOWED_ORIGIN?.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean)
-  const origin = publicEndpoint
-    ? requestOrigin ?? '*'
-    : allowedOrigins && allowedOrigins.length > 0
-      ? requestOrigin && allowedOrigins.includes(requestOrigin)
-        ? requestOrigin
-        : allowedOrigins[0]
-      : requestOrigin ?? '*'
+
   return {
-    'access-control-allow-origin': origin,
+    'access-control-allow-origin': corsOrigin(requestOrigin, allowedOrigins, publicEndpoint),
     'access-control-allow-methods': 'GET, POST, OPTIONS',
     'access-control-allow-headers':
       'content-type, authorization, accept, mcp-protocol-version, mcp-session-id, last-event-id',
