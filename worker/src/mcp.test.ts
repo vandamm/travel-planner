@@ -111,12 +111,14 @@ describe('handleMcp — handshake (open, no token needed)', () => {
     const body = (await res.json()) as RpcResponse
     const result = body.result as {
       protocolVersion: string
-      capabilities: { tools?: unknown }
+      capabilities: { tools?: { listChanged?: boolean } }
       serverInfo: { name: string }
+      instructions?: string
     }
     expect(result.protocolVersion).toBe('2025-06-18')
-    expect(result.capabilities.tools).toBeDefined()
+    expect(result.capabilities.tools?.listChanged).toBe(true)
     expect(result.serverInfo.name).toBe('travel-planner')
+    expect(result.instructions).toContain('Discover tools with tools/list')
   })
 
   it('acks ping with an empty result', async () => {

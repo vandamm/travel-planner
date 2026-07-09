@@ -21,6 +21,8 @@ import { permAtLeast, tokenFromLink, type Perm } from '../../src/data/token'
 
 const PROTOCOL_VERSION = '2025-06-18'
 const SERVER_INFO = { name: 'travel-planner', version: '1.0.0' }
+const SERVER_INSTRUCTIONS =
+  'This server reads and writes private travel.vansach.me trip boards. Discover tools with tools/list. To edit a board, call read_board with a full edit or owner share link, call get_schema, modify the full returned trip JSON, then call write_board with the same link and full updated trip JSON. Available tools are get_schema, read_board, and write_board; there are no add_card, searchPlaces, route, weather, flight, or hotel tools.'
 
 /** MCP tool result content (the shape `tools/call` returns). */
 interface ToolResult {
@@ -244,8 +246,9 @@ export async function handleMcp(
       // whatever the client requested — we implement exactly one.
       return rpcResult(id, {
         protocolVersion: PROTOCOL_VERSION,
-        capabilities: { tools: {} },
+        capabilities: { tools: { listChanged: true } },
         serverInfo: SERVER_INFO,
+        instructions: SERVER_INSTRUCTIONS,
       })
     case 'ping':
       return rpcResult(id, {})
