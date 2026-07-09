@@ -25,6 +25,10 @@ compatibility_date = "2026-06-25"
 # for quick test deploys: `npm run deploy:worker` (no --env).
 workers_dev = true
 
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 # ── KV: trip snapshot history ────────────────────────────────────────────────
 # Every Worker-mediated write (owner POST /api/trip and the MCP write_board tool)
 # snapshots the room's current trip here first, so a bad edit is revertible.
