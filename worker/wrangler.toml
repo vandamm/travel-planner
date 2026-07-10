@@ -46,8 +46,8 @@ id = "bdadc38e2576411c9b91160631307d7d"
 # Lock CORS to the deployed SPA origin so only the Cloudflare Pages app can call
 # the Worker. Change this to your actual Pages URL (or custom domain).
 ALLOWED_ORIGIN = "https://travel.vansach.me"
-ACCESS_TEAM_DOMAIN = "https://<team>.cloudflareaccess.com"
-ACCESS_AUD = "<access-aud>"
+ACCESS_TEAM_DOMAIN = "https://vandamm.cloudflareaccess.com"
+ACCESS_AUD = "760c14ea3e2db5fb0f53d87b4d258834434e86fc92b9c0ac2857d5ee42543fdd"
 
 [[env.production.routes]]
 pattern = "travel.vansach.me/api/*"
