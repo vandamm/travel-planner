@@ -16,6 +16,21 @@ describe('Card', () => {
     expect(screen.getByTestId('card-time')).toHaveTextContent('19:00–21:00')
   })
 
+  it('lets title and time share the remaining row beside the drag handle', () => {
+    render(
+      <Card
+        card={{ ...base, title: 'Brunch reservation', startTime: '10:00', endTime: '11:00' }}
+        dragHandleProps={{}}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Edit Brunch reservation' })).toHaveClass(
+      'min-w-0',
+      'flex-1',
+      'flex-col',
+    )
+    expect(screen.getByTestId('card-title')).toHaveClass('min-w-0')
+  })
+
   it('shows only the start time when there is no end time', () => {
     render(<Card card={{ ...base, startTime: '08:00' }} />)
     expect(screen.getByTestId('card-time')).toHaveTextContent('08:00')

@@ -20,7 +20,7 @@ export const DEFAULT_DIRECTION: TimeDirection = 'down'
 export const TIME_DIRECTION_KEY = 'travel-planner:time-direction'
 
 /** Vertical zone labels of the continuous time scale, morning→evening. */
-export const TIME_SCALE = ['Morning', 'Afternoon', 'Evening'] as const
+export const TIME_SCALE = ['Morning', 'Evening'] as const
 
 function isDirection(value: unknown): value is TimeDirection {
   return value === 'down' || value === 'up'

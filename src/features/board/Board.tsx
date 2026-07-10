@@ -81,7 +81,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
 
   // Recompute the fade + range label whenever the board's content or the viewport
   // changes. Runs only when the desktop scroll container is mounted (mobile leaves
-  // scrollRef null). Mirrors MobileDayView's scroll-hint effect.
+  // scrollRef null).
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -115,7 +115,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
       : undefined
 
   return (
-    <section aria-labelledby="board-heading" className="flex flex-col gap-3">
+    <section aria-labelledby="board-heading" className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6">
         <h2 id="board-heading" className="text-lg font-semibold text-ink">
           Board
@@ -169,18 +169,42 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
             aria-label="Undo"
             disabled={!canUndo}
             onClick={undo}
-            className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-10 items-center justify-center rounded border border-edge-300 bg-white text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <span aria-hidden>↶</span>
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 7 5 11l4 4" />
+              <path d="M5 11h8a6 6 0 1 1-4.2 10.2" />
+            </svg>
           </button>
           <button
             type="button"
             aria-label="Redo"
             disabled={!canRedo}
             onClick={redo}
-            className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-10 items-center justify-center rounded border border-edge-300 bg-white text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <span aria-hidden>↷</span>
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 7 4 4-4 4" />
+              <path d="M19 11h-8a6 6 0 1 0 4.2 10.2" />
+            </svg>
           </button>
           {/* Desktop's "Add stay" lives at the right end of the stays lane; mobile
               reaches it through the header ≡ menu (lifted to AppShell via nonce). */}
@@ -203,23 +227,27 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
       ) : viewport === 'mobile' ? (
         // Below the laptop breakpoint: one day at a time, paged by swipe or the
         // prev/next controls. Same cards/accommodation/direction logic as desktop.
-        <BoardDnd doc={doc} direction={direction}>
-          <MobileDayView
-            days={days}
-            cardsByDay={cardsByDay}
-            accommodations={accommodations}
-            overrides={overrides}
-            cityById={cityById}
-            cities={cities}
-            direction={direction}
-            dayStart={trip.dayStart}
-            dayEnd={trip.dayEnd}
-            columns={columns}
-            onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
-            onEditCard={(card) => setEditor({ mode: 'edit', card })}
-            onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
-          />
-        </BoardDnd>
+        <div className="min-h-0 flex-1">
+          <BoardDnd doc={doc} direction={direction}>
+            <MobileDayView
+              days={days}
+              cardsByDay={cardsByDay}
+              accommodations={accommodations}
+              overrides={overrides}
+              cityById={cityById}
+              cities={cities}
+              direction={direction}
+              dayStart={trip.dayStart}
+              dayEnd={trip.dayEnd}
+              columns={columns}
+              onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
+              onEditCard={(card) => setEditor({ mode: 'edit', card })}
+              onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
+              onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
+              onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
+            />
+          </BoardDnd>
+        </div>
       ) : (
         <div className="relative">
           <div

@@ -143,6 +143,8 @@ describe('Board', () => {
   it('tints the toolbar buttons with ink/edge tokens, not slate', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 1 }))
+    expect(screen.getByRole('button', { name: 'Undo' }).querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Redo' }).querySelector('svg')).toBeInTheDocument()
     const toggle = screen.getByRole('button', { name: 'Toggle time direction' })
     expect(toggle).toHaveClass('border-edge-300', 'text-ink-600', 'hover:bg-surface-chip')
     expect(toggle.className).not.toMatch(/slate-/)

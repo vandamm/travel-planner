@@ -76,18 +76,18 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
           type="button"
           aria-label={`Edit ${card.title}`}
           onClick={() => onEdit?.(card)}
-          className="flex w-full items-baseline justify-between gap-2 text-left hover:text-ink"
+          className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left hover:text-ink"
         >
           <span
             data-testid="card-title"
-            className="font-serif text-[15px] font-semibold leading-tight text-ink"
+            className="min-w-0 font-serif text-[15px] font-semibold leading-tight text-ink"
           >
             {card.title}
           </span>
           {card.startTime && (
             <span
               data-testid="card-time"
-              className="shrink-0 text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
+              className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
             >
               {formatTimeRange(card.startTime, card.endTime)}
             </span>
@@ -96,7 +96,10 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
       </div>
 
       {card.note && (
-        <p data-testid="card-note" className="whitespace-pre-wrap text-[11px] font-medium text-ink-500">
+        <p
+          data-testid="card-note"
+          className="whitespace-pre-wrap text-[11px] font-medium text-ink-500"
+        >
           {card.note}
         </p>
       )}

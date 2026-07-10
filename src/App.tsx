@@ -117,7 +117,7 @@ function AppShell() {
   const [addStayNonce, setAddStayNonce] = useState(0)
 
   return (
-    <main className="flex min-h-screen flex-col gap-6 bg-surface py-6 text-ink">
+    <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink lg:h-auto lg:min-h-screen lg:overflow-visible">
       <Header
         onOpenTrip={() => setTripOpen(true)}
         onOpenCities={() => setCitiesOpen(true)}

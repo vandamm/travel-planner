@@ -65,6 +65,14 @@ describe('MobileDayView', () => {
     expect(screen.getByTestId('mobile-day-position')).toHaveTextContent('Day 1 of 3')
   })
 
+  it('keeps bottom safe-area padding in the inner mobile scroller', () => {
+    renderView()
+    expect(screen.getByTestId('mobile-day-scroll')).toHaveClass(
+      'pb-[calc(2rem+env(safe-area-inset-bottom))]',
+      'scroll-pb-[calc(2rem+env(safe-area-inset-bottom))]',
+    )
+  })
+
   it('pages forward and back, clamping at the first and last day', async () => {
     const user = userEvent.setup()
     renderView()
@@ -154,7 +162,9 @@ describe('MobileDayView', () => {
   it('fills the active dot with the day city colour', () => {
     renderView({
       overrides: { '2027-05-01': 'kyoto' },
-      cityById: new Map<string, City>([['kyoto', { id: 'kyoto', name: 'Kyoto', color: '#5f6f44' }]]),
+      cityById: new Map<string, City>([
+        ['kyoto', { id: 'kyoto', name: 'Kyoto', color: '#5f6f44' }],
+      ]),
     })
     const [active] = screen.getAllByTestId('mobile-day-dot')
     expect(active).toHaveStyle({ backgroundColor: '#5f6f44' })

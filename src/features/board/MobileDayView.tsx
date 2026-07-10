@@ -9,10 +9,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { resolveDayCity } from '../../data/cityResolution'
 import type { Accommodation, Card, City, Day } from '../../data/schema'
+import { AccommodationLane } from '../accommodation/AccommodationLane'
 import { DayColumn } from './DayColumn'
 import { clampDayIndex } from './mobileDayViewMath'
 import { dayDotColor } from './pagerDot'
-import { showScrollHint } from './scrollHint'
 import type { TimeDirection } from './timeDirection'
 
 /** Minimum horizontal travel (px) for a touch gesture to count as a swipe. */
@@ -37,6 +37,8 @@ export interface MobileDayViewProps {
   columns?: number
   onAddCard?: (dayKey: string) => void
   onEditCard?: (card: Card) => void
+  onEditAccommodation?: (accommodation: Accommodation) => void
+  onAddStay?: (startNight?: string) => void
   /** Set or clear a day's manual city override (`null` = Auto). */
   onSetCity?: (dayKey: string, cityId: string | null) => void
 }
@@ -54,15 +56,13 @@ export function MobileDayView({
   columns = 1,
   onAddCard,
   onEditCard,
+  onEditAccommodation,
+  onAddStay,
   onSetCity,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
-  // A full day timeline (06:00–21:00 ≈ 660px) is taller than a phone, so the day
-  // column(s) live in a bounded scroll container; a fade + hint appear only while
-  // there is more below. Hint visibility is derived by the pure `showScrollHint`.
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [showHint, setShowHint] = useState(false)
 
   // The trip can shrink (fewer days) under us, so clamp on every render rather
   // than trusting the stored index.
@@ -75,18 +75,6 @@ export function MobileDayView({
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0
   }, [safeIndex])
-
-  // Recompute the hint when the visible content or the viewport changes (paging,
-  // card edits, the dvh-based cap on rotate/resize). `scrollRef.current` exposes
-  // the three metrics `showScrollHint` needs.
-  useLayoutEffect(() => {
-    const update = () => {
-      if (scrollRef.current) setShowHint(showScrollHint(scrollRef.current))
-    }
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [index, columns, days, cardsByDay, dayStart, dayEnd, direction])
 
   if (days.length === 0) return null
 
@@ -131,7 +119,7 @@ export function MobileDayView({
   return (
     <div
       data-testid="mobile-day-view"
-      className="px-4 pb-4"
+      className="flex h-full min-h-0 flex-col px-4 pb-4"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -146,7 +134,8 @@ export function MobileDayView({
           ‹ Prev
         </button>
         <span data-testid="mobile-day-position" className="text-sm font-medium text-ink-600">
-          {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of {days.length}
+          {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of{' '}
+          {days.length}
         </span>
         <button
           type="button"
@@ -185,13 +174,19 @@ export function MobileDayView({
         })}
       </div>
 
-      <div className="relative">
-        <div
-          ref={scrollRef}
-          data-testid="mobile-day-scroll"
-          onScroll={(e) => setShowHint(showScrollHint(e.currentTarget))}
-          className="flex max-h-[calc(100dvh-12rem)] justify-center gap-3 overflow-y-auto"
-        >
+      <div
+        className="min-h-0 flex-1 overflow-y-auto pb-[calc(2rem+env(safe-area-inset-bottom))] scroll-pb-[calc(2rem+env(safe-area-inset-bottom))]"
+        ref={scrollRef}
+        data-testid="mobile-day-scroll"
+      >
+        <AccommodationLane
+          days={visible}
+          accommodations={accommodations}
+          cityById={cityById}
+          onEditAccommodation={onEditAccommodation}
+          onAddStay={onAddStay}
+        />
+        <div className="flex justify-center gap-3">
           {visible.map((day) => {
             const cityId = resolveDayCity(day.key, accommodations, overrides)
             return (
@@ -212,21 +207,6 @@ export function MobileDayView({
             )
           })}
         </div>
-        {showHint && (
-          <>
-            <div
-              aria-hidden
-              data-testid="scroll-fade"
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent"
-            />
-            <span
-              data-testid="scroll-hint"
-              className="pointer-events-none absolute inset-x-0 bottom-1 text-center font-sans text-xs font-medium text-ink-400"
-            >
-              scroll for more ↓
-            </span>
-          </>
-        )}
       </div>
     </div>
   )

@@ -22,7 +22,7 @@ export interface HScrollMetrics {
 const EDGE_EPSILON = 2
 
 /** Show the right-edge fade only when the columns overflow AND we're not already
- *  scrolled to the right end. Mirrors {@link showScrollHint} for the horizontal axis. */
+ *  scrolled to the right end. */
 export function showRightFade({ scrollWidth, clientWidth, scrollLeft }: HScrollMetrics): boolean {
   const overflowing = scrollWidth > clientWidth + EDGE_EPSILON
   const atRight = scrollLeft + clientWidth >= scrollWidth - EDGE_EPSILON

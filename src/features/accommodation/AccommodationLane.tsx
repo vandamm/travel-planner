@@ -124,7 +124,7 @@ export function AccommodationLane({
         onClick={() => onAddStay?.()}
         className="shrink-0 rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
       >
-        Add stay
+        + Add stay
       </button>
     </div>
   )

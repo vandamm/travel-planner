@@ -29,6 +29,14 @@ function scaleLabels() {
   return screen.getAllByTestId('scale-label').map((n) => n.textContent)
 }
 
+function hasSlateClass(el: Element) {
+  return [...el.classList].some((c) =>
+    ['text-slate-', 'bg-slate-', 'border-slate-', 'ring-slate-'].some((prefix) =>
+      c.startsWith(prefix),
+    ),
+  )
+}
+
 describe('DayColumn', () => {
   it('renders a color-coded, city-labeled header', () => {
     render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
@@ -51,13 +59,13 @@ describe('DayColumn', () => {
   it('lays out cards morning→evening with the down direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     expect(titles()).toEqual(['Breakfast', 'Dinner', 'Stroll'])
-    expect(scaleLabels()).toEqual(['Morning', 'Afternoon', 'Evening'])
+    expect(scaleLabels()).toEqual(['Morning', 'Evening'])
   })
 
   it('reverses both the cards and the time scale with the up direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="up" />)
     expect(titles()).toEqual(['Stroll', 'Dinner', 'Breakfast'])
-    expect(scaleLabels()).toEqual(['Evening', 'Afternoon', 'Morning'])
+    expect(scaleLabels()).toEqual(['Evening', 'Morning'])
   })
 
   it('shows the time on time-bound cards', () => {
@@ -73,10 +81,17 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('day-body')).toHaveStyle({ minHeight: '660px' })
   })
 
-  it('keeps the scale in a left gutter the cards clear, so labels are never covered', () => {
+  it('keeps a large edge scale while cards use the full body width', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
-    expect(screen.getByTestId('scale')).toHaveClass('left-0', 'w-16')
-    expect(screen.getByTestId('card-list')).toHaveClass('pl-16')
+    expect(screen.getByTestId('scale')).toHaveClass('left-0', 'w-6')
+    expect(screen.getAllByTestId('scale-label')[0]).toHaveClass(
+      '[writing-mode:vertical-rl]',
+      'text-[24px]',
+      'px-0',
+      'rotate-180',
+      '-translate-x-1',
+    )
+    expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
   })
 
   it('scales each card by its duration; untimed and end-less cards get one block', () => {
@@ -85,6 +100,19 @@ describe('DayColumn', () => {
     expect(li('Dinner')).toHaveStyle({ minHeight: '88px' }) // 19:00–21:00 = 2h
     expect(li('Breakfast')).toHaveStyle({ minHeight: '44px' }) // timed, no end = 1h
     expect(li('Stroll')).toHaveStyle({ minHeight: '44px' }) // untimed = 1 block
+  })
+
+  it('offsets timed cards from the configured day start', () => {
+    render(
+      <DayColumn
+        day={day}
+        cards={[{ id: 'late', dayKey: day.key, title: 'Late start', order: 0, startTime: '10:00' }]}
+        direction="down"
+        dayStart="07:00"
+        dayEnd="21:00"
+      />,
+    )
+    expect(screen.getByText('Late start').closest('li')).toHaveStyle({ marginTop: '132px' })
   })
 
   it('offers an Auto + per-city override control, defaulting to Auto', () => {
@@ -166,7 +194,7 @@ describe('DayColumn', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
     for (const label of screen.getAllByTestId('scale-label')) {
       expect(label).toHaveClass('text-ink-300')
-      expect(label.className).not.toMatch(/slate-/)
+      expect(hasSlateClass(label)).toBe(false)
     }
     const addCard = screen.getByRole('button', { name: /Add card/ })
     expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
