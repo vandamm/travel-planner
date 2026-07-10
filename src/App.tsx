@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Modal } from './components/Modal'
 import { useRoom } from './data/RoomContext'
 import { RoomProvider } from './data/RoomProvider'
-import { parseToken } from './data/token'
+import { slugFromPath } from './data/slug'
 import { getTrip, listCities } from './data/doc'
 import { useDocVersion } from './data/useDoc'
 import { Board } from './features/board/Board'
@@ -147,9 +147,7 @@ function AppShell() {
   )
 }
 
-/** Shown when the app is opened without a board id in the URL hash. Rooms are
- *  created out-of-band (owner API), so a bare visit has nothing to show or edit
- *  — render a quiet notice and never mount the doc/board. */
+/** Shown when the app is opened without a room slug. */
 function NoRoom() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface px-6 text-center text-ink">
@@ -160,22 +158,16 @@ function NoRoom() {
         I
       </div>
       <h1 className="font-serif text-2xl font-semibold text-ink">Travel Planner</h1>
-      <p className="max-w-sm font-sans text-sm text-ink-500">Open a trip using its share link.</p>
+      <p className="max-w-sm font-sans text-sm text-ink-500">Open a trip using its slug URL.</p>
     </main>
   )
 }
 
 export default function App() {
-  // The board only exists for a specific room, addressed by a capability token
-  // in the URL fragment (`#<token>`). Opened without a decodable token there is
-  // nothing to do, so render a notice and never mount RoomProvider (no doc, no
-  // connection, no dev bridge). Read once at mount — like RoomProvider itself;
-  // a fresh link is always opened as a navigation. An old `#room=…` fragment
-  // fails to decode → the same notice.
-  const payload = parseToken(typeof location !== 'undefined' ? location.hash : '')
-  if (!payload) return <NoRoom />
+  const roomId = slugFromPath(typeof location !== 'undefined' ? location.pathname : '/')
+  if (!roomId) return <NoRoom />
   return (
-    <RoomProvider>
+    <RoomProvider roomId={roomId}>
       <AppShell />
     </RoomProvider>
   )

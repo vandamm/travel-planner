@@ -1,12 +1,9 @@
-// POST /api/auth — verify a capability token and mint a Liveblocks access token
-// scoped to the token's perms, but ONLY for a room that already exists. The link
-// (a signed `{ roomId, perms, name }` token) is the sole credential: anyone with
-// it joins at its perm level (view → read-only, edit/owner → write) without
-// logging in. New rooms are created exclusively through owner-token POST /api/rooms.
+// POST /api/auth — mint a Liveblocks access token for an Access-authenticated
+// user, scoped to an existing slug room.
 
 import type { Env, LiveblocksApi } from './liveblocks'
-import { verifyToken } from './token'
-import { liveblocksAccess } from '../../src/data/token'
+import type { AccessIdentity } from './access'
+import { isValidSlug } from '../../src/data/slug'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -16,13 +13,14 @@ function json(data: unknown, status = 200): Response {
 }
 
 interface AuthBody {
-  token?: unknown
+  room?: unknown
 }
 
 export async function handleAuth(
   request: Request,
   env: Env,
   api: LiveblocksApi,
+  identity: AccessIdentity,
 ): Promise<Response> {
   let body: AuthBody
   try {
@@ -31,22 +29,15 @@ export async function handleAuth(
     return json({ error: 'invalid JSON body' }, 400)
   }
 
-  const raw = typeof body.token === 'string' ? body.token.trim() : ''
-  const payload = raw ? await verifyToken(raw, env.TOKEN_SECRET) : null
-  if (!payload) return json({ error: 'invalid token' }, 401)
-
-  const room = payload.r
+  const room = typeof body.room === 'string' ? body.room.trim() : ''
+  if (!isValidSlug(room)) return json({ error: 'invalid room' }, 400)
   if (!(await api.roomExists(room))) {
-    // The room must already exist; creating one requires an owner token.
     return json({ error: 'room not found' }, 403)
   }
 
-  // Identify the session; the token is the credential and there is no login, so
-  // a stable per-room guest id is sufficient.
-  const userId = `guest-${room}`
-  const token = await api.mintAccessToken(room, userId, {
-    access: liveblocksAccess(payload.p),
-    name: payload.n,
+  const token = await api.mintAccessToken(room, identity.email, {
+    access: 'room:write',
+    name: identity.email,
   })
   return json({ token }, 200)
 }

@@ -11,8 +11,12 @@ import type { SnapshotKv } from './snapshots'
 export interface Env {
   /** Liveblocks project secret key — never shipped to the client. */
   LIVEBLOCKS_SECRET_KEY: string
-  /** HMAC key that signs/verifies capability tokens — the sole hidden secret. */
-  TOKEN_SECRET: string
+  /** Cloudflare Access issuer, e.g. https://team.cloudflareaccess.com. */
+  ACCESS_TEAM_DOMAIN?: string
+  /** Cloudflare Access application audience tag. */
+  ACCESS_AUD?: string
+  /** Explicit local/test bypass identity. Never set in production. */
+  DEV_AUTH_EMAIL?: string
   /** Optional CORS allow-list origin; defaults to reflecting/`*` when unset. */
   ALLOWED_ORIGIN?: string
   /**
@@ -31,7 +35,7 @@ export interface LiveblocksApi {
   createRoom(roomId: string): Promise<{ id: string }>
   /**
    * Mint a room-scoped access token. `opts.access` sets the Liveblocks scope
-   * (`room:read` for view-only, `room:write` for edit/owner); `opts.name`, when
+   * (`room:write` for authenticated users); `opts.name`, when
    * present, is forwarded as `userInfo` for presence.
    */
   mintAccessToken(
@@ -71,8 +75,8 @@ export function createLiveblocksApi(env: Env): LiveblocksApi {
       const res = await fetch(`${LIVEBLOCKS_API}/rooms`, {
         method: 'POST',
         headers: { authorization: authHeader, 'content-type': 'application/json' },
-        // `defaultAccesses: []` keeps the room private; access is granted per
-        // session via the minted token, so only secret-link holders can join.
+        // `defaultAccesses: []` keeps the room private; the Worker grants access
+        // per Access-authenticated session via the minted token.
         body: JSON.stringify({ id: roomId, defaultAccesses: [] }),
       })
       if (!res.ok) throw new Error(`Liveblocks room creation failed: ${res.status}`)
@@ -86,7 +90,7 @@ export function createLiveblocksApi(env: Env): LiveblocksApi {
         headers: { authorization: authHeader, 'content-type': 'application/json' },
         body: JSON.stringify({
           userId,
-          // Scope access to exactly this room at the perm the token grants.
+          // Scope access to exactly this room.
           permissions: { [roomId]: [opts.access] },
           ...(opts.name ? { userInfo: { name: opts.name } } : {}),
         }),

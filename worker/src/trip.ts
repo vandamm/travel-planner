@@ -3,9 +3,7 @@
 //   GET  /api/trip/:room  → serialize the room's Yjs doc to trip JSON
 //   POST /api/trip/:room  → validate + apply trip JSON, push the change to the room
 //
-// Both are gated by a Bearer capability token (the same signed link the UI/MCP
-// use): `GET` needs `view`+, `POST` needs `edit`+, and the token's room must match
-// `:room` — a token for one room can't act on another. The serialize/apply path
+// Routes are gated by Cloudflare Access before these handlers run. The serialize/apply path
 // reuses the SAME shared modules the client uses (`exportTrip`, `applyTrip`, the
 // zod schema), so what an agent reads and writes is identical to what the UI
 // renders — they can't drift.
@@ -32,30 +30,13 @@ import { exportTrip } from '../../src/data/exportTrip'
 import { applyTrip } from '../../src/data/applyTrip'
 import { formatTripErrors, tripDocumentSchema, type TripDocument } from '../../src/data/tripSchema'
 import { getSnapshot, listSnapshots, recordSnapshot } from './snapshots'
-import { verifyToken } from './token'
-import { permAtLeast, type Perm } from '../../src/data/token'
+import { isValidSlug } from '../../src/data/slug'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'content-type': 'application/json' },
   })
-}
-
-/**
- * Authorize an agent HTTP request against its Bearer capability token: the token
- * must verify, grant at least `minPerm`, and be scoped to `roomId` (its `r` must
- * match the `:room` path — a token for one room can't act on another).
- */
-async function tokenAuthorized(
-  request: Request,
-  env: Env,
-  roomId: string,
-  minPerm: Perm,
-): Promise<boolean> {
-  const bearer = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
-  const payload = bearer ? await verifyToken(bearer, env.TOKEN_SECRET) : null
-  return Boolean(payload && payload.r === roomId && permAtLeast(payload.p, minPerm))
 }
 
 /** Reconstruct the room's current `Y.Doc` from its binary Liveblocks state. */
@@ -117,12 +98,11 @@ export async function handleGetSchema(): Promise<Response> {
 
 export async function handleGetTrip(
   request: Request,
-  env: Env,
+  _env: Env,
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
-  if (!(await tokenAuthorized(request, env, roomId, 'view')))
-    return json({ error: 'unauthorized' }, 401)
+  if (!isValidSlug(roomId)) return json({ error: 'invalid room' }, 400)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
 
   const doc = await loadRoomDoc(api, roomId)
@@ -145,11 +125,8 @@ export async function handleGetTrip(
 }
 
 /**
- * Version history is gated by the same signed capability token as `/api/trip`:
- * `view`+ can read snapshots, the token's room must match `:room`, and rotating
- * `TOKEN_SECRET` revokes history access too. Unknown room → 404 after auth
- * (mirrors the trip handlers). When KV isn't bound there's simply no history:
- * list is empty.
+ * Version history is behind Cloudflare Access. Unknown room → 404 after auth.
+ * When KV isn't bound there's simply no history: list is empty.
  */
 export async function handleListVersions(
   request: Request,
@@ -157,8 +134,8 @@ export async function handleListVersions(
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
-  if (!(await tokenAuthorized(request, env, roomId, 'view')))
-    return json({ error: 'unauthorized' }, 401)
+  void request
+  if (!isValidSlug(roomId)) return json({ error: 'invalid room' }, 400)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
   const versions = env.SNAPSHOTS ? await listSnapshots(env.SNAPSHOTS, roomId) : []
   return json({ versions }, 200)
@@ -166,7 +143,7 @@ export async function handleListVersions(
 
 /**
  * Return a single snapshot's trip JSON verbatim (it is already a trip document).
- * Requires the same room-matched `view`+ capability as snapshot listing.
+ * Requires the same Cloudflare Access gate as snapshot listing.
  */
 export async function handleGetVersion(
   request: Request,
@@ -175,8 +152,8 @@ export async function handleGetVersion(
   roomId: string,
   id: string,
 ): Promise<Response> {
-  if (!(await tokenAuthorized(request, env, roomId, 'view')))
-    return json({ error: 'unauthorized' }, 401)
+  void request
+  if (!isValidSlug(roomId)) return json({ error: 'invalid room' }, 400)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
   const snapshot = env.SNAPSHOTS ? await getSnapshot(env.SNAPSHOTS, roomId, id) : null
   if (snapshot === null) return json({ error: 'version not found' }, 404)
@@ -189,8 +166,7 @@ export async function handlePostTrip(
   api: LiveblocksApi,
   roomId: string,
 ): Promise<Response> {
-  if (!(await tokenAuthorized(request, env, roomId, 'edit')))
-    return json({ error: 'unauthorized' }, 401)
+  if (!isValidSlug(roomId)) return json({ error: 'invalid room' }, 400)
   if (!(await api.roomExists(roomId))) return json({ error: 'room not found' }, 404)
 
   let input: unknown

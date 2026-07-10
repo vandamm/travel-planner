@@ -2,14 +2,14 @@
 //
 // Routes:
 //   OPTIONS *               → CORS preflight
-//   POST /api/auth          → mint a room-scoped token for an existing room
-//   POST /api/rooms         → create a room (owner-token-gated)
+//   POST /api/auth          → mint a room-scoped token for an existing slug room
+//   POST /api/rooms         → create a slug room
 //   GET  /api/schema        → JSON Schema for the trip document (public)
-//   GET  /api/trip/:room    → read the room's trip as JSON (view+ token, room-matched)
-//   POST /api/trip/:room    → write trip JSON into the room (edit+ token, room-matched)
-//   GET  /api/versions/:room       → list a room's snapshots (view+ token, room-matched)
-//   GET  /api/versions/:room/:id   → read one snapshot's trip JSON (view+ token, room-matched)
-//   POST /mcp               → MCP-over-HTTP tools endpoint (per-tool token-gated via the link)
+//   GET  /api/trip/:room    → read the room's trip as JSON
+//   POST /api/trip/:room    → write trip JSON into the room
+//   GET  /api/versions/:room       → list a room's snapshots
+//   GET  /api/versions/:room/:id   → read one snapshot's trip JSON
+//   POST /mcp               → MCP-over-HTTP tools endpoint
 //
 // The handlers depend on the `LiveblocksApi` abstraction; production builds the
 // REST-backed implementation, while tests call `handleRequest` with a fake.
@@ -24,8 +24,8 @@ import {
   handlePostTrip,
 } from './trip'
 import { handleMcp } from './mcp'
-import { TokenConfigError } from './token'
 import { createLiveblocksApi, type Env, type LiveblocksApi } from './liveblocks'
+import { AccessConfigError, accessIdentity, type AccessIdentity } from './access'
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = env.ALLOWED_ORIGIN ?? request.headers.get('origin') ?? '*'
@@ -52,6 +52,16 @@ function json(data: unknown, status: number): Response {
   })
 }
 
+function protectedRoute(pathname: string): boolean {
+  return (
+    pathname === '/api/auth' ||
+    pathname === '/api/rooms' ||
+    pathname === '/mcp' ||
+    pathname.startsWith('/api/trip/') ||
+    pathname.startsWith('/api/versions/')
+  )
+}
+
 export async function handleRequest(
   request: Request,
   env: Env,
@@ -66,11 +76,17 @@ export async function handleRequest(
   const { pathname } = new URL(request.url)
 
   try {
+    let identity: AccessIdentity | null = null
+    if (protectedRoute(pathname)) {
+      identity = await accessIdentity(request, env)
+      if (!identity) return withCors(json({ error: 'unauthorized' }, 401), cors)
+    }
+
     let res: Response
     if (pathname === '/api/auth') {
       res =
         request.method === 'POST'
-          ? await handleAuth(request, env, api)
+          ? await handleAuth(request, env, api, identity!)
           : json({ error: 'method not allowed' }, 405)
     } else if (pathname === '/api/rooms') {
       res =
@@ -132,9 +148,7 @@ export async function handleRequest(
 
     return withCors(res, cors)
   } catch (err) {
-    // A missing/blank TOKEN_SECRET is a deploy mistake, not an upstream failure —
-    // answer 500 "server misconfigured" so it isn't mistaken for a Liveblocks outage.
-    if (err instanceof TokenConfigError) {
+    if (err instanceof AccessConfigError) {
       return withCors(json({ error: 'server misconfigured' }, 500), cors)
     }
     // The Liveblocks REST layer throws on any non-2xx (outage, 429, transient

@@ -27,7 +27,7 @@ interface VersionMeta {
 }
 
 export function TripModal({ onClose }: TripModalProps) {
-  const { doc, roomId, token, workerUrl } = useRoom()
+  const { doc, roomId, workerUrl } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
 
@@ -47,8 +47,7 @@ export function TripModal({ onClose }: TripModalProps) {
   const [applyError, setApplyError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // "Recent versions" — pre-write snapshots the Worker records on each AI/owner
-  // write. Token-gated with the share-link capability; the Worker verifies it.
+  // "Recent versions" — pre-write snapshots the Worker records on each AI write.
   const [versions, setVersions] = useState<VersionMeta[]>([])
   const [versionsError, setVersionsError] = useState<string | null>(null)
 
@@ -84,11 +83,11 @@ export function TripModal({ onClose }: TripModalProps) {
   }
 
   async function loadVersions() {
-    if (!roomId || !token) return
+    if (!roomId) return
     setVersionsError(null)
     try {
       const base = `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId)}`
-      const res = await fetch(base, { headers: { authorization: `Bearer ${token}` } })
+      const res = await fetch(base)
       if (!res.ok) throw new Error(String(res.status))
       const body = (await res.json()) as { versions?: VersionMeta[] }
       setVersions(body.versions ?? [])
@@ -98,13 +97,11 @@ export function TripModal({ onClose }: TripModalProps) {
   }
 
   async function restoreVersion(id: string) {
-    if (!roomId || !token) return
+    if (!roomId) return
     setVersionsError(null)
     try {
       const base = `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId)}`
-      const res = await fetch(`${base}/${encodeURIComponent(id)}`, {
-        headers: { authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(`${base}/${encodeURIComponent(id)}`)
       if (!res.ok) throw new Error(String(res.status))
       applyJsonText(await res.text())
     } catch {

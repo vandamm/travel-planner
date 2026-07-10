@@ -16,7 +16,7 @@ function Capture() {
 
 function renderBoard(ui: ReactNode) {
   return render(
-    <RoomProvider workerUrl="" token={null} enableSync={false}>
+    <RoomProvider workerUrl="" roomId={null} enableSync={false}>
       <Capture />
       {ui}
     </RoomProvider>,
@@ -118,7 +118,7 @@ describe('Board', () => {
 
   it('opens the editor when the Add stay nonce bumps, not on mount, and re-opens on repeat', () => {
     const wrap = (nonce: number) => (
-      <RoomProvider workerUrl="" token={null} enableSync={false}>
+      <RoomProvider workerUrl="" roomId={null} enableSync={false}>
         <Capture />
         <Board addStayNonce={nonce} />
       </RoomProvider>

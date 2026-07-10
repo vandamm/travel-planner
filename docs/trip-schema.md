@@ -106,31 +106,26 @@ path-prefixed message, e.g. `cards.0.dayKey: Expected a date as YYYY-MM-DD`.
 ## Agent HTTP API
 
 An agent reads and writes the same room over JSON via the Cloudflare Worker. The
-two `/api/trip/:room` endpoints are gated by a **capability token** — the signed
-token from the board's share link, presented as `Authorization: Bearer <token>`:
-`GET` needs a `view`+ token, `POST` needs `edit`+, and the token's room must match
-`:room` (a token for one room can't act on another). `GET /api/schema` is **public**
-— the schema is the API's shape, not a secret, so it needs no token.
+`/api/trip/:room` and `/api/versions/:room` endpoints are behind Cloudflare
+Access. The `:room` is the slug from the board URL. `GET /api/schema` is public —
+the schema is the API's shape, not a secret.
 
 | Method | Path                      | Body                    | Auth                        | Returns                                                             |
 | ------ | ------------------------- | ----------------------- | --------------------------- | ------------------------------------------------------------------- |
 | `GET`  | `/api/schema`             | —                       | none (public)               | the JSON Schema for the trip document (derived from the zod schema) |
-| `GET`  | `/api/trip/:room`         | —                       | `view`+ token, room-matched | the room's current trip as the JSON document above                  |
-| `POST` | `/api/trip/:room`         | a trip document (above) | `edit`+ token, room-matched | the validated, default-filled document                              |
-| `GET`  | `/api/versions/:room`     | —                       | `view`+ token, room-matched | the room's saved version list                                       |
-| `GET`  | `/api/versions/:room/:id` | —                       | `view`+ token, room-matched | one saved version as a trip document                                |
+| `GET`  | `/api/trip/:room`         | —                       | Cloudflare Access           | the room's current trip as the JSON document above                  |
+| `POST` | `/api/trip/:room`         | a trip document (above) | Cloudflare Access           | the validated, default-filled document                              |
+| `GET`  | `/api/versions/:room`     | —                       | Cloudflare Access           | the room's saved version list                                       |
+| `GET`  | `/api/versions/:room/:id` | —                       | Cloudflare Access           | one saved version as a trip document                                |
 
 The same read/write surface is also reachable via the **MCP endpoint**
 (`POST /mcp`) as the `get_schema` / `read_board` / `write_board` tools, for MCP
 clients like Perplexity Pro. There is no separate endpoint key: each acting tool
-takes the share link as a string and authorizes itself from the token in it
-(`read_board` a `view`+ link, `write_board` an `edit`+ link). Every write here and
+is authorized by Cloudflare Access Managed OAuth. The tools take a `slug`
+argument: `read_board(slug)` and `write_board(slug, trip)`. Every write here and
 via `POST` above snapshots the prior trip to KV first; the version endpoints
 (`GET /api/versions/:room` and `…/:room/:id`) list and read those snapshots for
-restore, gated by the same room-matched `view`+ Bearer token rule as trip reads.
-They are read-only: `view` links can inspect history, while writing a restored
-snapshot back to the shared board still requires `edit`+ permission through the
-normal sync or `POST` write path.
+restore.
 See the [README](../README.md#agent-api) for the connector setup and
 version-history overview.
 
@@ -161,7 +156,7 @@ compare-and-swap Liveblocks doesn't expose).
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `200` | `GET` succeeded / `POST` applied                                                                                                                                        |
 | `400` | malformed JSON or schema violation (message is path-prefixed, as above)                                                                                                 |
-| `401` | missing, invalid, or insufficient token (wrong room, or below the required perm)                                                                                        |
+| `401` | missing or invalid Cloudflare Access identity                                                                                                                           |
 | `404` | the room does not exist (create it first via `POST /api/rooms`), or a requested version id does not exist                                                               |
 | `409` | authenticated `GET /api/trip/:room` found the room, but its Yjs state could not export as a valid trip; repair by `POST`ing a valid document or using MCP `write_board` |
 
@@ -173,19 +168,16 @@ Fetch the JSON Schema (public — no token):
 curl https://<worker-url>/api/schema
 ```
 
-Read the current trip (the response includes a `$schema` pointer). `$TOKEN` is the
-token from the board's share link — its `#` fragment:
+Read the current trip after authenticating through Cloudflare Access:
 
 ```sh
-curl https://<worker-url>/api/trip/<roomId> \
-  -H "authorization: Bearer $TOKEN"
+curl https://travel.vansach.me/api/trip/italy-2027
 ```
 
-Write a trip (full replace) — connected clients update live (needs an `edit`+ token):
+Write a trip (full replace) — connected clients update live:
 
 ```sh
-curl -X POST https://<worker-url>/api/trip/<roomId> \
-  -H "authorization: Bearer $TOKEN" \
+curl -X POST https://travel.vansach.me/api/trip/italy-2027 \
   -H "content-type: application/json" \
   -d '{
     "trip": { "title": "Italy 2027", "startDate": "2027-05-01", "numDays": 3 },

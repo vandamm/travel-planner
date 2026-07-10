@@ -4,21 +4,15 @@ import * as provider from './provider'
 import { useRoom } from './RoomContext'
 import { RoomProvider } from './RoomProvider'
 import { addCity, listCities } from './doc'
-import { encodePayload, type TokenPayload } from './token'
-
-function signedLikeToken(payload: TokenPayload): string {
-  return `${encodePayload(payload)}.dummySig`
-}
 
 function Consumer() {
-  const { doc, status, roomId, token } = useRoom()
+  const { doc, status, roomId } = useRoom()
   // Exercise the doc to prove it is a real, mutable Y.Doc.
   if (listCities(doc).length === 0) addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="room">{roomId ?? 'none'}</span>
-      <span data-testid="token">{token ?? 'none'}</span>
       <span data-testid="cities">
         {listCities(doc)
           .map((c) => c.name)
@@ -28,15 +22,11 @@ function Consumer() {
   )
 }
 
-// Surfaces the capability values the provider decodes from the token.
-function PermProbe() {
-  const { roomId, perm, name, token } = useRoom()
+function RoomProbe() {
+  const { roomId } = useRoom()
   return (
     <div>
       <span data-testid="room">{roomId ?? '∅'}</span>
-      <span data-testid="perm">{perm ?? '∅'}</span>
-      <span data-testid="name">{name ?? '∅'}</span>
-      <span data-testid="token">{token ?? '∅'}</span>
     </div>
   )
 }
@@ -44,68 +34,37 @@ function PermProbe() {
 describe('RoomProvider', () => {
   it('provides a local-first doc and status to consumers', () => {
     render(
-      <RoomProvider workerUrl="" token={null} enableSync={false}>
+      <RoomProvider workerUrl="" roomId={null} enableSync={false}>
         <Consumer />
       </RoomProvider>,
     )
     expect(screen.getByTestId('status')).toHaveTextContent('local')
     expect(screen.getByTestId('room')).toHaveTextContent('none')
-    expect(screen.getByTestId('token')).toHaveTextContent('none')
     expect(screen.getByTestId('cities')).toHaveTextContent('Rome')
   })
 
-  it('decodes room, perm and name from a passed token and exposes the raw token', () => {
-    const token = signedLikeToken({ r: 'rome-2027', p: 'view', n: 'Ada', v: 1 })
+  it('uses a passed room slug', () => {
     render(
-      <RoomProvider workerUrl="" token={token} enableSync={false}>
-        <PermProbe />
+      <RoomProvider workerUrl="" roomId="rome-2027" enableSync={false}>
+        <RoomProbe />
       </RoomProvider>,
     )
     expect(screen.getByTestId('room')).toHaveTextContent('rome-2027')
-    expect(screen.getByTestId('perm')).toHaveTextContent('view')
-    expect(screen.getByTestId('name')).toHaveTextContent('Ada')
-    expect(screen.getByTestId('token')).toHaveTextContent(token)
   })
 
-  it('accepts a `#<token>` fragment and defaults an absent name to null', () => {
-    const rawToken = signedLikeToken({ r: 'e2e', p: 'edit', v: 1 })
-    const token = '#' + rawToken
-    render(
-      <RoomProvider workerUrl="" token={token} enableSync={false}>
-        <PermProbe />
-      </RoomProvider>,
-    )
-    expect(screen.getByTestId('room')).toHaveTextContent('e2e')
-    expect(screen.getByTestId('perm')).toHaveTextContent('edit')
-    expect(screen.getByTestId('name')).toHaveTextContent('∅')
-    expect(screen.getByTestId('token')).toHaveTextContent(rawToken)
-  })
-
-  it('exposes a null token when there is no hash', () => {
+  it('reads the room slug from the current path', () => {
     const previousUrl = window.location.href
     try {
-      window.history.replaceState(null, '', '/')
+      window.history.replaceState(null, '', '/e2e')
       render(
         <RoomProvider workerUrl="" enableSync={false}>
-          <PermProbe />
+          <RoomProbe />
         </RoomProvider>,
       )
-      expect(screen.getByTestId('room')).toHaveTextContent('∅')
-      expect(screen.getByTestId('perm')).toHaveTextContent('∅')
-      expect(screen.getByTestId('token')).toHaveTextContent('∅')
+      expect(screen.getByTestId('room')).toHaveTextContent('e2e')
     } finally {
       window.history.replaceState(null, '', previousUrl)
     }
-  })
-
-  it('exposes null room/perm for an undecodable (legacy `#room=…`) token', () => {
-    render(
-      <RoomProvider workerUrl="" token="room=legacy" enableSync={false}>
-        <PermProbe />
-      </RoomProvider>,
-    )
-    expect(screen.getByTestId('room')).toHaveTextContent('∅')
-    expect(screen.getByTestId('perm')).toHaveTextContent('∅')
   })
 
   it('builds the connection inside an effect, not during render (StrictMode-safe)', () => {
@@ -124,7 +83,7 @@ describe('RoomProvider', () => {
       return null
     }
     render(
-      <RoomProvider workerUrl="" token={null} enableSync={false}>
+      <RoomProvider workerUrl="" roomId={null} enableSync={false}>
         <Probe />
       </RoomProvider>,
     )

@@ -1,6 +1,5 @@
-// MCP-over-HTTP endpoint for the Worker — lets an MCP client (e.g. Perplexity
-// Pro) discover tools, read a room's trip from a pasted share link, and write an
-// updated trip back. Tools: `get_schema`, `read_board`, `write_board`.
+// MCP-over-HTTP endpoint for the Worker — lets an Access-authenticated MCP
+// client discover tools, read a slug room's trip, and write an updated trip back.
 //
 // ponytail: hand-rolled JSON-RPC 2.0 dispatch instead of `@modelcontextprotocol/sdk`.
 // The SDK's Streamable-HTTP *server* transport is built on Node's http req/res
@@ -13,11 +12,10 @@
 
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { Env, LiveblocksApi } from './liveblocks'
-import { verifyToken } from './token'
 import { applyTripToRoom, loadRoomDoc } from './trip'
 import { exportTrip } from '../../src/data/exportTrip'
 import { formatTripErrors, tripDocumentSchema } from '../../src/data/tripSchema'
-import { permAtLeast, tokenFromLink, type Perm } from '../../src/data/token'
+import { isValidSlug } from '../../src/data/slug'
 
 const PROTOCOL_VERSION = '2025-06-18'
 const SERVER_INFO = { name: 'travel-planner', version: '1.0.0' }
@@ -28,26 +26,24 @@ interface ToolResult {
   isError?: boolean
 }
 
-const LINK_SCHEMA = {
+const SLUG_SCHEMA = {
   type: 'object',
   properties: {
-    link: {
+    slug: {
       type: 'string',
-      description:
-        'The full board share link (its # fragment is the access token that also authorizes this call), pasted verbatim.',
+      description: 'The room slug from the board URL, for example "italy-2027".',
     },
   },
-  required: ['link'],
+  required: ['slug'],
   additionalProperties: false,
 } as const
 
 const WRITE_SCHEMA = {
   type: 'object',
   properties: {
-    link: {
+    slug: {
       type: 'string',
-      description:
-        'The full board share link (its # fragment is the access token that also authorizes this call), pasted verbatim.',
+      description: 'The room slug from the board URL, for example "italy-2027".',
     },
     trip: {
       type: 'object',
@@ -55,7 +51,7 @@ const WRITE_SCHEMA = {
         'The full replacement trip document. Call get_schema first for its exact shape — write_board replaces the entire board.',
     },
   },
-  required: ['link', 'trip'],
+  required: ['slug', 'trip'],
   additionalProperties: false,
 } as const
 
@@ -69,13 +65,13 @@ const TOOLS = [
   {
     name: 'read_board',
     description:
-      "Read a travel board's current trip as JSON. Pass the board's share link — a view, edit, or owner link all work.",
-    inputSchema: LINK_SCHEMA,
+      "Read a travel board's current trip as JSON. Pass the board slug from its URL.",
+    inputSchema: SLUG_SCHEMA,
   },
   {
     name: 'write_board',
     description:
-      "Replace a travel board's trip with an updated document. Pass an edit or owner share link (a view link can't write) and the full trip JSON (call get_schema first). The previous version is snapshotted, so the change can be reverted.",
+      "Replace a travel board's trip with an updated document. Pass the board slug and the full trip JSON (call get_schema first). The previous version is snapshotted, so the change can be reverted.",
     inputSchema: WRITE_SCHEMA,
   },
 ] as const
@@ -112,41 +108,23 @@ function toolError(text: string): ToolResult {
 }
 
 /**
- * Verify the pasted link's capability token and resolve it to an existing room,
- * or a user-facing tool error. The link's # fragment IS the token — it is the
- * sole credential (no separate API key). `minPerm` gates the action: `read_board`
- * needs `view`+, `write_board` needs `edit`+.
+ * Resolve a slug to an existing room. Cloudflare Access gates the endpoint before
+ * any tool reaches here.
  */
 async function resolveRoom(
-  env: Env,
+  _env: Env,
   api: LiveblocksApi,
-  link: string,
-  minPerm: Perm,
+  slug: string,
 ): Promise<{ roomId: string } | { error: ToolResult }> {
-  const raw = tokenFromLink(link)
-  const payload = raw ? await verifyToken(raw, env.TOKEN_SECRET) : null
-  if (!payload) {
-    return {
-      error: toolError(
-        'That link is invalid or expired. Paste the full, current board share link.',
-      ),
-    }
+  if (!isValidSlug(slug)) return { error: toolError('That room slug is invalid.') }
+  if (!(await api.roomExists(slug))) {
+    return { error: toolError(`No board found for room "${slug}". Check the slug is current.`) }
   }
-  if (!permAtLeast(payload.p, minPerm)) {
-    return {
-      error: toolError(
-        `That link is ${payload.p}-only — it can't ${minPerm === 'edit' ? 'edit' : 'access'} this board. Use an ${minPerm} (or owner) link.`,
-      ),
-    }
-  }
-  if (!(await api.roomExists(payload.r))) {
-    return { error: toolError(`No board found for room "${payload.r}". Check the link is current.`) }
-  }
-  return { roomId: payload.r }
+  return { roomId: slug }
 }
 
-async function readBoard(env: Env, api: LiveblocksApi, link: string): Promise<ToolResult> {
-  const room = await resolveRoom(env, api, link, 'view')
+async function readBoard(env: Env, api: LiveblocksApi, slug: string): Promise<ToolResult> {
+  const room = await resolveRoom(env, api, slug)
   if ('error' in room) return room.error
   const doc = await loadRoomDoc(api, room.roomId)
   // `exportTrip` re-validates and throws on an inconsistent doc (e.g. concurrent
@@ -166,10 +144,10 @@ async function readBoard(env: Env, api: LiveblocksApi, link: string): Promise<To
 async function writeBoard(
   env: Env,
   api: LiveblocksApi,
-  link: string,
+  slug: string,
   trip: unknown,
 ): Promise<ToolResult> {
-  const room = await resolveRoom(env, api, link, 'edit')
+  const room = await resolveRoom(env, api, slug)
   if ('error' in room) return room.error
 
   // Validate before touching the room so a bad payload never mutates the doc (nor
@@ -201,12 +179,12 @@ async function handleToolCall(
     return rpcResult(id, toolText(JSON.stringify(zodToJsonSchema(tripDocumentSchema), null, 2)))
   }
   if (p.name === 'read_board') {
-    const link = typeof args.link === 'string' ? args.link : ''
-    return rpcResult(id, await readBoard(env, api, link))
+    const slug = typeof args.slug === 'string' ? args.slug : ''
+    return rpcResult(id, await readBoard(env, api, slug))
   }
   if (p.name === 'write_board') {
-    const link = typeof args.link === 'string' ? args.link : ''
-    return rpcResult(id, await writeBoard(env, api, link, args.trip))
+    const slug = typeof args.slug === 'string' ? args.slug : ''
+    return rpcResult(id, await writeBoard(env, api, slug, args.trip))
   }
   return rpcError(id, -32602, `Unknown tool: ${String(p.name)}`)
 }
@@ -220,9 +198,7 @@ export async function handleMcp(
   env: Env,
   api: LiveblocksApi,
 ): Promise<Response> {
-  // No endpoint-level API key: discovery (initialize/tools/list) is open, and
-  // each acting tool (read_board/write_board) authorizes itself from the token in
-  // the pasted share link — that token is the sole credential.
+  // Cloudflare Access gates this endpoint before the MCP request is dispatched.
   let body: JsonRpcRequest
   try {
     body = (await request.json()) as JsonRpcRequest

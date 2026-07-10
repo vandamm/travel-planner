@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { setupTrip, RESTORE_LINK } from './helpers'
 
-// The app is local-first with no live backend in e2e, so we mock the token-gated
+// The app is local-first with no live backend in e2e, so we mock the Access-gated
 // version endpoints the Trip-settings panel calls. The snapshot we hand back is
 // an earlier board state; restoring it should replace the current trip with it.
 const SNAPSHOT = JSON.stringify({
@@ -17,11 +17,9 @@ const SNAPSHOT = JSON.stringify({
   cards: [],
   dayOverrides: {},
 })
-const EXPECTED_RESTORE_TOKEN = RESTORE_LINK.split('#')[1]
-
 test('Recent versions: restore reverts the board to an earlier snapshot', async ({ page }) => {
   await page.route('**/api/versions/**', async (route) => {
-    expect(route.request().headers().authorization).toBe(`Bearer ${EXPECTED_RESTORE_TOKEN}`)
+    expect(route.request().headers().authorization).toBeUndefined()
     const url = route.request().url()
     if (url.endsWith('/1000')) {
       await route.fulfill({ contentType: 'application/json', body: SNAPSHOT })
@@ -33,7 +31,7 @@ test('Recent versions: restore reverts the board to an earlier snapshot', async 
     }
   })
 
-  // A room id in the hash is what makes the "Recent versions" section render.
+  // A room slug in the path is what makes the "Recent versions" section render.
   await page.goto(RESTORE_LINK)
   await setupTrip(page, { title: 'Current Draft', startDate: '2027-05-01', numDays: 3 })
 

@@ -4,11 +4,12 @@
 # Liveblocks project secret key (Dashboard → project → API keys). Never shipped to the client.
 LIVEBLOCKS_SECRET_KEY=sk_dev_replace_me
 
-# HMAC key that signs/verifies every capability token (the share links). This is the
-# sole hidden secret — humans hold links, the Worker holds this. Choose any long random
-# string; rotating it invalidates all outstanding links. Mint a link with:
-#   npx tsx scripts/mint-token.ts <roomId> owner
-TOKEN_SECRET=replace_me_with_a_long_random_string
+# Local bypass identity for wrangler dev. Never set this in production.
+DEV_AUTH_EMAIL=me@example.com
+
+# Production Access validation vars. Optional locally when DEV_AUTH_EMAIL is set.
+# ACCESS_TEAM_DOMAIN=https://<team>.cloudflareaccess.com
+# ACCESS_AUD=<access-aud>
 
 # Optional: lock CORS to your Pages origin in production (e.g. https://travel-planner.pages.dev).
 # Leave unset locally to reflect the request Origin.

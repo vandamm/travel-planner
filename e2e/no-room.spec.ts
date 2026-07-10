@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test'
 test('opening without a board id shows a notice and no board', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByText(/share link/i)).toBeVisible()
+  await expect(page.getByText(/slug url/i)).toBeVisible()
   // No board, no editing entry points.
   await expect(page.getByRole('region', { name: 'Board' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Trip' })).toHaveCount(0)

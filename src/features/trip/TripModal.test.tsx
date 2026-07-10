@@ -7,21 +7,14 @@ import type { ReactNode } from 'react'
 import { setTrip } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import { RoomProvider } from '../../data/RoomProvider'
-import { encodePayload, type TokenPayload } from '../../data/token'
 import { TripModal } from './TripModal'
-
-function signedLikeToken(payload: TokenPayload): string {
-  return `${encodePayload(payload)}.dummySig`
-}
-
-const ROOM_TOKEN = signedLikeToken({ r: 'rome-2027', p: 'edit', v: 1 })
 
 function renderInRoom(
   ui: ReactNode,
-  { token = null, workerUrl = '' }: { token?: string | null; workerUrl?: string } = {},
+  { roomId = null, workerUrl = '' }: { roomId?: string | null; workerUrl?: string } = {},
 ) {
   return render(
-    <RoomProvider workerUrl={workerUrl} token={token} enableSync={false}>
+    <RoomProvider workerUrl={workerUrl} roomId={roomId} enableSync={false}>
       {ui}
     </RoomProvider>,
   )
@@ -114,12 +107,12 @@ describe('TripModal', () => {
     expect(currentJson.value).not.toContain('city may have been removed')
   })
 
-  it('shows an alert when token-gated version history cannot be listed', async () => {
+  it('shows an alert when version history cannot be listed', async () => {
     const user = userEvent.setup()
     const fetchMock = vi.fn(async () => new Response('', { status: 401 }))
     vi.stubGlobal('fetch', fetchMock)
     renderInRoom(<TripModal onClose={() => {}} />, {
-      token: ROOM_TOKEN,
+      roomId: 'rome-2027',
       workerUrl: 'https://worker.test',
     })
 
@@ -127,9 +120,7 @@ describe('TripModal', () => {
     await user.click(screen.getByText('Recent versions'))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load version history.')
-    expect(fetchMock).toHaveBeenCalledWith('https://worker.test/api/versions/rome-2027', {
-      headers: { authorization: `Bearer ${ROOM_TOKEN}` },
-    })
+    expect(fetchMock).toHaveBeenCalledWith('https://worker.test/api/versions/rome-2027')
   })
 
   it('shows an alert when a listed version cannot be restored', async () => {
@@ -145,7 +136,7 @@ describe('TripModal', () => {
       .mockResolvedValueOnce(new Response('', { status: 500 }))
     vi.stubGlobal('fetch', fetchMock)
     renderInRoom(<TripModal onClose={() => {}} />, {
-      token: ROOM_TOKEN,
+      roomId: 'rome-2027',
       workerUrl: 'https://worker.test',
     })
 
@@ -154,9 +145,7 @@ describe('TripModal', () => {
     await user.click(await screen.findByRole('button', { name: 'Restore' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load that version.')
-    expect(fetchMock).toHaveBeenLastCalledWith('https://worker.test/api/versions/rome-2027/1000', {
-      headers: { authorization: `Bearer ${ROOM_TOKEN}` },
-    })
+    expect(fetchMock).toHaveBeenLastCalledWith('https://worker.test/api/versions/rome-2027/1000')
   })
 
   it('closes via Done, Escape, and backdrop click', async () => {

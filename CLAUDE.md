@@ -72,13 +72,8 @@ of browser- or Worker-only APIs:
   the keystroke undo stack (see below).
 - `exportTrip.ts` — doc → validated JSON. Used by `GET /api/trip/:room`, MCP
   `read_board`, and the (legacy) Trip-settings JSON panel's "show current JSON".
-- `token.ts` — the **capability-token codec** (see "Auth / room-creation model"):
-  the `TokenPayload` type, base64url + `encodePayload`/`decodePayload`,
-  `parseToken`/`tokenFromLink` (extract + **decode-only**, no signature check),
-  and the pure perm helpers `permAtLeast` / `liveblocksAccess`. Shared so the
-  client shapes local rendering from a link (`parseToken`) and the Worker's MCP
-  tools extract the same fragment (`tokenFromLink`) before `verifyToken` — same
-  parse logic, no drift. Signing/verifying is Worker-only (`worker/src/token.ts`).
+- `slug.ts` — room slug parsing/validation. Slugs are lowercase letters, digits,
+  and hyphens; the slug is also the Liveblocks room id.
 
 `days.ts` (day generation) and `cityResolution.ts` are also pure shared logic.
 `cityResolution.ts` resolves a day's city/color (`resolveDayCity`) _and_ exposes
@@ -98,9 +93,7 @@ Client room state is split between `src/data/RoomProvider.tsx` and
 `src/data/RoomContext.ts`: `RoomProvider` owns the Y.Doc/connection lifecycle and
 provides the context, while `RoomContext.ts` owns `RoomContextValue` and
 `useRoom()`. UI consumers should import `useRoom` from `RoomContext`, not from
-the provider. `RoomContextValue.token` is the raw URL-fragment capability token
-used for Worker Bearer calls; the client only decodes it for local UX, and the
-Worker remains the verifier.
+the provider. `RoomContextValue.roomId` is the slug room id from the path.
 
 ## City resolution (hybrid)
 
@@ -232,69 +225,41 @@ single-day view and `useViewport.ts` are unchanged.
 
 ## Auth / room-creation model
 
-**Capability tokens, one signing key.** A share link is a signed **capability
-token** carried as the whole URL fragment: `#<token>`. The token is
-`<base64url(payload)>.<base64url(HMAC-SHA256(payload, TOKEN_SECRET))>` with
-payload `{ r: roomId, p: 'view'|'edit'|'owner', n?: name, slug?, v:1 }`. Perms
-nest: `view` ⊂ `edit` ⊂ `owner`. There is **one hidden secret**, `TOKEN_SECRET`
-(the Worker's HMAC key); humans hold links.
+**Cloudflare Access + slug rooms.** Production access is controlled by a
+Cloudflare Access app on `travel.vansach.me/*`, allowing only the approved Google
+accounts. A room URL is `/<slug>`, and the slug is the Liveblocks room id.
 
-- **Token codec is shared, verification is Worker-only.** `src/data/token.ts`
-  (browser/Worker-safe — only `TextEncoder`/`btoa`) encodes/decodes the payload
-  and exposes `parseToken`/`tokenFromLink` (**decode only, NO signature check** —
-  the client just shapes local rendering; no security rests on it),
-  `permAtLeast`, `liveblocksAccess`. `worker/src/token.ts` (Worker-only) holds
-  `signToken`/`verifyToken` via `crypto.subtle`. `verifyToken` returning a
-  non-null payload is the **only** thing a security decision may rest on. UI code
-  that calls token-gated Worker endpoints should read `token` from `useRoom()` and
-  send `Authorization: Bearer <token>`; the client only extracts/decodes it.
-- `POST /api/auth` takes `{ token }`, **verifies** it, requires the room to
-  already exist (403 if not; 401 on an invalid/absent token), and mints a
-  Liveblocks token **scoped to the token's perms** — `view`→`room:read`,
-  `edit`/`owner`→`room:write` (so view-only is enforced by Liveblocks, not just
-  hidden) — forwarding the optional `name` as `userInfo`. Anyone with the link
-  joins at its perm level, no login.
-- `POST /api/rooms` creates a room and is gated by a valid **`owner`** token
-  (`Authorization: Bearer`); it returns `{ id, token }` — a fresh **owner** link
-  for the new room. This is the _only_ way rooms are created, and it chains
-  (create-from-in-a-room). Genesis (room #0) is minted once locally with
-  `scripts/mint-token.ts` (see below). `view`/`edit`/absent/invalid → 401.
-- The agent HTTP API `GET`/`POST /api/trip/:room` is gated by a **Bearer
-  capability token** whose `r` must match `:room`: `GET` needs `view`+, `POST`
-  needs `edit`+. `GET /api/schema` (JSON Schema derived from `tripDocumentSchema`)
-  is **public** — the schema is the API's shape, not a secret.
+- `worker/src/access.ts` validates `Cf-Access-Jwt-Assertion` with `jose` against
+  `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`. Tests/local dev use explicit
+  `DEV_AUTH_EMAIL`; never set it in production.
+- `POST /api/auth` takes `{ room }`, requires a valid slug and an existing room,
+  then mints a Liveblocks `room:write` token for the Access email.
+- `POST /api/rooms` creates a new slug room and returns `{ id }`.
+- The agent HTTP API `GET`/`POST /api/trip/:room` and version endpoints are
+  behind the same Access gate. `GET /api/schema` remains public.
 - The **MCP endpoint** (`POST /mcp`, `worker/src/mcp.ts`) exposes the same
   read/write surface to an MCP client (e.g. Perplexity Pro) as three tools —
-  `get_schema`, `read_board(link)`, `write_board(link, trip)` — over a
+  `get_schema`, `read_board(slug)`, `write_board(slug, trip)` — over a
   hand-rolled JSON-RPC 2.0 handshake (no `@modelcontextprotocol/sdk`; its
   Streamable-HTTP _server_ transport targets Node http, not the Workers Fetch
-  runtime). **No endpoint key**: `initialize`/`tools/list` are open (discovery is
-  harmless), and each acting tool authorizes itself from the **token in the pasted
-  link** — `read_board` needs `view`+, `write_board` needs `edit`+. The tools take
-  the share link _as a string argument_ (never sent otherwise), verify it with
-  `tokenFromLink` + `verifyToken`, reuse `loadRoomDoc`/`exportTrip`/`applyTrip`,
-  and share the write path (`applyTripToRoom` in `trip.ts`) with the owner `POST`.
+  runtime). Cloudflare Access, with Managed OAuth for capable MCP clients, gates
+  the endpoint. The tools reuse `loadRoomDoc`/`exportTrip`/`applyTrip` and share
+  the write path (`applyTripToRoom` in `trip.ts`).
 - **Snapshot history & restore** (`worker/src/snapshots.ts`, Cloudflare **KV**
   binding `SNAPSHOTS`): every Worker-mediated write (owner `POST /api/trip` and MCP
   `write_board`, both via `applyTripToRoom`) records the room's current trip JSON
   _before_ mutating, keyed by room + timestamp, **keep-all**. Snapshotting is guarded
   on the KV binding being present, so handlers still work unbound. Two
-  **token-gated** endpoints expose the log: `GET /api/versions/:room` (list
+  Access-gated endpoints expose the log: `GET /api/versions/:room` (list
   `{id, timestamp}`) and `GET /api/versions/:room/:id` (that snapshot's JSON).
-  Both require a Bearer capability token with `view`+ permission whose `r` matches
-  the room. These endpoints are read-only: a `view` link can inspect history, but
-  persisting a restore back to the shared board is a write through the normal sync
-  or API path and requires `edit`+. The Trip-settings panel lists recent versions
+  These endpoints are read-only; persisting a restore back to the shared board is
+  a write through the normal sync or API path. The Trip-settings panel lists recent versions
   and restores one by feeding its JSON through the same paste-apply path (a
   restore is itself snapshotted on the next write). `UndoManager` is the
   session-local undo; this KV log is the durable history.
-- Only `LIVEBLOCKS_SECRET_KEY` and `TOKEN_SECRET` live on the Worker (the old
-  `OWNER_SECRET`/`MCP_API_KEY` are gone — collapsed into `TOKEN_SECRET`). Rotating
-  `TOKEN_SECRET` invalidates every token-verified capability: sync join via
-  `/api/auth`, room creation, the trip HTTP + MCP API, and version-history access.
-  This is the revocation lever for all link-held access. The client's only
-  configured secret-adjacent value is `VITE_WORKER_URL`, a public URL baked into
-  the bundle.
+- Only `LIVEBLOCKS_SECRET_KEY` is a Worker secret. Access config is
+  `ACCESS_TEAM_DOMAIN` + `ACCESS_AUD`; `VITE_WORKER_URL` is only a public client
+  URL and is unset in same-origin production.
 
 ## Testing conventions
 

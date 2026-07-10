@@ -45,12 +45,10 @@ show accommodation as horizontal bars spanning the nights they cover.
 
 Edits persist instantly to local storage (IndexedDB) and sync in the background
 via Liveblocks + Yjs (CRDT), so two people can co-edit the same board in real
-time. Access is via a **capability link** — a signed token in the URL hash that
-grants `view`, `edit`, or `owner` on one room — with no login; a small Cloudflare
-Worker holds the single signing key, verifies links, and mints matching Liveblocks
-tokens. The same Worker exposes a structured HTTP API so an **AI agent can read the
-whole trip and write it back** — you discuss the plan with the agent and it
-visualizes it directly in the room.
+time. Access is via **Cloudflare Access** on `travel.vansach.me/*`: only the
+allow-listed Google accounts can open the site, and rooms use short slug URLs
+such as `/italy-2027`. The Worker validates Access identity, mints Liveblocks
+tokens, and exposes the agent HTTP + MCP API.
 
 ## Architecture
 
@@ -60,35 +58,25 @@ Two independent pieces deployed on Cloudflare:
    **Cloudflare Pages**. Local-first: it renders and edits on IndexedDB alone, so
    it is fully usable offline with no backend.
 2. **The Worker** (`worker/`) — mints Liveblocks tokens, gates room creation, and
-   exposes the agent HTTP + MCP API. It holds the only copies of
-   `LIVEBLOCKS_SECRET_KEY` and `TOKEN_SECRET` (the capability-link signing key);
-   neither ever reaches the browser.
+   exposes the agent HTTP + MCP API. It holds `LIVEBLOCKS_SECRET_KEY` and validates
+   Cloudflare Access JWTs; neither reaches the browser.
 
 ```
-Browser (Pages)  ──auth / rooms / trip──▶  Worker  ──REST + secret key──▶  Liveblocks
+Browser (Access + Pages)  ──auth / rooms / trip──▶  Worker  ──REST + secret key──▶  Liveblocks
         │                                                                       ▲
-        └──────────────── Yjs sync (token-scoped, via Liveblocks) ─────────────┘
+        └──────────────── Yjs sync (room-scoped, via Liveblocks) ──────────────┘
 ```
 
 The browser only ever talks to the Worker (for auth, room creation, and the
-agent API). Liveblocks talks to the Worker too, via the secret key.
+agent API). Liveblocks talks to the Worker via the secret key.
 
-### The capability link (signed token)
+### Slug rooms + Cloudflare Access
 
-A share link is a **signed capability token** carried as the whole URL fragment —
-`https://<app>/#<token>`. The token is `base64url(payload).base64url(HMAC-SHA256)`,
-its payload `{ r: roomId, p: 'view'|'edit'|'owner', n?: name, v:1 }`, signed with
-the Worker's `TOKEN_SECRET`. Perms nest (`view` ⊂ `edit` ⊂ `owner`):
-
-- **Anyone with a link joins at its perm level, no login.** The client posts the
-  token to the Worker's `/api/auth`, which verifies it and mints a room-scoped
-  Liveblocks token _only if the room already exists_ — scoped `room:read` for
-  `view`, `room:write` for `edit`/`owner`, so view-only is enforced by Liveblocks.
-- **Creating a new room requires an `owner` token** (`POST /api/rooms`,
-  `Authorization: Bearer <token>`); it returns a fresh **owner** link for the new
-  room, so ownership chains (create-from-in-a-room). The very first (genesis) link
-  is minted locally with `scripts/mint-token.ts`. The client only _decodes_ a token
-  (never verifies) to shape rendering — no security rests on the client.
+A room URL is `https://travel.vansach.me/<slug>`, where the slug is lowercase
+letters, digits, and hyphens. Cloudflare Access authenticates the request first;
+the Worker validates the Access JWT and mints a Liveblocks `room:write` token for
+that slug room if it exists. `POST /api/rooms` creates a new slug room for any
+Access-authorized user.
 
 ### Shared data modules
 
@@ -137,7 +125,9 @@ cp .env.example .env
 | ----------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `VITE_WORKER_URL`       | client (`.env`)       | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret.                                                            |
 | `LIVEBLOCKS_SECRET_KEY` | Worker secret         | Liveblocks project secret key (`sk_...`). Never shipped to the client.                                                                                                                                                       |
-| `TOKEN_SECRET`          | Worker secret         | HMAC key that signs/verifies every capability link — the sole hidden secret. Any long random string; rotating it invalidates all token-verified access: sync join, room creation, trip API + MCP, and version-history reads. |
+| `ACCESS_TEAM_DOMAIN`    | Worker var            | Cloudflare Access issuer, e.g. `https://<team>.cloudflareaccess.com`.                                                                                                                                                        |
+| `ACCESS_AUD`            | Worker var            | Cloudflare Access application audience tag for `travel.vansach.me/*`.                                                                                                                                                        |
+| `DEV_AUTH_EMAIL`        | Worker local var      | Local/test bypass identity for `wrangler dev`; never set in production.                                                                                                                                                       |
 | `ALLOWED_ORIGIN`        | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset.                                                                                                                                         |
 
 For local Worker dev, copy `worker/.dev.vars.example` to `worker/.dev.vars`
@@ -177,8 +167,7 @@ npm run test:e2e  # end-to-end
 ## Deployment
 
 See [`docs/deployment.md`](./docs/deployment.md) for the full Cloudflare Pages +
-Worker deploy flow (secrets, CORS, Pages build config, minting the genesis owner
-link, and sharing capability links).
+Worker deploy flow (Cloudflare Access, Worker routes, CORS, and Pages config).
 
 ## Agent API
 
@@ -186,36 +175,26 @@ The trip serializes to a single JSON document — the format the agent API reads
 and writes. The zod schema in `src/data/tripSchema.ts` is the single source of
 truth, and `GET /api/schema` publishes the matching JSON Schema (public — no
 token). See [`docs/trip-schema.md`](./docs/trip-schema.md) for the schema and the
-agent API (`GET`/`POST /api/trip/:room`, `GET /api/schema`, capability token,
-example payloads).
+agent API (`GET`/`POST /api/trip/:room`, `GET /api/schema`, Access auth, example
+payloads).
 
 An AI assistant reads and writes a board through the **MCP connector**. The HTTP
 API underneath it is the programmatic/scripting path.
 
 - **MCP connector** (`POST /mcp`) — the way an AI drives a board, for an MCP
-  client such as **Perplexity Pro**. Add the connector with just the Worker's
-  `/mcp` URL (no separate key), then paste a board's share link into the chat. It
-  exposes three tools: `get_schema`, `read_board(link)`, and
-  `write_board(link, trip)` — the link _is_ the credential (its `#` fragment is
-  the token), passed as a string, and each tool authorizes itself from it
-  (`read_board` needs a `view`+ link, `write_board` an `edit`+ link).
+  client such as **Perplexity Pro**. Connect to `/mcp` through Cloudflare Access
+  Managed OAuth. It exposes three tools: `get_schema`, `read_board(slug)`, and
+  `write_board(slug, trip)`.
   `write_board` snapshots the current board before replacing it, so any AI edit is
   revertible.
-- **HTTP API** — `GET`/`POST /api/trip/:room`, gated by a capability token
-  presented as `Authorization: Bearer <token>` (the token from the board's link):
-  `GET` needs `view`+, `POST` needs `edit`+, and the token's room must match the
-  path. The scripting path; see `docs/trip-schema.md`.
+- **HTTP API** — `GET`/`POST /api/trip/:room`, gated by Cloudflare Access. The
+  scripting path; see `docs/trip-schema.md`.
 
 **Version history & restore.** Every Worker-mediated write (`POST /api/trip` and MCP
 `write_board`) records the room's prior trip JSON to Cloudflare **KV** first
 (keep-all, keyed by room + timestamp). The Trip-settings "Recent versions" list
 uses `GET /api/versions/:room` and `GET /api/versions/:room/:id` to list and
-fetch snapshots; both read-only endpoints require `Authorization: Bearer <token>`
-with a `view`+ capability token whose room matches the path. Writing a fetched
-snapshot back to the shared board still requires `edit`+ permission through the
-normal sync/API write path. Rotating `TOKEN_SECRET` revokes history access along
-with sync, room creation, and the trip APIs.
+fetch snapshots; both endpoints are behind Cloudflare Access. Writing a fetched
+snapshot back to the shared board goes through the normal sync/API write path.
 For live hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within
-the session; agent writes and restores are kept off that keystroke stack. Provision
-the `SNAPSHOTS` KV namespace and set `TOKEN_SECRET` per the notes in
-`worker/wrangler.toml` and `worker/.dev.vars.example`.
+the session; agent writes and restores are kept off that keystroke stack.

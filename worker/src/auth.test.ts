@@ -1,12 +1,11 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { handleAuth } from './auth'
-import { signToken } from './token'
+import type { AccessIdentity } from './access'
 import type { Env, LiveblocksApi } from './liveblocks'
-import type { TokenPayload } from '../../src/data/token'
 
-const SECRET = 'test-signing-secret'
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', DEV_AUTH_EMAIL: 'me@example.com' }
+const identity: AccessIdentity = { email: 'me@example.com' }
 
 interface MintCall {
   roomId: string
@@ -16,30 +15,23 @@ interface MintCall {
 
 function makeApi(overrides: Partial<LiveblocksApi> = {}): { api: LiveblocksApi; mints: MintCall[] } {
   const mints: MintCall[] = []
-  const api: LiveblocksApi = {
-    roomExists: async () => true,
-    createRoom: async (id) => ({ id }),
-    mintAccessToken: async (roomId, userId, opts) => {
-      mints.push({ roomId, userId, opts })
-      return `tok-for-${roomId}`
+  return {
+    mints,
+    api: {
+      roomExists: async () => true,
+      createRoom: async (id) => ({ id }),
+      mintAccessToken: async (roomId, userId, opts) => {
+        mints.push({ roomId, userId, opts })
+        return `tok-for-${roomId}`
+      },
+      getYUpdate: async () => new Uint8Array(),
+      sendYUpdate: async () => {},
+      ...overrides,
     },
-    getYUpdate: async () => new Uint8Array(),
-    sendYUpdate: async () => {},
-    ...overrides,
   }
-  return { api, mints }
 }
 
-async function authRequest(payload: TokenPayload): Promise<Request> {
-  const token = await signToken(payload, SECRET)
-  return new Request('https://worker.test/api/auth', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ token }),
-  })
-}
-
-function rawRequest(body: unknown): Request {
+function authRequest(body: unknown): Request {
   return new Request('https://worker.test/api/auth', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -48,69 +40,38 @@ function rawRequest(body: unknown): Request {
 }
 
 describe('handleAuth', () => {
-  it('mints a room:read scoped token for a view token', async () => {
+  it('mints a room:write Liveblocks token for an existing slug room', async () => {
     const { api, mints } = makeApi()
-    const res = await handleAuth(await authRequest({ r: 'paris-2026', p: 'view', v: 1 }), env, api)
+    const res = await handleAuth(authRequest({ room: 'paris-2026' }), env, api, identity)
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ token: 'tok-for-paris-2026' })
-    expect(mints).toHaveLength(1)
-    expect(mints[0].roomId).toBe('paris-2026')
-    expect(mints[0].userId).toBe('guest-paris-2026')
-    expect(mints[0].opts.access).toBe('room:read')
+    expect(mints).toEqual([
+      {
+        roomId: 'paris-2026',
+        userId: 'me@example.com',
+        opts: { access: 'room:write', name: 'me@example.com' },
+      },
+    ])
   })
 
-  it('mints a room:write scoped token for an edit token', async () => {
+  it('rejects invalid room slugs', async () => {
     const { api, mints } = makeApi()
-    const res = await handleAuth(await authRequest({ r: 'r1', p: 'edit', v: 1 }), env, api)
-    expect(res.status).toBe(200)
-    expect(mints[0].opts.access).toBe('room:write')
-  })
-
-  it('mints a room:write scoped token for an owner token', async () => {
-    const { api, mints } = makeApi()
-    const res = await handleAuth(await authRequest({ r: 'r1', p: 'owner', v: 1 }), env, api)
-    expect(res.status).toBe(200)
-    expect(mints[0].opts.access).toBe('room:write')
-  })
-
-  it('forwards the token name into the mint call (for presence)', async () => {
-    const { api, mints } = makeApi()
-    await handleAuth(await authRequest({ r: 'r1', p: 'edit', n: 'Alex', v: 1 }), env, api)
-    expect(mints[0].opts.name).toBe('Alex')
-  })
-
-  it('rejects an invalid (unsigned/tampered) token with 401', async () => {
-    const { api, mints } = makeApi()
-    const res = await handleAuth(rawRequest({ token: 'garbage.notasignature' }), env, api)
-    expect(res.status).toBe(401)
+    const res = await handleAuth(authRequest({ room: 'Paris_2026' }), env, api, identity)
+    expect(res.status).toBe(400)
     expect(mints).toHaveLength(0)
   })
 
-  it('rejects a token signed with the wrong key with 401', async () => {
-    const { api, mints } = makeApi()
-    const token = await signToken({ r: 'r1', p: 'edit', v: 1 }, 'other-secret')
-    const res = await handleAuth(rawRequest({ token }), env, api)
-    expect(res.status).toBe(401)
-    expect(mints).toHaveLength(0)
-  })
-
-  it('rejects an absent token with 401', async () => {
-    const { api } = makeApi()
-    const res = await handleAuth(rawRequest({}), env, api)
-    expect(res.status).toBe(401)
-  })
-
-  it('denies a room that does not exist with 403', async () => {
+  it('denies a room that does not exist', async () => {
     const { api, mints } = makeApi({ roomExists: async () => false })
-    const res = await handleAuth(await authRequest({ r: 'ghost', p: 'owner', v: 1 }), env, api)
+    const res = await handleAuth(authRequest({ room: 'ghost' }), env, api, identity)
     expect(res.status).toBe(403)
     expect(mints).toHaveLength(0)
   })
 
-  it('rejects a malformed JSON body with 400', async () => {
+  it('rejects malformed JSON', async () => {
     const { api } = makeApi()
-    const res = await handleAuth(rawRequest('not json'), env, api)
+    const res = await handleAuth(authRequest('not json'), env, api, identity)
     expect(res.status).toBe(400)
   })
 })

@@ -6,40 +6,32 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as Y from 'yjs'
 import { installDevBridge } from './devBridge'
 import { connectRoom, type SyncStatus } from './provider'
-import { parseToken, tokenFromLink } from './token'
 import { RoomContext, type RoomContextValue } from './RoomContext'
+import { slugFromPath } from './slug'
 
 export interface RoomProviderProps {
   /** Worker base URL; defaults to `import.meta.env.VITE_WORKER_URL`. */
   workerUrl?: string
-  /**
-   * The raw capability token (URL fragment). When omitted, it is read from
-   * `location.hash`. Pass `null` explicitly for a local-only doc with no room.
-   * Room id, perms and name are decoded from it (NO signature check — the client
-   * only shapes local rendering; the Worker verifies on `/api/auth`).
-   */
-  token?: string | null
-  /** Force-enable/disable background sync (defaults to auto from room + url). */
+  /** Room slug. When omitted, it is read from `location.pathname`. */
+  roomId?: string | null
+  /** Force-enable/disable background sync (defaults to auto from room slug). */
   enableSync?: boolean
   children: ReactNode
 }
 
-function currentHash(): string {
-  return typeof location !== 'undefined' ? location.hash : ''
+function currentRoomId(): string | null {
+  return typeof location !== 'undefined' ? slugFromPath(location.pathname) : null
 }
 
 export function RoomProvider({
   workerUrl,
-  token: tokenProp,
+  roomId: roomIdProp,
   enableSync,
   children,
 }: RoomProviderProps) {
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ''
-  const token = tokenProp === null ? null : tokenFromLink(tokenProp ?? currentHash()) || null
-  const payload = token ? parseToken(token) : null
-  const roomId = payload?.r ?? null
-  const perm = payload?.p ?? null
-  const name = payload?.n ?? null
+  const roomId = roomIdProp === undefined ? currentRoomId() : roomIdProp
+  const autoSync = import.meta.env.MODE !== 'test' && Boolean(roomId)
 
   // The Y.Doc is cheap and owns no external resources, so it can live in useMemo
   // and be available synchronously for the first render. The *connection*
@@ -58,9 +50,8 @@ export function RoomProvider({
   useEffect(() => {
     const connection = connectRoom({
       roomId: roomId ?? 'local',
-      token,
       workerUrl: workerBase,
-      enableSync: enableSync ?? Boolean(roomId && workerBase),
+      enableSync: enableSync ?? autoSync,
       doc,
     })
     installDevBridge(doc)
@@ -70,11 +61,11 @@ export function RoomProvider({
       unsubscribe()
       connection.destroy()
     }
-  }, [doc, roomId, token, workerBase, enableSync])
+  }, [doc, roomId, workerBase, enableSync, autoSync])
 
   const value = useMemo<RoomContextValue>(
-    () => ({ doc, token, roomId, perm, name, status, workerUrl: workerBase }),
-    [doc, token, roomId, perm, name, status, workerBase],
+    () => ({ doc, roomId, status, workerUrl: workerBase }),
+    [doc, roomId, status, workerBase],
   )
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>

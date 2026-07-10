@@ -1,21 +1,10 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import { encodePayload, type Perm } from '../src/data/token'
 
-/**
- * Build a `#<token>` link fragment for e2e. The signature segment is a dummy:
- * offline e2e never hits `/api/auth`, and the client only decodes the payload to
- * derive room + perms. Keeping the two-segment shape mirrors production links
- * and catches client code that would accidentally drop the signature.
- */
-export function tokenHash(roomId: string, perm: Perm = 'edit'): string {
-  return `#${encodePayload({ r: roomId, p: perm, v: 1 })}.dummySig`
-}
-
-/** The default e2e board link (edit perms on room "e2e"). */
-export const E2E_LINK = `/${tokenHash('e2e')}`
+/** The default e2e board link (room "e2e"). */
+export const E2E_LINK = '/e2e'
 
 /** A distinct board used by the version-restore spec. */
-export const RESTORE_LINK = `/${tokenHash('restore-test')}`
+export const RESTORE_LINK = '/restore-test'
 
 /**
  * Navigate an open calendar Popover to `iso`'s month (stepping ‹/› by the month

@@ -1,134 +1,63 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { handleCreateRoom } from './rooms'
-import { signToken, verifyToken } from './token'
 import type { Env, LiveblocksApi } from './liveblocks'
-import type { Perm, TokenPayload } from '../../src/data/token'
 
-const SECRET = 'test-token-secret'
-const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', TOKEN_SECRET: SECRET }
+const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', DEV_AUTH_EMAIL: 'me@example.com' }
 
-function makeApi(overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
+function makeApi(overrides: Partial<LiveblocksApi> = {}): { api: LiveblocksApi; created: string[] } {
+  const created: string[] = []
   return {
-    roomExists: async () => false,
-    createRoom: async (id) => ({ id }),
-    mintAccessToken: async () => 'token-123',
-    getYUpdate: async () => new Uint8Array(),
-    sendYUpdate: async () => {},
-    ...overrides,
+    created,
+    api: {
+      roomExists: async () => false,
+      createRoom: async (id) => {
+        created.push(id)
+        return { id }
+      },
+      mintAccessToken: async () => 'token-123',
+      getYUpdate: async () => new Uint8Array(),
+      sendYUpdate: async () => {},
+      ...overrides,
+    },
   }
 }
 
-async function roomRequest(body: unknown, token?: string): Promise<Request> {
-  const headers: Record<string, string> = { 'content-type': 'application/json' }
-  if (token !== undefined) headers['authorization'] = `Bearer ${token}`
+function roomRequest(body: unknown): Request {
   return new Request('https://worker.test/api/rooms', {
     method: 'POST',
-    headers,
-    body: JSON.stringify(body),
+    headers: { 'content-type': 'application/json' },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
   })
-}
-
-function ownerToken(payload: Partial<TokenPayload> = {}): Promise<string> {
-  return signToken({ r: 'genesis', p: 'owner', v: 1, ...payload }, SECRET)
 }
 
 describe('handleCreateRoom', () => {
-  it('returns 401 when no token is presented', async () => {
-    let created = false
-    const api = makeApi({
-      createRoom: async (id) => {
-        created = true
-        return { id }
-      },
-    })
-
-    const res = await handleCreateRoom(await roomRequest({ room: 'new-room' }), env, api)
-
-    expect(res.status).toBe(401)
-    expect(created).toBe(false)
-  })
-
-  it('returns 401 for an invalid/tampered token', async () => {
-    const res = await handleCreateRoom(await roomRequest({ room: 'new-room' }, 'garbage.sig'), env, makeApi())
-    expect(res.status).toBe(401)
-  })
-
-  it('returns 401 for a token signed with the wrong key', async () => {
-    const token = await signToken({ r: 'genesis', p: 'owner', v: 1 }, 'other-secret')
-    const res = await handleCreateRoom(await roomRequest({ room: 'new-room' }, token), env, makeApi())
-    expect(res.status).toBe(401)
-  })
-
-  it.each(['view', 'edit'] as Perm[])('returns 401 for a non-owner (%s) token', async (perm) => {
-    let created = false
-    const api = makeApi({
-      createRoom: async (id) => {
-        created = true
-        return { id }
-      },
-    })
-    const token = await signToken({ r: 'r1', p: perm, v: 1 }, SECRET)
-    const res = await handleCreateRoom(await roomRequest({ room: 'new-room' }, token), env, api)
-
-    expect(res.status).toBe(401)
-    expect(created).toBe(false)
-  })
-
-  it('creates the room and returns id + a fresh owner token for an owner token', async () => {
-    let createdId: string | undefined
-    const api = makeApi({
-      createRoom: async (id) => {
-        createdId = id
-        return { id }
-      },
-    })
-
-    const res = await handleCreateRoom(await roomRequest({ room: 'rome-2027' }, await ownerToken()), env, api)
+  it('creates a slug room and returns its id', async () => {
+    const { api, created } = makeApi()
+    const res = await handleCreateRoom(roomRequest({ room: 'rome-2027' }), env, api)
 
     expect(res.status).toBe(201)
-    const body = (await res.json()) as { id: string; token: string }
-    expect(body.id).toBe('rome-2027')
-    expect(createdId).toBe('rome-2027')
-
-    // The returned token must be a valid owner token for the new room.
-    const minted = await verifyToken(body.token, SECRET)
-    expect(minted).toMatchObject({ r: 'rome-2027', p: 'owner', v: 1 })
+    expect(await res.json()).toEqual({ id: 'rome-2027' })
+    expect(created).toEqual(['rome-2027'])
   })
 
-  it('returns 409 without creating when the requested room already exists', async () => {
-    let created = false
-    const api = makeApi({
-      roomExists: async () => true,
-      createRoom: async (id) => {
-        created = true
-        return { id }
-      },
-    })
+  it('rejects invalid slugs', async () => {
+    const { api, created } = makeApi()
+    const res = await handleCreateRoom(roomRequest({ room: 'Rome_2027' }), env, api)
+    expect(res.status).toBe(400)
+    expect(created).toEqual([])
+  })
 
-    const res = await handleCreateRoom(await roomRequest({ room: 'rome-2027' }, await ownerToken()), env, api)
-
+  it('rejects duplicate rooms', async () => {
+    const { api, created } = makeApi({ roomExists: async () => true })
+    const res = await handleCreateRoom(roomRequest({ room: 'rome-2027' }), env, api)
     expect(res.status).toBe(409)
-    expect(created).toBe(false)
+    expect(created).toEqual([])
   })
 
-  it('generates a room id when none is supplied', async () => {
-    let createdId: string | undefined
-    const api = makeApi({
-      createRoom: async (id) => {
-        createdId = id
-        return { id }
-      },
-    })
-
-    const res = await handleCreateRoom(await roomRequest({}, await ownerToken()), env, api)
-
-    expect(res.status).toBe(201)
-    const body = (await res.json()) as { id: string; token: string }
-    expect(typeof body.id).toBe('string')
-    expect(body.id.length).toBeGreaterThan(0)
-    expect(body.id).toBe(createdId)
-    const minted = await verifyToken(body.token, SECRET)
-    expect(minted).toMatchObject({ r: body.id, p: 'owner' })
+  it('rejects malformed JSON', async () => {
+    const { api } = makeApi()
+    const res = await handleCreateRoom(roomRequest('not json'), env, api)
+    expect(res.status).toBe(400)
   })
 })

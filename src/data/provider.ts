@@ -6,8 +6,7 @@
 //
 // The provider wiring degrades gracefully: with no IndexedDB (e.g. a test/SSR
 // runtime) it uses an in-memory doc, and with sync disabled it never touches the
-// network — so the app always loads and edits locally. Link parsing lives in
-// `token.ts` (`parseToken`/`tokenFromLink`), shared with the Worker's MCP tools.
+// network — so the app always loads and edits locally.
 
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
@@ -22,19 +21,13 @@ function trimSlash(url: string): string {
 
 export interface ConnectOptions {
   roomId: string
-  /**
-   * The raw capability token (URL fragment) POSTed to `/api/auth` — the sole
-   * credential. The Worker verifies it and derives the room + perms; the client
-   * never sends the room id separately.
-   */
-  token?: string | null
   /** Worker base URL used for the Liveblocks auth endpoint. */
   workerUrl: string
   /** Reuse an existing doc instead of creating one (handy for tests). */
   doc?: Y.Doc
   /**
-   * Enable background Liveblocks sync. Defaults to true when both a room id and
-   * a worker URL are present. Set false for a purely local doc.
+   * Enable background Liveblocks sync. Defaults to true when a room id is
+   * present. An empty worker URL uses same-origin `/api/auth`.
    */
   enableSync?: boolean
 }
@@ -80,8 +73,8 @@ export function connectRoom(opts: ConnectOptions): RoomConnection {
   }
 
   // 2) Background sync via the Worker-authenticated Liveblocks Yjs provider.
-  const wantSync = opts.enableSync ?? Boolean(opts.roomId && opts.workerUrl)
-  if (wantSync && opts.workerUrl) {
+  const wantSync = opts.enableSync ?? Boolean(opts.roomId)
+  if (wantSync) {
     setStatus('connecting')
     void setupLiveblocksSync(opts, doc, setStatus, (teardown) => {
       if (destroyed) teardown()
@@ -123,14 +116,13 @@ async function setupLiveblocksSync(
   ])
 
   const client = createClient({
-    // The capability token is the credential: POST it to the Worker, which
-    // verifies it, derives the room + perms, and mints a perm-scoped Liveblocks
-    // token only if the room already exists. The room id is never sent separately.
+    // Cloudflare Access authenticates the browser before this reaches the Worker.
+    // The Worker then mints a Liveblocks token scoped to this slug room.
     authEndpoint: async () => {
       const res = await fetch(`${base}/api/auth`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token: opts.token }),
+        body: JSON.stringify({ room: opts.roomId }),
       })
       if (!res.ok) throw new Error(`auth failed: ${res.status}`)
       return (await res.json()) as { token: string }

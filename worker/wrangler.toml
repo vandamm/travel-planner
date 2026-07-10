@@ -4,19 +4,15 @@ compatibility_date = "2026-06-25"
 
 # Secrets (NOT stored here — they are encrypted Worker secrets, set per environment):
 #   LIVEBLOCKS_SECRET_KEY  — Liveblocks project secret key (never shipped to the client)
-#   TOKEN_SECRET           — HMAC key that signs/verifies capability tokens (the sole
-#                            hidden secret; every share link is a token signed with it).
-#                            Rotate it to invalidate all link-held access: sync join,
-#                            room creation, trip HTTP + MCP API, and version-history
-#                            reads (/api/versions/:room).
 #
 # Set them locally for `wrangler dev` via worker/.dev.vars (gitignored), and for a
 # deployed Worker with:
 #   wrangler secret put LIVEBLOCKS_SECRET_KEY --config worker/wrangler.toml --env production
-#   wrangler secret put TOKEN_SECRET          --config worker/wrangler.toml --env production
-# Mint the genesis owner link once with:  npx tsx scripts/mint-token.ts <roomId> owner
 #
 # Plain var:
+#   ACCESS_TEAM_DOMAIN — Cloudflare Access issuer, e.g. https://<team>.cloudflareaccess.com
+#   ACCESS_AUD         — Access application audience tag for travel.vansach.me/*
+#   DEV_AUTH_EMAIL     — explicit local/test bypass identity; never set in production
 #   ALLOWED_ORIGIN — CORS allow-list origin. When unset the Worker reflects the
 #                    request Origin (fine for local dev). Pin it to your Pages URL
 #                    in production (set under [env.production.vars] below).
@@ -39,7 +35,7 @@ id = "1ac8c7b50e2443a3b48d37ff401bd07b"
 # Deploy with `npm run deploy:worker:prod` (= `wrangler deploy --env production`).
 # This publishes a separate Worker named `travel-planner-worker-production`.
 [env.production]
-workers_dev = true
+workers_dev = false
 
 # Bind the (separately created) production KV namespace for snapshot history.
 [[env.production.kv_namespaces]]
@@ -49,11 +45,14 @@ id = "bdadc38e2576411c9b91160631307d7d"
 [env.production.vars]
 # Lock CORS to the deployed SPA origin so only the Cloudflare Pages app can call
 # the Worker. Change this to your actual Pages URL (or custom domain).
-ALLOWED_ORIGIN = "https://travel-planner-86b.pages.dev"
+ALLOWED_ORIGIN = "https://travel.vansach.me"
+ACCESS_TEAM_DOMAIN = "https://<team>.cloudflareaccess.com"
+ACCESS_AUD = "<access-aud>"
 
-# To serve the Worker from your own domain instead of *.workers.dev, attach a
-# route (requires the zone to live on your Cloudflare account) and set
-# `workers_dev = false` above:
-# [[env.production.routes]]
-# pattern = "api.example.com/*"
-# zone_name = "example.com"
+[[env.production.routes]]
+pattern = "travel.vansach.me/api/*"
+zone_name = "vansach.me"
+
+[[env.production.routes]]
+pattern = "travel.vansach.me/mcp"
+zone_name = "vansach.me"
