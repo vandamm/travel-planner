@@ -85,7 +85,7 @@ function Header({
         type="button"
         onClick={onOpenShare}
         className="rounded-card border border-edge-300 bg-white px-3 py-1.5 font-sans text-sm font-medium text-ink-600 hover:bg-surface-chip"
-        title="Share trip"
+        title="Share board"
       >
         <span aria-hidden>↗</span>
       </button>
