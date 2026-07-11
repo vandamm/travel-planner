@@ -18,7 +18,7 @@ function Header({
   onOpenCities: () => void
   onOpenMenu: () => void
 }) {
-  const { doc } = useRoom()
+  const { doc, status } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
   const cityCount = listCities(doc).length
@@ -26,6 +26,12 @@ function Header({
   const wordmark = trip.title.trim() || 'Travel Planner'
   const days = trip.numDays
   const meta = `${days} ${days === 1 ? 'day' : 'days'} · ${cityCount} ${cityCount === 1 ? 'city' : 'cities'}`
+  const statusLabel = {
+    local: 'Local',
+    connecting: 'Connecting…',
+    synced: 'Synced',
+    error: 'Offline',
+  }[status]
 
   return (
     <header className="mx-auto flex w-full max-w-2xl items-center gap-3 px-6">
@@ -45,6 +51,14 @@ function Header({
         className="border-l border-edge pl-3 font-sans text-xs font-medium leading-snug text-ink-500"
       >
         {meta}
+        <span
+          data-testid="sync-status"
+          role="status"
+          aria-live="polite"
+          className="block text-[10px]"
+        >
+          {statusLabel}
+        </span>
       </p>
       {/* Desktop: inline Trip/Cities buttons. Mobile: they collapse into the ≡
           menu so the header isn't crowded on a phone. */}

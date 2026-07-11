@@ -25,10 +25,14 @@ async function clickCalendarDay(cal: Locator, iso: string) {
   await cal.locator(`[data-key="${iso}"]`).click()
 }
 
+function pageOf(scope: Page | Locator): Page {
+  return 'page' in scope ? scope.page() : scope
+}
+
 /** Pick a single date through the custom calendar pop-over (trip start etc.). */
 export async function pickDate(scope: Page | Locator, triggerName: string, iso: string) {
   await scope.getByRole('button', { name: triggerName }).click()
-  await clickCalendarDay(scope.getByRole('dialog', { name: triggerName }), iso)
+  await clickCalendarDay(pageOf(scope).getByRole('dialog', { name: triggerName }), iso)
 }
 
 /** Pick a first→last night range through the custom calendar pop-over. */
@@ -39,7 +43,7 @@ export async function pickRange(
   endIso: string,
 ) {
   await scope.getByRole('button', { name: triggerName }).click()
-  const cal = scope.getByRole('dialog', { name: triggerName })
+  const cal = pageOf(scope).getByRole('dialog', { name: triggerName })
   await clickCalendarDay(cal, startIso)
   await clickCalendarDay(cal, endIso)
 }
@@ -48,7 +52,7 @@ export async function pickRange(
 export async function pickTime(scope: Page | Locator, triggerName: string, hhmm: string) {
   const [hh, mm] = hhmm.split(':')
   await scope.getByRole('button', { name: triggerName }).click()
-  const wheel = scope.getByRole('dialog', { name: triggerName })
+  const wheel = pageOf(scope).getByRole('dialog', { name: triggerName })
   await wheel.getByRole('option', { name: `Hour ${hh}` }).click()
   await wheel.getByRole('option', { name: `Minute ${mm}` }).click()
   await wheel.getByRole('button', { name: `Set ${hhmm}` }).click()

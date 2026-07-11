@@ -250,7 +250,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
               </button>
               <button
                 type="submit"
-                className="rounded-card bg-ink px-5 py-2 text-sm font-semibold text-white hover:bg-ink-frame"
+                disabled={title.trim() === ''}
+                className="rounded-card bg-ink px-5 py-2 text-sm font-semibold text-white hover:bg-ink-frame disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Save card
               </button>

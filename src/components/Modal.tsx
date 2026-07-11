@@ -8,7 +8,8 @@
 // `lg` breakpoint equals `LAPTOP_BREAKPOINT`, so the sheet↔scrim switch is pure
 // CSS — no `useViewport` branch, no SSR/hydration mismatch.
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { pushEscapeHandler } from './escapeStack'
 
 export interface ModalProps {
@@ -21,19 +22,29 @@ export interface ModalProps {
 }
 
 export function Modal({ label, onClose, children, className = '' }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+
   // Escape close goes through the shared stack so only the top-most overlay
   // reacts (a picker Popover open over this modal wins Escape, not this modal).
   useEffect(() => pushEscapeHandler(onClose), [onClose])
 
-  return (
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    dialogRef.current?.focus()
+    return () => opener?.focus()
+  }, [])
+
+  return createPortal(
     <div
       className="fixed inset-0 z-10 flex bg-ink/40 lg:items-center lg:justify-center lg:p-4"
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={label}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={`h-full w-full max-h-full animate-sheet-in overflow-y-auto rounded-none bg-white p-6 shadow-xl motion-reduce:animate-none lg:h-auto lg:animate-none lg:rounded-frame lg:border lg:border-ink-frame ${className}`}
       >
@@ -54,6 +65,7 @@ export function Modal({ label, onClose, children, className = '' }: ModalProps) 
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

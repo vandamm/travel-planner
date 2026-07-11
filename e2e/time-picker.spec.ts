@@ -55,3 +55,23 @@ test('setting the trip day window through the wheel updates the field', async ({
   await pickTime(trip, 'Day start', '08:00')
   await expect(trip.getByRole('button', { name: 'Day start' })).toHaveText('08:00')
 })
+
+test.describe('mobile time picker', () => {
+  test.use({ viewport: { width: 456, height: 652 }, hasTouch: true, isMobile: true })
+
+  test('opens as a viewport-fixed sheet above the card editor', async ({ page }) => {
+    await page.goto('/mobile-picker-e2e')
+    await setupTrip(page, { title: 'Picker', startDate: '2027-05-01', numDays: 1 })
+
+    await page.getByRole('button', { name: /Add card/ }).click()
+    const editor = page.getByRole('dialog', { name: 'Card editor' })
+    await editor.getByLabel('Set a time').check()
+    await editor.getByRole('button', { name: 'Start time' }).click()
+
+    const picker = page.getByRole('dialog', { name: 'Start time' })
+    await expect.poll(async () => (await picker.boundingBox())?.y).toBeLessThanOrEqual(1)
+    const box = await picker.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.height).toBeGreaterThanOrEqual(651)
+  })
+})

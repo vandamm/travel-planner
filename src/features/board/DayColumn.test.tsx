@@ -74,6 +74,20 @@ describe('DayColumn', () => {
     expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00–21:00')
   })
 
+  it('marks every timed card involved in an overlap', () => {
+    const overlapping: Card[] = [
+      { id: 'a', dayKey: day.key, title: 'Tour', order: 0, startTime: '09:00', endTime: '11:00' },
+      { id: 'b', dayKey: day.key, title: 'Museum', order: 1, startTime: '10:30', endTime: '12:00' },
+      { id: 'c', dayKey: day.key, title: 'Lunch', order: 2, startTime: '12:00', endTime: '13:00' },
+    ]
+    render(<DayColumn day={day} cards={overlapping} direction="down" />)
+    const card = (title: string) =>
+      screen.getByText(title).closest('[data-testid="card"]') as HTMLElement
+    expect(within(card('Tour')).getByText('Overlap')).toBeInTheDocument()
+    expect(within(card('Museum')).getByText('Overlap')).toBeInTheDocument()
+    expect(within(card('Lunch')).queryByText('Overlap')).not.toBeInTheDocument()
+  })
+
   it('sizes the body to the day window even when empty', () => {
     // 06:00–21:00 = 15h × 44px/h = 660px, so columns stay aligned regardless of
     // how many cards each holds.

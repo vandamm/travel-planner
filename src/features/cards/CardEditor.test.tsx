@@ -111,6 +111,14 @@ describe('CardEditor — create', () => {
     expect(screen.queryAllByTestId('dump-row')).toHaveLength(0)
   })
 
+  it('disables Save until the title is non-blank', () => {
+    renderInRoom(<CreateHarness />)
+    const save = screen.getByRole('button', { name: 'Save card' })
+    expect(save).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: ' Museum ' } })
+    expect(save).toBeEnabled()
+  })
+
   it('captures note and an optional start/end time when timed', async () => {
     const user = userEvent.setup()
     renderInRoom(<CreateHarness />)

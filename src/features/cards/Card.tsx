@@ -19,6 +19,8 @@ const CATEGORY_CHIP: Record<CardCategory, string> = {
 
 export interface CardProps {
   card: CardType
+  /** True when this timed card collides with another activity in its day. */
+  conflict?: boolean
   /** Called with the card when the user clicks it to edit. */
   onEdit?: (card: CardType) => void
   /**
@@ -53,7 +55,7 @@ function isSafeHref(link: string): boolean {
   }
 }
 
-export function Card({ card, onEdit, dragHandleProps }: CardProps) {
+export function Card({ card, conflict = false, onEdit, dragHandleProps }: CardProps) {
   const category = cardCategory(card)
   return (
     <article
@@ -104,14 +106,24 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
         </p>
       )}
 
-      {category && (
-        <div>
-          <span
-            data-testid="card-category"
-            className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
-          >
-            {category}
-          </span>
+      {(category || conflict) && (
+        <div className="flex flex-wrap gap-1">
+          {category && (
+            <span
+              data-testid="card-category"
+              className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
+            >
+              {category}
+            </span>
+          )}
+          {conflict && (
+            <span
+              data-testid="card-conflict"
+              className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
+            >
+              Overlap
+            </span>
+          )}
         </div>
       )}
 
@@ -139,6 +151,7 @@ export function Card({ card, onEdit, dragHandleProps }: CardProps) {
 
 export interface SortableCardProps {
   card: CardType
+  conflict?: boolean
   onEdit?: (card: CardType) => void
 }
 
@@ -148,7 +161,7 @@ export interface SortableCardProps {
  * another day (see `dndHandlers.ts`). Must be rendered inside a `SortableContext`
  * (its day column) and the board's `DndContext`.
  */
-export function SortableCard({ card, onEdit }: SortableCardProps) {
+export function SortableCard({ card, conflict, onEdit }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
   })
@@ -161,7 +174,12 @@ export function SortableCard({ card, onEdit }: SortableCardProps) {
 
   return (
     <div ref={setNodeRef} style={style} data-testid="sortable-card">
-      <Card card={card} onEdit={onEdit} dragHandleProps={{ ...attributes, ...listeners }} />
+      <Card
+        card={card}
+        conflict={conflict}
+        onEdit={onEdit}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
     </div>
   )
 }

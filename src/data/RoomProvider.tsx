@@ -31,7 +31,8 @@ export function RoomProvider({
 }: RoomProviderProps) {
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ''
   const roomId = roomIdProp === undefined ? currentRoomId() : roomIdProp
-  const autoSync = import.meta.env.MODE !== 'test' && Boolean(roomId)
+  const autoSync = import.meta.env.MODE !== 'test' && Boolean(roomId && workerBase)
+  const hasIndexedDb = typeof globalThis.indexedDB !== 'undefined' && globalThis.indexedDB !== null
 
   // The Y.Doc is cheap and owns no external resources, so it can live in useMemo
   // and be available synchronously for the first render. The *connection*
@@ -45,6 +46,7 @@ export function RoomProvider({
   // behaviour where connectRoom minted the doc under these same deps.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const doc = useMemo(() => new Y.Doc(), [roomId, workerBase, enableSync])
+  const [loadedDoc, setLoadedDoc] = useState<Y.Doc | null>(hasIndexedDb ? null : doc)
   const [status, setStatus] = useState<SyncStatus>('local')
 
   useEffect(() => {
@@ -56,8 +58,13 @@ export function RoomProvider({
     })
     installDevBridge(doc)
     setStatus(connection.getStatus())
+    let active = true
+    void connection.whenLocalLoaded.then(() => {
+      if (active) setLoadedDoc(doc)
+    })
     const unsubscribe = connection.onStatus(setStatus)
     return () => {
+      active = false
       unsubscribe()
       connection.destroy()
     }
@@ -68,5 +75,18 @@ export function RoomProvider({
     [doc, roomId, status, workerBase],
   )
 
-  return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>
+  return (
+    <RoomContext.Provider value={value}>
+      {!hasIndexedDb || loadedDoc === doc ? (
+        children
+      ) : (
+        <main
+          role="status"
+          className="flex min-h-screen items-center justify-center bg-surface text-ink-500"
+        >
+          Loading trip…
+        </main>
+      )}
+    </RoomContext.Provider>
+  )
 }

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as provider from './provider'
 import { useRoom } from './RoomContext'
 import { RoomProvider } from './RoomProvider'
@@ -32,6 +32,8 @@ function RoomProbe() {
 }
 
 describe('RoomProvider', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
   it('provides a local-first doc and status to consumers', () => {
     render(
       <RoomProvider workerUrl="" roomId={null} enableSync={false}>
@@ -50,6 +52,45 @@ describe('RoomProvider', () => {
       </RoomProvider>,
     )
     expect(screen.getByTestId('room')).toHaveTextContent('rome-2027')
+  })
+
+  it('does not start background sync without a Worker URL', () => {
+    const spy = vi.spyOn(provider, 'connectRoom')
+    render(
+      <RoomProvider workerUrl="" roomId="rome-2027">
+        <RoomProbe />
+      </RoomProvider>,
+    )
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ enableSync: false }))
+    spy.mockRestore()
+  })
+
+  it('shows a loading state until IndexedDB has restored the local document', async () => {
+    vi.stubGlobal('indexedDB', {})
+    let resolveLoaded!: () => void
+    const whenLocalLoaded = new Promise<void>((resolve) => {
+      resolveLoaded = resolve
+    })
+    const doc = new (await import('yjs')).Doc()
+    const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
+      doc,
+      whenLocalLoaded,
+      getStatus: () => 'local',
+      onStatus: () => () => undefined,
+      destroy: () => undefined,
+    })
+
+    render(
+      <RoomProvider workerUrl="" roomId="rome-2027" enableSync={false}>
+        <span>Loaded board</span>
+      </RoomProvider>,
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('Loading trip')
+    expect(screen.queryByText('Loaded board')).not.toBeInTheDocument()
+
+    resolveLoaded()
+    expect(await screen.findByText('Loaded board')).toBeInTheDocument()
+    spy.mockRestore()
   })
 
   it('reads the room slug from the current path', () => {

@@ -29,6 +29,11 @@ describe('App (with a room slug path)', () => {
     expect(screen.getByTestId('app-meta')).toHaveTextContent('0 days · 0 cities')
   })
 
+  it('shows the current sync state', () => {
+    render(<App />)
+    expect(screen.getByTestId('sync-status')).toHaveTextContent('Local')
+  })
+
   it('does not render the on-page import/export controls', () => {
     render(<App />)
     expect(screen.queryByRole('button', { name: 'Export trip' })).not.toBeInTheDocument()

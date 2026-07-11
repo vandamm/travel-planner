@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Modal } from './Modal'
 
@@ -68,5 +69,30 @@ describe('Modal', () => {
 
     await user.keyboard('{Escape}')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('moves focus into the dialog and restores it to the opener', async () => {
+    const user = userEvent.setup()
+    function Harness() {
+      const [open, setOpen] = useState(false)
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open
+          </button>
+          {open && (
+            <Modal label="Test dialog" onClose={() => setOpen(false)}>
+              <p>Body</p>
+            </Modal>
+          )}
+        </>
+      )
+    }
+    render(<Harness />)
+    const opener = screen.getByRole('button', { name: 'Open' })
+    await user.click(opener)
+    expect(screen.getByRole('dialog')).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(opener).toHaveFocus()
   })
 })

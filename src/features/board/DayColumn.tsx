@@ -66,6 +66,26 @@ function cardGapPx(
   return gap
 }
 
+function overlappingCardIds(cards: CardType[]): Set<string> {
+  const timed = cards.filter((card) => card.startTime)
+  const conflicts = new Set<string>()
+  for (let i = 0; i < timed.length; i += 1) {
+    const a = timed[i]
+    const aStart = clockMinutes(a.startTime!)
+    const aEnd = a.endTime ? clockMinutes(a.endTime) : aStart + 60
+    for (let j = i + 1; j < timed.length; j += 1) {
+      const b = timed[j]
+      const bStart = clockMinutes(b.startTime!)
+      const bEnd = b.endTime ? clockMinutes(b.endTime) : bStart + 60
+      if (aStart < bEnd && bStart < aEnd) {
+        conflicts.add(a.id)
+        conflicts.add(b.id)
+      }
+    }
+  }
+  return conflicts
+}
+
 export function DayColumn({
   day,
   city,
@@ -80,6 +100,7 @@ export function DayColumn({
   onEditCard,
 }: DayColumnProps) {
   const ordered = orderCardsForDirection(cards, direction)
+  const conflicts = overlappingCardIds(cards)
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const cardCursor = { current: 0 }
   const weekday = format(parseISO(day.key), 'EEE')
@@ -210,7 +231,7 @@ export function DayColumn({
                   marginTop: cardGapPx(c, direction, dayStart, dayEnd, cardCursor),
                 }}
               >
-                <SortableCard card={c} onEdit={onEditCard} />
+                <SortableCard card={c} conflict={conflicts.has(c.id)} onEdit={onEditCard} />
               </li>
             ))}
           </ol>
