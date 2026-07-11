@@ -1,200 +1,177 @@
 # Travel Planner
 
-A laptop-first, mobile-friendly web app for two people to visually plan a
-multi-week trip on a board where **each column is a day**. Days are color-coded
-by city, host activity cards on a continuous, time-proportional timeline, and
-show accommodation as horizontal bars spanning the nights they cover.
-
-- Each day column is a time-scaled timeline over a configurable window (default
-  06:00–21:00, set per trip in the Trip modal opened from the header `[✎ Trip]`
-  button); timed cards are sized by their
-  duration so free time stays visible. A card's height can also be a preset
-  (small / half-day / whole-day) instead of its exact duration. A long
-  (multi-week) trip scrolls horizontally on desktop: a right-edge fade signals
-  more days off-screen, a **Jump to today** button scrolls today's column into
-  view, and a date-range stepper (`‹ dd.mm – dd.mm ›`) pages the scroll a screen
-  at a time.
-- Any card can be given a **category** (indoor / outdoor / transit), shown as a
-  colour chip (a legacy transport flag renders as the transit category). Weekend
-  columns mark the weekday label in vermilion rather than tinting the column.
-- Dragging a card shows an overlay that follows the cursor across days and
-  highlights the day it will land in. Dragging an **untimed** card toward the
-  evening of a day with timed cards gives it a start time inferred from its
-  drop position (snapped to 15 min). The narrow/mobile view shows as many day
-  columns as fit the viewport and pages by that count, with city-coloured pager
-  dots to jump between pages and a scroll hint when a day's timeline overflows;
-  editors open as full-screen sheets and the header controls collapse into a
-  `≡` menu (Trip / Cities / Add stay).
-- A day's city is resolved automatically (a covering stay, else none), but each
-  day header has a city control to **pin a city manually** ("Auto" clears it).
-  Cities are added, renamed, recolored, and removed in the **Cities** modal
-  (header `[◉ Cities]` button); each new city is auto-assigned a distinct color
-  from a built-in palette (preferring an unused one), still overridable in the
-  color picker.
-- The stays lane is always shown: each uncovered gap's first day carries an
-  **Add stay** button (and one sits at the right end of the lane). Two stays
-  that share only a changeover day meet mid-day on one row; genuine
-  double-bookings still stack on separate rows.
-- Dates and times **display** in European format (`dd.mm`, 24-hour). Stored
-  values stay ISO. Date and time entry uses the app's **own pickers** — a calendar
-  pop-over (single date for the trip start; a first→last night **range** for a
-  stay) and an hour/minute wheel — anchored below their field on desktop and
-  presented as full-screen sheets on mobile; there are no native `<input>`
-  widgets, so the European display is consistent everywhere (see
-  [`docs/trip-schema.md`](./docs/trip-schema.md) storage note).
-
-Edits persist instantly to local storage (IndexedDB) and sync in the background
-via Liveblocks + Yjs (CRDT), so two people can co-edit the same board in real
-time. Access is via **Cloudflare Access** on `travel.vansach.me/*`: only the
-allow-listed Google accounts can open the site, and rooms use short slug URLs
-such as `/italy-2027`. The Worker validates Access identity, mints Liveblocks
-tokens, and exposes the agent HTTP + MCP API.
+A local-first, collaborative day-board for planning a multi-week trip together. Two people edit the same board in real time: each column is a day, color-coded by city, hosting activity cards on a continuous time scale and accommodation bars spanning nights. Edits persist instantly to local IndexedDB and sync in the background via Liveblocks + Yjs (CRDT). Access is via a secret link (room id in the URL) with no login. An agent can read and write the whole trip over HTTP, visualizing AI-generated plans directly in the board.
 
 ## Architecture
 
-Two independent pieces deployed on Cloudflare:
+The app ships as two independent pieces on Cloudflare:
 
-1. **The SPA** — a static Vite + React + TypeScript build (`dist/`), served by
-   **Cloudflare Pages**. Local-first: it renders and edits on IndexedDB alone, so
-   it is fully usable offline with no backend.
-2. **The Worker** (`worker/`) — mints Liveblocks tokens, gates room creation, and
-   exposes the agent HTTP + MCP API. It holds `LIVEBLOCKS_SECRET_KEY` and validates
-   Cloudflare Access JWTs; neither reaches the browser.
+- **SPA** (Vite + React + TypeScript) — deployed to Cloudflare Pages. Renders and edits on local IndexedDB; syncs in the background via the Worker-authenticated Liveblocks Yjs provider.
+- **Worker** (single Cloudflare Worker) — mints Liveblocks access tokens, gates room creation, and exposes the agent HTTP API. Holds the only copies of `LIVEBLOCKS_SECRET_KEY` and `OWNER_SECRET`; neither ever reaches the browser.
+
+The browser talks only to the Worker (for auth, room creation, agent API). Liveblocks also talks to the Worker via the secret key. The room id lives in the URL hash (`#<roomId>`) — the "secret link" — so anyone with the link joins and edits with no login, while creating a *new* room requires the owner secret.
 
 ```
-Browser (Access + Pages)  ──auth / rooms / trip──▶  Worker  ──REST + secret key──▶  Liveblocks
-        │                                                                       ▲
-        └──────────────── Yjs sync (room-scoped, via Liveblocks) ──────────────┘
+Browser (Pages)  ──auth/rooms/trip──▶  Worker  ──REST + secret key──▶  Liveblocks
+        │                                                                    ▲
+        └────────────── Yjs sync (token-scoped, via Liveblocks) ───────────┘
 ```
 
-The browser only ever talks to the Worker (for auth, room creation, and the
-agent API). Liveblocks talks to the Worker via the secret key.
+## Stack
 
-### Slug rooms + Cloudflare Access
+- **Client**: Vite + React + TypeScript, Yjs (CRDT), `@liveblocks/client` + `@liveblocks/yjs`, `y-indexeddb` (local persistence), `@dnd-kit` (drag-and-drop), `zod` (schema validation), Tailwind CSS, `date-fns` (date math).
+- **Worker**: Cloudflare Workers, Liveblocks REST API with secret key, environment-agnostic shared `src/data/` modules (zod schema, Y.Doc shape, typed mutators, trip apply/export).
+- **Tests**: Vitest + React Testing Library + jsdom (unit/integration), Playwright (end-to-end).
 
-A room URL is `https://travel.vansach.me/<slug>`, where the slug is lowercase
-letters, digits, and hyphens. Cloudflare Access authenticates the request first;
-the Worker validates the Access JWT and mints a Liveblocks `room:write` token for
-that slug room if it exists. `POST /api/rooms` creates a new slug room for any
-Access-authorized user.
+## Setup
 
-### Shared data modules
+### Prerequisites
 
-The zod schema, the Y.Doc shape, the typed doc mutators, and the
-"trip JSON → doc" apply logic live in environment-agnostic modules under
-`src/data/` and are imported by **both** the client and the Worker, so the agent
-API and the UI never drift. See [`CLAUDE.md`](./CLAUDE.md) for the data-model
-conventions.
+- Node.js 18+, npm.
+- A Liveblocks account and project; copy the **secret key** (`sk_...`) from Dashboard → project → API keys.
+- Choose an **owner secret** — any long random string. It gates new-room creation and the agent API.
 
-## Tech stack
+### Development
 
-- **Client:** Vite + React + TypeScript, Tailwind CSS (the "ink & type" design
-  tokens — Lora/Manrope fonts, city hues, radii — live in `tailwind.config.js`;
-  fonts are self-hosted via `@fontsource` so the local-first app renders
-  offline), `@dnd-kit` (drag/drop), Yjs + `@liveblocks/client`/`@liveblocks/yjs`
-  (sync), `y-indexeddb` (local persistence), `zod` (schema), `date-fns` (date
-  math).
-- **Worker:** a single Cloudflare Worker using Liveblocks REST + the secret key,
-  configured and deployed with Wrangler. `zod-to-json-schema` publishes the trip
-  JSON Schema at `GET /api/schema`.
-- **Tests:** Vitest + React Testing Library + jsdom for pure logic; Playwright
-  for end-to-end UI flows.
+1. **Install dependencies:**
+   ```sh
+   npm install
+   ```
 
-## Getting started
+2. **Create `.env` for the SPA** (client-side Worker URL for local dev):
+   ```sh
+   cp .env.example .env
+   # .env defaults to http://localhost:8787 (wrangler dev default)
+   ```
 
-Requires Node 24+ (current LTS) and npm.
+3. **Create `worker/.dev.vars`** (Worker secrets for local dev):
+   ```sh
+   cp worker/.dev.vars.example worker/.dev.vars
+   # Edit worker/.dev.vars and fill in:
+   #   LIVEBLOCKS_SECRET_KEY=sk_dev_... (from your Liveblocks dashboard)
+   #   OWNER_SECRET=<your-chosen-long-random-string>
+   ```
 
+4. **Start the local Worker:**
+   ```sh
+   npm run worker:dev    # wrangler dev on http://localhost:8787
+   ```
+
+5. **In a separate terminal, start the SPA dev server:**
+   ```sh
+   npm run dev           # vite on http://localhost:5173
+   ```
+
+6. **Open the app:**
+   - http://localhost:5173 opens a local-only doc (no sync).
+   - Create a room via the UI, which generates a secret link hash (`#<roomId>`).
+   - Share that link to co-edit in real time.
+
+### Scripts
+
+- `npm run dev` — start the SPA dev server.
+- `npm run build` — build the SPA (`dist/`) and typecheck.
+- `npm run preview` — preview the production SPA build.
+- `npm test` — run unit and integration tests (Vitest).
+- `npm run test:watch` — run tests in watch mode.
+- `npm run test:e2e` — run end-to-end tests (Playwright).
+- `npm run lint` — lint with ESLint.
+- `npm run format` — format with Prettier.
+- `npm run coverage` — run tests with coverage report.
+- `npm run worker:dev` — start the local Worker (`wrangler dev`).
+- `npm run deploy:worker` — deploy the default Worker (for testing).
+- `npm run deploy:worker:prod` — deploy the production Worker environment.
+
+## Room Creation and Secret Links
+
+The app has no login. Access is via a **secret link** — a URL containing a room id in the hash.
+
+### Create a new room
+
+From the UI: the app prompts you to create a room (owner-gated via the owner secret set in `worker/.dev.vars`). The browser calls `POST /api/rooms` with the owner secret in the `x-owner-secret` header; the Worker creates the room and returns its id.
+
+From the command line (once deployed):
 ```sh
-npm install
-npm run dev          # Vite dev server on http://localhost:5173
+curl -X POST https://<worker-url>/api/rooms \
+  -H "x-owner-secret: $OWNER_SECRET" \
+  -H "content-type: application/json" \
+  -d '{}'
+# → { "id": "<roomId>" }
 ```
 
-The app runs **local-first**: without a Worker URL configured it still loads and
-edits entirely on local IndexedDB (no sync). To enable background sync and room
-creation, run the Worker locally and point the client at it (below).
+### Join an existing room
 
-### Environment variables
-
-The only client variable is the Worker base URL. Copy `.env.example` to `.env`:
-
-```sh
-cp .env.example .env
-```
-
-| Variable                | Where                 | Notes                                                                                                                                                                                                                        |
-| ----------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_WORKER_URL`       | client (`.env`)       | Base URL of the Worker. Default `http://localhost:8787`. `VITE_`-prefixed, so it is baked into the bundle at build time — only ever a public URL, never a secret.                                                            |
-| `LIVEBLOCKS_SECRET_KEY` | Worker secret         | Liveblocks project secret key (`sk_...`). Never shipped to the client.                                                                                                                                                       |
-| `ACCESS_TEAM_DOMAIN`    | Worker var            | Cloudflare Access issuer, e.g. `https://<team>.cloudflareaccess.com`.                                                                                                                                                        |
-| `ACCESS_AUD`            | Worker var            | Cloudflare Access application audience tag for `travel.vansach.me/*`.                                                                                                                                                        |
-| `DEV_AUTH_EMAIL`        | Worker local var      | Local/test bypass identity for `wrangler dev`; never set in production.                                                                                                                                                       |
-| `ALLOWED_ORIGIN`        | Worker var (optional) | Pin CORS to your Pages origin in production; reflects the request Origin when unset.                                                                                                                                         |
-
-For local Worker dev, copy `worker/.dev.vars.example` to `worker/.dev.vars`
-(gitignored) and fill in real values.
-
-## Scripts
-
-| Script                       | Does                                                  |
-| ---------------------------- | ----------------------------------------------------- |
-| `npm run dev`                | Vite dev server                                       |
-| `npm run build`              | `tsc --noEmit && vite build` → `dist/`                |
-| `npm run preview`            | Preview the production build                          |
-| `npm test`                   | Vitest unit/integration suite (single run)            |
-| `npm run test:watch`         | Vitest in watch mode                                  |
-| `npm run test:e2e`           | Playwright end-to-end suite                           |
-| `npm run lint`               | ESLint                                                |
-| `npm run format`             | Prettier (write)                                      |
-| `npm run coverage`           | Vitest with coverage                                  |
-| `npm run worker:dev`         | `wrangler dev` for the Worker (http://localhost:8787) |
-| `npm run deploy:worker`      | Deploy the default/test Worker                        |
-| `npm run deploy:worker:prod` | Deploy the production Worker                          |
-
-## Testing
-
-- **Vitest** covers the pure, environment-agnostic logic in `src/data/`
-  (day generation, city resolution, card sort, schema validation, doc mutators,
-  trip-apply) plus a two-`Y.Doc` integration test that merges updates between
-  docs to verify CRDT sync — no mocked Liveblocks.
-- **Playwright** drives the real UI against the dev server. Because the app is
-  local-first, these flows run with no live backend.
-
-```sh
-npm test          # unit + integration
-npm run test:e2e  # end-to-end
-```
-
-## Deployment
-
-See [`docs/deployment.md`](./docs/deployment.md) for the full Cloudflare Pages +
-Worker deploy flow (Cloudflare Access, Worker routes, CORS, and Pages config).
+Share the secret link: `https://<app-url>/#<roomId>`. Anyone who clicks it joins that room and can co-edit instantly. No login, no signup.
 
 ## Agent API
 
-The trip serializes to a single JSON document — the format the agent API reads
-and writes. The zod schema in `src/data/tripSchema.ts` is the single source of
-truth, and `GET /api/schema` publishes the matching JSON Schema (public — no
-token). See [`docs/trip-schema.md`](./docs/trip-schema.md) for the schema and the
-agent API (`GET`/`POST /api/trip/:room`, `GET /api/schema`, Access auth, example
-payloads).
+Agents (or any automated system with the owner secret) can read and write the trip over plain JSON. Both endpoints are owner-gated and perform a **full replace** — the entire trip is cleared and rebuilt from the payload.
 
-An AI assistant reads and writes a board through the **MCP connector**. The HTTP
-API underneath it is the programmatic/scripting path.
+### Endpoints
 
-- **MCP connector** (`POST /mcp`) — the way an AI drives a board, for an MCP
-  client such as **Perplexity Pro**. Connect to `/mcp` through Cloudflare Access
-  Managed OAuth. It exposes three tools: `get_schema`, `read_board(slug)`, and
-  `write_board(slug, trip)`.
-  `write_board` snapshots the current board before replacing it, so any AI edit is
-  revertible.
-- **HTTP API** — `GET`/`POST /api/trip/:room`, gated by Cloudflare Access. The
-  scripting path; see `docs/trip-schema.md`.
+**`GET /api/trip/:roomId`** — read the room's current trip as JSON.
 
-**Version history & restore.** Every Worker-mediated write (`POST /api/trip` and MCP
-`write_board`) records the room's prior trip JSON to Cloudflare **KV** first
-(keep-all, keyed by room + timestamp). The Trip-settings "Recent versions" list
-uses `GET /api/versions/:room` and `GET /api/versions/:room/:id` to list and
-fetch snapshots; both endpoints are behind Cloudflare Access. Writing a fetched
-snapshot back to the shared board goes through the normal sync/API write path.
-For live hand-editing, Cmd/Ctrl+Z (and the ↶/↷ toolbar buttons) undo/redo within
-the session; agent writes and restores are kept off that keystroke stack.
+```sh
+curl https://<worker-url>/api/trip/<roomId> \
+  -H "x-owner-secret: $OWNER_SECRET"
+# → { "trip": {...}, "cities": [...], "accommodations": [...], "cards": [...], "dayOverrides": {...} }
+```
+
+**`POST /api/trip/:roomId`** — write a trip JSON into the room (full replace).
+
+```sh
+curl -X POST https://<worker-url>/api/trip/<roomId> \
+  -H "x-owner-secret: $OWNER_SECRET" \
+  -H "content-type: application/json" \
+  -d @trip.json
+# → { "trip": {...}, "cities": [...], "accommodations": [...], "cards": [...], "dayOverrides": {...} }
+```
+
+The request payload and response follow the schema documented in [`docs/trip-schema.md`](./docs/trip-schema.md). Validation errors are reported with readable, path-prefixed messages (e.g., `cards.0.dayKey: Expected a date as YYYY-MM-DD`). An invalid POST returns 400 and does not mutate the room.
+
+Connected clients (in the browser) see writes from the agent merge live into the board, thanks to the shared Yjs CRDT.
+
+For payload shape, defaults, field rules, and validation, see [`docs/trip-schema.md`](./docs/trip-schema.md).
+
+## Shared Code
+
+The client and the Worker share environment-agnostic modules in `src/data/` — zod schema, Y.Doc shape, typed mutators, trip apply/export — so they never drift:
+
+- `schema.ts` — plain-JS domain types (Trip, City, Day, Card, Accommodation).
+- `doc.ts` — Y.Doc shape + the only sanctioned mutators.
+- `tripSchema.ts` — zod schema, the single source of truth for import/export + agent API.
+- `applyTrip.ts` — validated trip JSON → doc mutations (full replace).
+- `exportTrip.ts` — doc → validated JSON.
+
+Import/export and the agent API both use the same apply/export path, so a trip a human imports and a trip an agent posts are held to identical rules.
+
+## Deployment
+
+See [`docs/deployment.md`](./docs/deployment.md) for the full deployment workflow (Worker secrets, SPA build config, env vars, Pages project setup, and first-room creation).
+
+Quick summary:
+1. Set Worker secrets (`LIVEBLOCKS_SECRET_KEY`, `OWNER_SECRET`) with `wrangler secret put`.
+2. Deploy the Worker: `npm run deploy:worker:prod`.
+3. Deploy the SPA to Cloudflare Pages with `VITE_WORKER_URL` env var pointing to the Worker URL.
+4. Create the first room via the API and share the secret link.
+
+## Testing
+
+- **Unit tests** (Vitest): pure logic in `src/data/` (schema validation, doc mutators, city resolution, day generation, trip apply/export).
+- **Integration tests** (Vitest): two-doc sync verification (CRDT merge).
+- **End-to-end tests** (Playwright): real browser UI flows (create room, add cards, drag, import/export, multi-user sync).
+
+Run them:
+```sh
+npm test              # unit + integration
+npm run test:e2e      # playwright
+npm run coverage      # unit + integration coverage report
+```
+
+## Data Model
+
+For conventions on the Y.Doc shape, shared mutators, per-user vs. synced state, and auth/room-creation model, see [`CLAUDE.md`](./CLAUDE.md).
+
+## License
+
+MIT.
