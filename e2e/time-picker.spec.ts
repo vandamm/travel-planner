@@ -59,7 +59,7 @@ test('setting the trip day window through the wheel updates the field', async ({
 test.describe('mobile time picker', () => {
   test.use({ viewport: { width: 456, height: 652 }, hasTouch: true, isMobile: true })
 
-  test('opens as a viewport-fixed sheet above the card editor', async ({ page }) => {
+  test('centers the first minute instead of pinning it to the top edge', async ({ page }) => {
     await page.goto('/mobile-picker-e2e')
     await setupTrip(page, { title: 'Picker', startDate: '2027-05-01', numDays: 1 })
 
@@ -69,9 +69,19 @@ test.describe('mobile time picker', () => {
     await editor.getByRole('button', { name: 'Start time' }).click()
 
     const picker = page.getByRole('dialog', { name: 'Start time' })
-    await expect.poll(async () => (await picker.boundingBox())?.y).toBeLessThanOrEqual(1)
-    const box = await picker.boundingBox()
-    expect(box).not.toBeNull()
-    expect(box!.height).toBeGreaterThanOrEqual(651)
+    const minutes = picker.getByRole('listbox', { name: 'Minute' })
+    const selected = minutes.getByRole('option', { name: 'Minute 00' })
+    await expect
+      .poll(async () => {
+        const [listBox, selectedBox] = await Promise.all([
+          minutes.boundingBox(),
+          selected.boundingBox(),
+        ])
+        if (!listBox || !selectedBox) return Number.POSITIVE_INFINITY
+        return Math.abs(
+          listBox.y + listBox.height / 2 - (selectedBox.y + selectedBox.height / 2),
+        )
+      })
+      .toBeLessThanOrEqual(1)
   })
 })

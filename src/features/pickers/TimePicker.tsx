@@ -126,6 +126,7 @@ function Column({
 
   return (
     <div role="listbox" aria-label={label} className="h-36 w-16 overflow-y-auto rounded-card border border-edge">
+      <div aria-hidden className="h-[55px]" />
       {values.map((v, i) => {
         const active = i === selected
         return (
@@ -145,6 +146,7 @@ function Column({
           </button>
         )
       })}
+      <div aria-hidden className="h-[55px]" />
     </div>
   )
 }

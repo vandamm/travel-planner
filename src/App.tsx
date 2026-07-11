@@ -8,15 +8,18 @@ import { useDocVersion } from './data/useDoc'
 import { Board } from './features/board/Board'
 import { CityModal } from './features/cities/CityModal'
 import { TripModal } from './features/trip/TripModal'
+import { ShareModal } from './features/share/ShareModal'
 
 function Header({
   onOpenTrip,
   onOpenCities,
   onOpenMenu,
+  onOpenShare,
 }: {
   onOpenTrip: () => void
   onOpenCities: () => void
   onOpenMenu: () => void
+  onOpenShare: () => void
 }) {
   const { doc, status } = useRoom()
   useDocVersion(doc)
@@ -80,9 +83,17 @@ function Header({
       </div>
       <button
         type="button"
+        onClick={onOpenShare}
+        className="rounded-card border border-edge-300 bg-white px-3 py-1.5 font-sans text-sm font-medium text-ink-600 hover:bg-surface-chip"
+        title="Share trip"
+      >
+        <span aria-hidden>↗</span>
+      </button>
+      <button
+        type="button"
         aria-label="Menu"
         onClick={onOpenMenu}
-        className="ml-auto flex h-9 w-9 items-center justify-center rounded-card border border-edge-300 bg-white text-xl leading-none text-ink-600 hover:bg-surface-chip lg:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-card border border-edge-300 bg-white text-xl leading-none text-ink-600 hover:bg-surface-chip lg:hidden"
       >
         <span aria-hidden>≡</span>
       </button>
@@ -129,6 +140,7 @@ function AppShell() {
   // A monotonic counter, not a boolean: repeated "Add stay" taps re-open the
   // Board's create editor even without an intervening close.
   const [addStayNonce, setAddStayNonce] = useState(0)
+  const [shareOpen, setShareOpen] = useState(false)
 
   return (
     <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink lg:h-auto lg:min-h-screen lg:overflow-visible">
@@ -136,6 +148,7 @@ function AppShell() {
         onOpenTrip={() => setTripOpen(true)}
         onOpenCities={() => setCitiesOpen(true)}
         onOpenMenu={() => setMenuOpen(true)}
+        onOpenShare={() => setShareOpen(true)}
       />
       <Board addStayNonce={addStayNonce} />
       {menuOpen && (
@@ -157,6 +170,7 @@ function AppShell() {
       )}
       {tripOpen && <TripModal onClose={() => setTripOpen(false)} />}
       {citiesOpen && <CityModal onClose={() => setCitiesOpen(false)} />}
+      {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
     </main>
   )
 }

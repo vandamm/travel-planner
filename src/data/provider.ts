@@ -14,6 +14,12 @@ import { IndexeddbPersistence } from 'y-indexeddb'
 /** Sync lifecycle as the UI cares about it. */
 export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error'
 
+export interface Presence {
+  userId: string
+  name: string
+  color: string
+}
+
 /** Strip a trailing slash so we can safely append `/api/...`. */
 function trimSlash(url: string): string {
   return url.replace(/\/+$/, '')
@@ -39,6 +45,8 @@ export interface RoomConnection {
   getStatus(): SyncStatus
   /** Subscribe to status changes; returns an unsubscribe function. */
   onStatus(cb: (status: SyncStatus) => void): () => void
+  getPresences(): Presence[]
+  onPresences(cb: (presences: Presence[]) => void): () => void
   destroy(): void
 }
 
@@ -55,10 +63,18 @@ function hasIndexedDb(): boolean {
 export function connectRoom(opts: ConnectOptions): RoomConnection {
   const doc = opts.doc ?? new Y.Doc()
   const listeners = new Set<(s: SyncStatus) => void>()
+  const presenceListeners = new Set<(p: Presence[]) => void>()
   let status: SyncStatus = 'local'
+  let presences: Presence[] = []
+
   const setStatus = (next: SyncStatus) => {
     status = next
     for (const cb of listeners) cb(next)
+  }
+
+  const setPresences = (next: Presence[]) => {
+    presences = next
+    for (const cb of presenceListeners) cb(next)
   }
 
   const cleanups: Array<() => void> = []
@@ -76,7 +92,7 @@ export function connectRoom(opts: ConnectOptions): RoomConnection {
   const wantSync = opts.enableSync ?? Boolean(opts.roomId)
   if (wantSync) {
     setStatus('connecting')
-    void setupLiveblocksSync(opts, doc, setStatus, (teardown) => {
+    void setupLiveblocksSync(opts, doc, setStatus, setPresences, (teardown) => {
       if (destroyed) teardown()
       else cleanups.push(teardown)
     }).catch(() => setStatus('error'))
@@ -90,11 +106,17 @@ export function connectRoom(opts: ConnectOptions): RoomConnection {
       listeners.add(cb)
       return () => listeners.delete(cb)
     },
+    getPresences: () => presences,
+    onPresences(cb) {
+      presenceListeners.add(cb)
+      return () => presenceListeners.delete(cb)
+    },
     destroy() {
       destroyed = true
       for (const c of cleanups) c()
       cleanups.length = 0
       listeners.clear()
+      presenceListeners.clear()
     },
   }
 }
@@ -107,6 +129,7 @@ async function setupLiveblocksSync(
   opts: ConnectOptions,
   doc: Y.Doc,
   setStatus: (s: SyncStatus) => void,
+  setPresences: (p: Presence[]) => void,
   registerTeardown: (teardown: () => void) => void,
 ): Promise<void> {
   const base = trimSlash(opts.workerUrl)
@@ -135,8 +158,19 @@ async function setupLiveblocksSync(
   provider.on('status', onProviderStatus)
   onProviderStatus(provider.getStatus())
 
+  // Subscribe to others' presence updates
+  const unsubPresence = room.subscribe('others', (others) => {
+    const list = others
+      .map((o) => o.presence)
+      .filter((p) => {
+        return p && typeof p === 'object' && 'userId' in p && 'name' in p && 'color' in p
+      }) as unknown as Presence[]
+    setPresences(list)
+  })
+
   registerTeardown(() => {
     provider.off('status', onProviderStatus)
+    unsubPresence()
     provider.destroy()
     leave()
   })

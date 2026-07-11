@@ -77,6 +77,8 @@ describe('RoomProvider', () => {
       whenLocalLoaded,
       getStatus: () => 'local',
       onStatus: () => () => undefined,
+      getPresences: () => [],
+      onPresences: () => () => undefined,
       destroy: () => undefined,
     })
 
