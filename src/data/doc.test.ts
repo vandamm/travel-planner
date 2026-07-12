@@ -24,7 +24,6 @@ import {
   updateCard,
   updateCity,
 } from './doc'
-import { MAX_TRIP_DAYS } from './days'
 
 function freshDoc() {
   return new Y.Doc()
@@ -35,7 +34,7 @@ describe('trip settings', () => {
     expect(getTrip(freshDoc())).toEqual({
       title: '',
       startDate: '',
-      numDays: 0,
+      endDate: '',
       dayStart: '06:00',
       dayEnd: '21:00',
     })
@@ -43,17 +42,17 @@ describe('trip settings', () => {
 
   it('sets and reads back trip fields, merging partial updates', () => {
     const doc = freshDoc()
-    setTrip(doc, { title: 'Italy', startDate: '2027-05-01', numDays: 14 })
+    setTrip(doc, { title: 'Italy', startDate: '2027-05-01', endDate: '2027-05-14' })
     expect(getTrip(doc)).toEqual({
       title: 'Italy',
       startDate: '2027-05-01',
-      numDays: 14,
+      endDate: '2027-05-14',
       dayStart: '06:00',
       dayEnd: '21:00',
     })
 
-    setTrip(doc, { numDays: 21 })
-    expect(getTrip(doc)).toMatchObject({ title: 'Italy', startDate: '2027-05-01', numDays: 21 })
+    setTrip(doc, { endDate: '2027-05-21' })
+    expect(getTrip(doc)).toMatchObject({ title: 'Italy', startDate: '2027-05-01', endDate: '2027-05-21' })
   })
 
   it('sets and reads back a custom day window', () => {
@@ -62,19 +61,15 @@ describe('trip settings', () => {
     expect(getTrip(doc)).toMatchObject({ dayStart: '08:00', dayEnd: '23:00' })
   })
 
-  it('clamps numDays to the schema range and floors fractions', () => {
+  it('rejects a reversed date range so the doc remains exportable', () => {
     const doc = freshDoc()
-    setTrip(doc, { numDays: MAX_TRIP_DAYS + 5000 })
-    expect(getTrip(doc).numDays).toBe(MAX_TRIP_DAYS)
+    setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-03' })
 
-    setTrip(doc, { numDays: -3 })
-    expect(getTrip(doc).numDays).toBe(0)
+    setTrip(doc, { endDate: '2027-04-30' })
+    expect(getTrip(doc)).toMatchObject({ startDate: '2027-05-01', endDate: '2027-05-03' })
 
-    setTrip(doc, { numDays: 5.9 })
-    expect(getTrip(doc).numDays).toBe(5)
-
-    setTrip(doc, { numDays: Number.NaN })
-    expect(getTrip(doc).numDays).toBe(0)
+    setTrip(doc, { startDate: '2027-05-04' })
+    expect(getTrip(doc)).toMatchObject({ startDate: '2027-05-01', endDate: '2027-05-03' })
   })
 
   it('rejects an inverted day window so the doc never holds one exportTrip would throw on', () => {

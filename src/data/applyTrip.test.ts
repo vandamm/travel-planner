@@ -12,7 +12,7 @@ import {
 } from './doc'
 
 const TRIP = {
-  trip: { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
+  trip: { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03', dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'rome', name: 'Rome', color: '#ef4444' }],
   accommodations: [
     { id: 'stay-1', label: 'Hotel Roma', cityId: 'rome', startNight: '2027-05-01', endNight: '2027-05-02' },
@@ -65,13 +65,13 @@ describe('applyTrip', () => {
 
   it('throws on invalid input rather than corrupting the doc', () => {
     const doc = new Y.Doc()
-    expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', numDays: 1 } })).toThrow()
+    expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', endDate: '2027-05-01' } })).toThrow()
   })
 
   it('leaves an existing doc untouched when the input is invalid', () => {
     const doc = new Y.Doc()
     applyTrip(doc, TRIP)
-    expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', numDays: 1 } })).toThrow()
+    expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', endDate: '2027-05-01' } })).toThrow()
     // Validation fails before the transaction, so the prior trip survives intact.
     expect(getTrip(doc)).toEqual(TRIP.trip)
     expect(listCities(doc)).toEqual(TRIP.cities)

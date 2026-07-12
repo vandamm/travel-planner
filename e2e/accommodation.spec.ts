@@ -26,7 +26,7 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   await page.goto(E2E_LINK)
 
   // A trip with days plus a city to assign the stay to.
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 4 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-04' })
   await addCity(page, 'Rome')
 
   const columns = page.locator('[data-testid="day-column"]')
@@ -65,7 +65,7 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
 
 test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
 
   // With no stays the whole trip is one gap: the right-end button is present and
   // a single gap button sits on the first day.
@@ -92,7 +92,7 @@ test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => 
 
 test('Add-stay popup preselects the first uncovered night and saves a range', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
 
   // Cover the first two nights; the right-end "Add stay" should preselect the
   // first uncovered night (day 3) as both range endpoints (a one-night default).
@@ -115,7 +115,7 @@ test('Add-stay popup preselects the first uncovered night and saves a range', as
 
 test('two stays sharing a changeover day render on one row meeting mid-day', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
 
   // A checks out 05-03; B checks in 05-03 — a pure changeover, only that day shared.
   await seedStays(page, [

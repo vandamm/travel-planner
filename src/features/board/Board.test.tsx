@@ -35,14 +35,14 @@ describe('Board', () => {
 
   it('renders one column per day once the trip is set up', () => {
     renderBoard(<Board />)
-    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 3 }))
+    act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-03' }))
     expect(screen.getAllByTestId('day-column')).toHaveLength(3)
   })
 
   it('colors a day header from its covering accommodation', () => {
     renderBoard(<Board />)
     act(() => {
-      setTrip(doc, { startDate: '2027-05-01', numDays: 2 })
+      setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-02' })
       addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
       addAccommodation(doc, {
         label: 'Hotel Roma',
@@ -61,7 +61,7 @@ describe('Board', () => {
   it('renders an accommodation bar in the lane spanning its nights', () => {
     renderBoard(<Board />)
     act(() => {
-      setTrip(doc, { startDate: '2027-05-01', numDays: 3 })
+      setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-03' })
       addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
       addAccommodation(doc, {
         label: 'Hotel Roma',
@@ -78,7 +78,7 @@ describe('Board', () => {
   it('overrides a day’s city from its header, then reverts to Auto', () => {
     renderBoard(<Board />)
     act(() => {
-      setTrip(doc, { startDate: '2027-05-01', numDays: 1 })
+      setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' })
       addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
       addCity(doc, { id: 'florence', name: 'Florence', color: '#3b82f6' })
       addAccommodation(doc, {
@@ -111,7 +111,7 @@ describe('Board', () => {
 
   it('opens the accommodation editor from the Add stay button', () => {
     renderBoard(<Board />)
-    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 2 }))
+    act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-02' }))
     act(() => screen.getByRole('button', { name: 'Add stay' }).click())
     expect(screen.getByRole('dialog', { name: 'Accommodation editor' })).toBeInTheDocument()
   })
@@ -125,7 +125,7 @@ describe('Board', () => {
     )
     const dialog = () => screen.queryByRole('dialog', { name: 'Accommodation editor' })
     const { rerender } = render(wrap(0))
-    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 2 }))
+    act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-02' }))
     // Nonce 0 on mount must not open the editor (the `> 0` guard).
     expect(dialog()).not.toBeInTheDocument()
 
@@ -142,7 +142,7 @@ describe('Board', () => {
 
   it('tints the toolbar buttons with ink/edge tokens, not slate', () => {
     renderBoard(<Board />)
-    act(() => setTrip(doc, { startDate: '2027-05-01', numDays: 1 }))
+    act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' }))
     expect(screen.getByRole('button', { name: 'Undo' }).querySelector('svg')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Redo' }).querySelector('svg')).toBeInTheDocument()
     const toggle = screen.getByRole('button', { name: 'Toggle time direction' })
@@ -154,7 +154,7 @@ describe('Board', () => {
   it('reverses every card in every day when the direction is toggled', () => {
     renderBoard(<Board />)
     act(() => {
-      setTrip(doc, { startDate: '2027-05-01', numDays: 1 })
+      setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' })
       addCard(doc, { dayKey: '2027-05-01', title: 'Breakfast', startTime: '08:00' })
       addCard(doc, { dayKey: '2027-05-01', title: 'Dinner', startTime: '19:00' })
     })

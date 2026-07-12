@@ -26,7 +26,7 @@ async function seedCards(
 }
 
 async function setUpTrip(page: Page) {
-  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 }
 
 test('toggling time direction reverses card order and persists across reload', async ({ page }) => {

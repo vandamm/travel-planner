@@ -4,6 +4,7 @@ import { useRoom } from './data/RoomContext'
 import { RoomProvider } from './data/RoomProvider'
 import { slugFromPath } from './data/slug'
 import { getTrip, listCities } from './data/doc'
+import { inclusiveDayCount } from './data/days'
 import { useDocVersion } from './data/useDoc'
 import { Board } from './features/board/Board'
 import { CityModal } from './features/cities/CityModal'
@@ -28,7 +29,7 @@ function Header({
   const cityCount = listCities(doc).length
   // Wordmark is the trip title; untitled falls back to the app name.
   const wordmark = trip.title.trim() || 'Travel Planner'
-  const days = trip.numDays
+  const days = inclusiveDayCount(trip.startDate, trip.endDate)
   const meta = `${days} ${days === 1 ? 'day' : 'days'} · ${cityCount} ${cityCount === 1 ? 'city' : 'cities'}`
   const statusLabel = {
     local: 'Local',

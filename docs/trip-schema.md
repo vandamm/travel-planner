@@ -20,7 +20,7 @@ write can survive it.)
   "trip": {
     "title": "Italy 2027", // string (may be empty)
     "startDate": "2027-05-01", // "YYYY-MM-DD", or "" when not set up
-    "numDays": 14, // integer 0–730 — day columns, counted from startDate
+    "endDate": "2027-05-14", // inclusive last day, or "" when not set up
     "dayStart": "06:00", // "HH:mm" — top of each day's timeline window (default "06:00")
     "dayEnd": "21:00", // "HH:mm" — bottom of the window (default "21:00")
   },
@@ -63,7 +63,7 @@ write can survive it.)
 | ------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `trip.title`                               | string                                         | May be empty.                                                                                                                                                                                     |
 | `trip.startDate`                           | `"YYYY-MM-DD"` or `""`                         | Empty only before the trip is set up.                                                                                                                                                             |
-| `trip.numDays`                             | integer 0–730                                  | Number of day columns from `startDate` (inclusive). Bounded at 730 (~2 years) to keep the board finite; a larger count is rejected.                                                               |
+| `trip.endDate`                             | `"YYYY-MM-DD"` or `""`                         | Inclusive last day. A populated end date must not precede `startDate`; rendering clamps the board to 730 days.                                                                                       |
 | `trip.dayStart` / `dayEnd`                 | `"HH:mm"`, optional                            | The day's timeline window — cards are scaled and placed within it. Default `"06:00"` / `"21:00"` when omitted.                                                                                    |
 | `cities[].id`                              | non-empty string                               | Referenced by `accommodations[].cityId` and `dayOverrides`.                                                                                                                                       |
 | `cities[].color`                           | non-empty string                               | Any CSS color, e.g. `#ef4444`.                                                                                                                                                                    |
@@ -81,7 +81,7 @@ write can survive it.)
 
 The four collections are optional on input and default to empty, and
 `trip.dayStart`/`dayEnd` default to `"06:00"`/`"21:00"` — a minimal valid
-document is just `{ "trip": { "title": "", "startDate": "", "numDays": 0 } }`.
+document is just `{ "trip": { "title": "", "startDate": "", "endDate": "" } }`.
 An export always emits the collections (sorted deterministically) and the
 default-filled window, so every export round-trips through `POST` unchanged.
 Exports also defensively prune dangling city references that can appear after a
@@ -180,7 +180,7 @@ Write a trip (full replace) — connected clients update live:
 curl -X POST https://travel.vansach.me/api/trip/italy-2027 \
   -H "content-type: application/json" \
   -d '{
-    "trip": { "title": "Italy 2027", "startDate": "2027-05-01", "numDays": 3 },
+    "trip": { "title": "Italy 2027", "startDate": "2027-05-01", "endDate": "2027-05-03" },
     "cities": [{ "id": "rome", "name": "Rome", "color": "#ef4444" }],
     "accommodations": [
       { "id": "stay-1", "label": "Hotel Roma", "cityId": "rome",
@@ -194,6 +194,6 @@ curl -X POST https://travel.vansach.me/api/trip/italy-2027 \
   }'
 ```
 
-The minimal valid body is just `{ "trip": { "title": "", "startDate": "", "numDays": 0 } }`
+The minimal valid body is just `{ "trip": { "title": "", "startDate": "", "endDate": "" } }`
 (the four collections default to empty). See
 [`docs/deployment.md`](./deployment.md) for creating a room and a live smoke test.

@@ -66,7 +66,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   }, [addStayNonce])
 
   const trip = getTrip(doc)
-  const days = generateDays(trip.startDate, trip.numDays)
+  const days = generateDays(trip.startDate, trip.endDate)
   const accommodations = listAccommodations(doc)
   const overrides = listDayOverrides(doc)
   const cities = listCities(doc)
@@ -222,7 +222,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
 
       {days.length === 0 ? (
         <p data-testid="board-empty" className="px-6 text-ink-500">
-          Set a start date and number of days to build the board.
+          Set start and end dates to build the board.
         </p>
       ) : viewport === 'mobile' ? (
         // Below the laptop breakpoint: one day at a time, paged by swipe or the

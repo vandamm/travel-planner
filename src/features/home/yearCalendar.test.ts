@@ -13,7 +13,7 @@ const trip: TripSummary = {
   id: 'japan-2028',
   title: 'Japan',
   startDate: '2028-02-28',
-  numDays: 3,
+  endDate: '2028-03-01',
 }
 
 describe('year calendar', () => {
@@ -33,7 +33,7 @@ describe('year calendar', () => {
 
   it('caps a trip only at its start, end, and weekly row breaks', () => {
     const days = buildMonth(2028, 1)
-    const spanningTrip = { ...trip, startDate: '2028-02-08', numDays: 8 }
+    const spanningTrip = { ...trip, startDate: '2028-02-08', endDate: '2028-02-15' }
     const edges = (key: string) =>
       ribbonEdges(
         days,

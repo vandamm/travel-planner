@@ -4,7 +4,7 @@ import { setupTrip, E2E_LINK } from './helpers'
 test('a card set to whole-day grows taller than a default card', async ({ page }) => {
   await page.goto(E2E_LINK)
 
-  await setupTrip(page, { title: 'Heights', startDate: '2027-05-01', numDays: 1 })
+  await setupTrip(page, { title: 'Heights', startDate: '2027-05-01', endDate: '2027-05-01' })
 
   const column = page.locator('[data-testid="day-column"]').first()
 

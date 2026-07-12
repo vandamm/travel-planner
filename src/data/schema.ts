@@ -13,8 +13,8 @@ export interface Trip {
   title: string
   /** First day of the trip, 'YYYY-MM-DD'. */
   startDate: string
-  /** Total number of day columns, counted inclusively from `startDate`. */
-  numDays: number
+  /** Last day of the trip, inclusive, 'YYYY-MM-DD'. */
+  endDate: string
   /** Start of each day's timeline window, 'HH:mm' (default '06:00'). */
   dayStart: string
   /** End of each day's timeline window, 'HH:mm' (default '21:00'). */

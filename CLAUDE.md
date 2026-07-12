@@ -17,7 +17,7 @@ Everything persistent lives on one shared `Y.Doc`. Top-level containers:
 
 | Container        | Yjs type       | Holds                                                                                                                                            |
 | ---------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `trip`           | `Y.Map`        | `title`, `startDate` (`YYYY-MM-DD`), `numDays`, `dayStart`/`dayEnd` (`HH:mm`, the day's timeline window, default `06:00`/`21:00`) (plain values) |
+| `trip`           | `Y.Map`        | `title`, `startDate`/`endDate` (`YYYY-MM-DD`, inclusive), `dayStart`/`dayEnd` (`HH:mm`, the day's timeline window, default `06:00`/`21:00`) (plain values) |
 | `cities`         | `Y.Map<Y.Map>` | id → `{ id, name, color }`                                                                                                                       |
 | `dayOverrides`   | `Y.Map`        | `YYYY-MM-DD` → `cityId` (manual per-day city)                                                                                                    |
 | `cards`          | `Y.Map<Y.Map>` | id → `Card` fields                                                                                                                               |

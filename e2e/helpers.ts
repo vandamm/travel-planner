@@ -87,13 +87,13 @@ async function openEditor(
  */
 export async function setupTrip(
   page: Page,
-  { title, startDate, numDays }: { title?: string; startDate?: string; numDays?: number | string },
+  { title, startDate, endDate }: { title?: string; startDate?: string; endDate?: string },
 ) {
   await openEditor(page, 'Trip setup', 'Trip')
   const dialog = page.getByRole('dialog', { name: 'Trip details' })
   if (title !== undefined) await dialog.getByLabel('Trip title').fill(title)
   if (startDate !== undefined) await pickDate(dialog, 'Start date', startDate)
-  if (numDays !== undefined) await dialog.getByLabel('Number of days').fill(String(numDays))
+  if (endDate !== undefined) await pickDate(dialog, 'End date', endDate)
   await dialog.getByRole('button', { name: 'Done' }).click()
   await expect(dialog).toHaveCount(0)
 }

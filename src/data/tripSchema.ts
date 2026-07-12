@@ -10,7 +10,6 @@
 
 import { isValid, parseISO } from 'date-fns'
 import { z } from 'zod'
-import { MAX_TRIP_DAYS } from './days'
 
 /**
  * ISO-8601 date-only, 'YYYY-MM-DD'. The regex only checks shape, so a real
@@ -38,11 +37,15 @@ export const tripSettingsSchema = z
     title: z.string(),
     // Empty while the trip is not yet set up; otherwise a calendar date.
     startDate: z.union([dateOnly, z.literal('')]),
-    // Bounded so an oversized count can't generate an unbounded board (see days.ts).
-    numDays: z.number().int().min(0).max(MAX_TRIP_DAYS),
+    // Empty while the trip is not yet set up; otherwise the inclusive last day.
+    endDate: z.union([dateOnly, z.literal('')]),
     // The day's timeline window; defaults mirror DEFAULT_TRIP in doc.ts.
     dayStart: clockTime.default('06:00'),
     dayEnd: clockTime.default('21:00'),
+  })
+  .refine((t) => !t.startDate || !t.endDate || t.endDate >= t.startDate, {
+    message: 'endDate must be on or after startDate',
+    path: ['endDate'],
   })
   // The window must be non-empty: the day ends after it starts. 'HH:mm' strings
   // compare lexicographically so a plain `>` is correct. An inverted window

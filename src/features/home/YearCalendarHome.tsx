@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { addDays, format, parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { Modal } from '../../components/Modal'
 import {
   buildMonth,
@@ -245,9 +245,8 @@ export function YearCalendarHome() {
   const yearTrips = useMemo(
     () =>
       trips.filter((trip) => {
-        if (!trip.startDate || trip.numDays < 1) return false
-        const lastDay = addDays(parseISO(trip.startDate), trip.numDays - 1)
-        return Number(trip.startDate.slice(0, 4)) <= year && lastDay.getFullYear() >= year
+        if (!trip.startDate || !trip.endDate || trip.endDate < trip.startDate) return false
+        return Number(trip.startDate.slice(0, 4)) <= year && Number(trip.endDate.slice(0, 4)) >= year
       }),
     [trips, year],
   )
@@ -325,7 +324,7 @@ export function YearCalendarHome() {
           ) : yearTrips.length ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {yearTrips.map((trip, index) => {
-                const end = addDays(parseISO(trip.startDate), trip.numDays - 1)
+                const end = parseISO(trip.endDate)
                 return (
                   <a
                     key={trip.id}

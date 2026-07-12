@@ -13,7 +13,7 @@ import { exportTrip, exportTripJSON } from './exportTrip'
 import { tripDocumentSchema } from './tripSchema'
 
 function seed(doc: Y.Doc) {
-  setTrip(doc, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  setTrip(doc, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
   addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
   addAccommodation(doc, {
     id: 'stay-1',
@@ -34,7 +34,7 @@ function sync(from: Y.Doc, to: Y.Doc) {
 function docWithMergedCityRemoval(setDanglingRef: (doc: Y.Doc) => void) {
   const removeDoc = new Y.Doc()
   const addRefDoc = new Y.Doc()
-  setTrip(removeDoc, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  setTrip(removeDoc, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
   addCity(removeDoc, { id: 'rome', name: 'Rome', color: '#ef4444' })
   sync(removeDoc, addRefDoc)
 
@@ -55,7 +55,7 @@ describe('exportTrip', () => {
     expect(out.trip).toEqual({
       title: 'Italy 2027',
       startDate: '2027-05-01',
-      numDays: 3,
+      endDate: '2027-05-03',
       dayStart: '06:00',
       dayEnd: '21:00',
     })
@@ -71,7 +71,7 @@ describe('exportTrip', () => {
   it('exports a fresh, never-set-up doc as a valid empty document', () => {
     const out = exportTrip(new Y.Doc())
     expect(out).toEqual({
-      trip: { title: '', startDate: '', numDays: 0, dayStart: '06:00', dayEnd: '21:00' },
+      trip: { title: '', startDate: '', endDate: '', dayStart: '06:00', dayEnd: '21:00' },
       cities: [],
       accommodations: [],
       cards: [],
@@ -135,7 +135,7 @@ describe('exportTrip', () => {
   it('prunes only dangling city references when valid refs are mixed in the same export', () => {
     const removeDoc = new Y.Doc()
     const addRefDoc = new Y.Doc()
-    setTrip(removeDoc, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+    setTrip(removeDoc, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
     addCity(removeDoc, { id: 'rome', name: 'Rome', color: '#ef4444' })
     addCity(removeDoc, { id: 'paris', name: 'Paris', color: '#2563eb' })
     sync(removeDoc, addRefDoc)
@@ -196,7 +196,7 @@ describe('export → import round-trip', () => {
 
   it('round-trips a custom day window and a transport card', () => {
     const source = new Y.Doc()
-    setTrip(source, { title: 'T', startDate: '2027-05-01', numDays: 1, dayStart: '08:00', dayEnd: '23:00' })
+    setTrip(source, { title: 'T', startDate: '2027-05-01', endDate: '2027-05-01', dayStart: '08:00', dayEnd: '23:00' })
     addCard(source, { id: 'flight', dayKey: '2027-05-01', title: 'Flight', order: 0, transport: true })
     const exported = exportTrip(source)
     expect(exported.trip).toMatchObject({ dayStart: '08:00', dayEnd: '23:00' })
@@ -209,7 +209,7 @@ describe('export → import round-trip', () => {
 
   it('round-trips a card category', () => {
     const source = new Y.Doc()
-    setTrip(source, { title: 'T', startDate: '2027-05-01', numDays: 1 })
+    setTrip(source, { title: 'T', startDate: '2027-05-01', endDate: '2027-05-01' })
     addCard(source, { id: 'museum', dayKey: '2027-05-01', title: 'Museum', order: 0, category: 'indoor' })
     const exported = exportTrip(source)
     expect(exported.cards[0].category).toBe('indoor')
@@ -221,7 +221,7 @@ describe('export → import round-trip', () => {
 
   it('round-trips a card height preset', () => {
     const source = new Y.Doc()
-    setTrip(source, { title: 'T', startDate: '2027-05-01', numDays: 1 })
+    setTrip(source, { title: 'T', startDate: '2027-05-01', endDate: '2027-05-01' })
     addCard(source, { id: 'tall', dayKey: '2027-05-01', title: 'All day', order: 0, size: 'full' })
     const exported = exportTrip(source)
     expect(exported.cards[0].size).toBe('full')

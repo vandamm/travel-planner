@@ -8,7 +8,7 @@ import { pickTime, setupTrip, E2E_LINK } from './helpers'
 
 test('setting a card start + end through the wheel shows the time range', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
   await firstColumn.getByRole('button', { name: /Add card/ }).click()
@@ -24,7 +24,7 @@ test('setting a card start + end through the wheel shows the time range', async 
 
 test('clearing a card start time in the wheel untimes the card', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
   await firstColumn.getByRole('button', { name: /Add card/ }).click()
@@ -47,7 +47,7 @@ test('clearing a card start time in the wheel untimes the card', async ({ page }
 
 test('setting the trip day window through the wheel updates the field', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   await page.getByRole('button', { name: 'Trip' }).click()
   const trip = page.getByRole('dialog', { name: 'Trip details' })
@@ -61,7 +61,7 @@ test.describe('mobile time picker', () => {
 
   test('centers the first minute instead of pinning it to the top edge', async ({ page }) => {
     await page.goto('/mobile-picker-e2e')
-    await setupTrip(page, { title: 'Picker', startDate: '2027-05-01', numDays: 1 })
+    await setupTrip(page, { title: 'Picker', startDate: '2027-05-01', endDate: '2027-05-01' })
 
     await page.getByRole('button', { name: /Add card/ }).click()
     const editor = page.getByRole('dialog', { name: 'Card editor' })

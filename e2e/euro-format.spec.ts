@@ -5,7 +5,7 @@ import { setupTrip, E2E_LINK } from './helpers'
 // (Native picker *widgets* still follow the OS locale — see the plan's Post-Completion.)
 test('day-column labels render day-first dd.MM', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const labels = page.getByTestId('day-label')
   await expect(labels).toHaveCount(3)

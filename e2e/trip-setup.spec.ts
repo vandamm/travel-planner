@@ -4,7 +4,7 @@ import { addCity, setupTrip, E2E_LINK } from './helpers'
 test('set up a trip and add a city', async ({ page }) => {
   await page.goto(E2E_LINK)
 
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 10 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-10' })
 
   // Live writes surface in the header wordmark + meta line.
   await expect(page.getByRole('heading', { name: 'Italy 2027' })).toBeVisible()

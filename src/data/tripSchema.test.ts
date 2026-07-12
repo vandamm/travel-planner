@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_TRIP_DAYS } from './days'
 import { parseTripText, tripDocumentSchema } from './tripSchema'
 
 const VALID = {
-  trip: { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
+  trip: { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03', dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'rome', name: 'Rome', color: '#ef4444' }],
   accommodations: [
     { id: 'stay-1', label: 'Hotel Roma', cityId: 'rome', startNight: '2027-05-01', endNight: '2027-05-02' },
@@ -20,10 +19,10 @@ describe('tripDocumentSchema', () => {
 
   it('fills empty defaults for the optional collections and day window', () => {
     const parsed = tripDocumentSchema.parse({
-      trip: { title: '', startDate: '', numDays: 0 },
+      trip: { title: '', startDate: '', endDate: '' },
     })
     expect(parsed).toEqual({
-      trip: { title: '', startDate: '', numDays: 0, dayStart: '06:00', dayEnd: '21:00' },
+      trip: { title: '', startDate: '', endDate: '', dayStart: '06:00', dayEnd: '21:00' },
       cities: [],
       accommodations: [],
       cards: [],
@@ -33,20 +32,20 @@ describe('tripDocumentSchema', () => {
 
   it('keeps an explicit day window and rejects a malformed one', () => {
     const parsed = tripDocumentSchema.parse({
-      trip: { title: 'X', startDate: '2027-05-01', numDays: 1, dayStart: '07:30', dayEnd: '22:00' },
+      trip: { title: 'X', startDate: '2027-05-01', endDate: '2027-05-01', dayStart: '07:30', dayEnd: '22:00' },
     })
     expect(parsed.trip).toMatchObject({ dayStart: '07:30', dayEnd: '22:00' })
 
     expect(
       tripDocumentSchema.safeParse({
-        trip: { title: 'X', startDate: '2027-05-01', numDays: 1, dayStart: '6am', dayEnd: '21:00' },
+        trip: { title: 'X', startDate: '2027-05-01', endDate: '2027-05-01', dayStart: '6am', dayEnd: '21:00' },
       }).success,
     ).toBe(false)
   })
 
   it('rejects a day window whose end is not after its start', () => {
     const result = tripDocumentSchema.safeParse({
-      trip: { title: 'X', startDate: '2027-05-01', numDays: 1, dayStart: '21:00', dayEnd: '06:00' },
+      trip: { title: 'X', startDate: '2027-05-01', endDate: '2027-05-01', dayStart: '21:00', dayEnd: '06:00' },
     })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error.issues[0].path).toEqual(['trip', 'dayEnd'])
@@ -93,7 +92,7 @@ describe('tripDocumentSchema', () => {
     // Would otherwise pass the regex yet make generateDays' parseISO/format throw.
     for (const bad of ['2027-99-99', '2027-02-30', '2027-13-01']) {
       const result = tripDocumentSchema.safeParse({
-        trip: { title: 'X', startDate: bad, numDays: 1 },
+        trip: { title: 'X', startDate: bad, endDate: '2027-05-01' },
       })
       expect(result.success).toBe(false)
     }
@@ -118,24 +117,12 @@ describe('tripDocumentSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects a negative day count', () => {
+  it('rejects a populated reversed date range', () => {
     const result = tripDocumentSchema.safeParse({
-      trip: { title: 'X', startDate: '2027-05-01', numDays: -1 },
+      trip: { title: 'X', startDate: '2027-05-03', endDate: '2027-05-01' },
     })
     expect(result.success).toBe(false)
-  })
-
-  it('accepts a day count at the maximum but rejects one beyond it', () => {
-    expect(
-      tripDocumentSchema.safeParse({
-        trip: { title: 'X', startDate: '2027-05-01', numDays: MAX_TRIP_DAYS },
-      }).success,
-    ).toBe(true)
-    expect(
-      tripDocumentSchema.safeParse({
-        trip: { title: 'X', startDate: '2027-05-01', numDays: MAX_TRIP_DAYS + 1 },
-      }).success,
-    ).toBe(false)
+    if (!result.success) expect(result.error.issues[0].path).toEqual(['trip', 'endDate'])
   })
 
   it('rejects an accommodation whose endNight precedes its startNight', () => {
@@ -215,7 +202,7 @@ describe('parseTripText', () => {
   })
 
   it('reports a schema violation with the offending field path', () => {
-    const out = parseTripText(JSON.stringify({ trip: { title: 'X', startDate: 'nope', numDays: 1 } }))
+    const out = parseTripText(JSON.stringify({ trip: { title: 'X', startDate: 'nope', endDate: '2027-05-01' } }))
     expect(out.ok).toBe(false)
     if (!out.ok) expect(out.error).toMatch(/trip\.startDate/)
   })

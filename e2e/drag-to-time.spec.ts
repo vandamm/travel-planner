@@ -26,7 +26,7 @@ async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
 test('dragging an untimed card toward the evening gives it an evening time', async ({ page }) => {
   await page.goto(E2E_LINK)
 
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 1 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-01' })
 
   // Seed a morning + evening timed card and one untimed card via the dev bridge.
   await page.evaluate(() => {

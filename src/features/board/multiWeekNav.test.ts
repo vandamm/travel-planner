@@ -21,7 +21,7 @@ describe('showRightFade', () => {
 })
 
 describe('todayIndex', () => {
-  const days = generateDays('2027-05-01', 14)
+  const days = generateDays('2027-05-01', '2027-05-14')
 
   it('returns the index when today is inside the trip', () => {
     expect(todayIndex(days, '2027-05-04')).toBe(3)
@@ -64,7 +64,7 @@ describe('visibleRange', () => {
 })
 
 describe('rangeLabel', () => {
-  const days = generateDays('2027-05-01', 14)
+  const days = generateDays('2027-05-01', '2027-05-14')
 
   it('is empty when there are no days', () => {
     expect(rangeLabel([], { clientWidth: 1000, scrollLeft: 0 })).toBe('')

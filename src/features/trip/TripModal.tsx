@@ -1,16 +1,15 @@
-// Trip-level settings (title, start date + days, day-timeline window) as a
+// Trip-level settings (title, inclusive date range, day-timeline window) as a
 // scrim pop-over, opened from the header's `[✎ Trip]` button. Edits write
 // straight through the shared `setTrip` mutator — live, like every other edit —
 // so there is no Save/Cancel: a single ink `Done` (plus backdrop / Escape via
 // the shared `Modal`) closes it. Start date + day window use the custom
-// calendar / time-wheel pickers; the day count stays a native number input.
+// calendar / time-wheel pickers.
 
 import { useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { DatePicker } from '../pickers/DatePicker'
 import { TimePicker } from '../pickers/TimePicker'
 import { getTrip, setTrip } from '../../data/doc'
-import { MAX_TRIP_DAYS } from '../../data/days'
 import { applyTrip } from '../../data/applyTrip'
 import { exportTripJSON } from '../../data/exportTrip'
 import { parseTripText } from '../../data/tripSchema'
@@ -153,17 +152,16 @@ export function TripModal({ onClose }: TripModalProps) {
           />
         </div>
 
-        <label className="flex w-24 flex-col gap-1.5">
-          <span className={sectionLabel}>Number of days</span>
-          <input
-            type="number"
-            min={1}
-            max={MAX_TRIP_DAYS}
-            value={trip.numDays || ''}
-            onChange={(e) => setTrip(doc, { numDays: Number(e.target.value) })}
-            className={`${fieldInput} font-serif`}
+        <div className="flex flex-1 flex-col gap-1.5">
+          <span className={sectionLabel}>End date</span>
+          <DatePicker
+            label="End date"
+            value={trip.endDate}
+            onSelect={(iso) => setTrip(doc, { endDate: iso })}
+            placeholder="Pick an end date"
+            triggerClassName={`${fieldInput} font-serif text-left`}
           />
-        </label>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">

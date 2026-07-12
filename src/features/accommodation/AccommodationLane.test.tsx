@@ -4,7 +4,7 @@ import { generateDays } from '../../data/days'
 import type { Accommodation, City } from '../../data/schema'
 import { AccommodationLane } from './AccommodationLane'
 
-const days = generateDays('2027-05-01', 5)
+const days = generateDays('2027-05-01', '2027-05-05')
 const cityById = new Map<string, City>([['rome', { id: 'rome', name: 'Rome', color: '#ef4444' }]])
 
 const stay = (over: Partial<Accommodation> = {}): Accommodation => ({

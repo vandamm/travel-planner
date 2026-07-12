@@ -16,12 +16,12 @@ declare global {
 export function installDevBridge(doc: Y.Doc): void {
   if (!import.meta.env.DEV) return
   if (typeof window === 'undefined') return
-  if (new URLSearchParams(location.search).has('demo') && docApi.getTrip(doc).numDays === 0) {
+  if (new URLSearchParams(location.search).has('demo') && !docApi.getTrip(doc).endDate) {
     doc.transact(() => {
       docApi.setTrip(doc, {
         title: 'Berlin Weekend',
         startDate: '2026-07-10',
-        numDays: 4,
+        endDate: '2026-07-13',
         dayStart: '07:00',
         dayEnd: '21:00',
       })
