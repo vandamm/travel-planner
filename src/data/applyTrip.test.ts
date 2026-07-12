@@ -18,8 +18,8 @@ const TRIP = {
     { id: 'stay-1', label: 'Hotel Roma', cityId: 'rome', startNight: '2027-05-01', endNight: '2027-05-02' },
   ],
   cards: [
-    { id: 'card-1', dayKey: '2027-05-01', title: 'Colosseum', order: 0 },
-    { id: 'card-2', dayKey: '2027-05-01', title: 'Train', order: 1, startTime: '18:30' },
+    { id: 'card-1', dayKey: '2027-05-01', title: 'Colosseum', order: 0, duration: 'custom', durationHours: 1 },
+    { id: 'card-2', dayKey: '2027-05-01', title: 'Train', order: 1, startTime: '18:30', duration: 'custom', durationHours: 1 },
   ],
   dayOverrides: { '2027-05-03': 'rome' },
 }
@@ -58,7 +58,7 @@ describe('applyTrip', () => {
     const doc = new Y.Doc()
     applyTrip(doc, {
       ...TRIP,
-      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Museum', order: 0, category: 'indoor' }],
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Museum', order: 0, duration: 'custom', durationHours: 1, category: 'indoor' }],
     })
     expect(listCards(doc)[0]).toMatchObject({ category: 'indoor' })
   })

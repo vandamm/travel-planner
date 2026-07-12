@@ -25,7 +25,7 @@ function CardDump() {
     <ul aria-label="card dump">
       {listCards(doc).map((c) => (
         <li key={c.id} data-testid="dump-row">
-          {JSON.stringify({ title: c.title, startTime: c.startTime, endTime: c.endTime, note: c.note, link: c.link, transport: c.transport, category: c.category, size: c.size })}
+          {JSON.stringify({ title: c.title, startTime: c.startTime, duration: c.duration, durationHours: c.durationHours, note: c.note, link: c.link, transport: c.transport, category: c.category })}
         </li>
       ))}
     </ul>
@@ -119,19 +119,19 @@ describe('CardEditor — create', () => {
     expect(save).toBeEnabled()
   })
 
-  it('captures note and an optional start/end time when timed', async () => {
+  it('captures a note and optional start time', async () => {
     const user = userEvent.setup()
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Train' } })
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'platform 4' } })
     fireEvent.click(screen.getByLabelText('Set a time'))
     await setTimeViaWheel(user, 'Start time', '10', '00')
-    await setTimeViaWheel(user, 'End time', '12', '30')
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Train')) ?? ''
     expect(row).toContain('"startTime":"10:00"')
-    expect(row).toContain('"endTime":"12:30"')
+    expect(row).toContain('"duration":"custom"')
+    expect(row).toContain('"durationHours":1')
     expect(row).toContain('"note":"platform 4"')
   })
 
@@ -145,17 +145,14 @@ describe('CardEditor — create', () => {
     expect(row).toContain('"link":"https://example.com"')
   })
 
-  it('drops the end time when timed but no start time is given', async () => {
-    const user = userEvent.setup()
+  it('keeps the start time optional', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Loose end' } })
-    fireEvent.click(screen.getByLabelText('Set a time'))
-    await setTimeViaWheel(user, 'End time', '12', '30')
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Loose end')) ?? ''
     expect(row).not.toContain('"startTime":"')
-    expect(row).not.toContain('"endTime":"')
+    expect(row).toContain('"durationHours":1')
   })
 
   it('saves the category chosen from the Type control', () => {
@@ -182,23 +179,24 @@ describe('CardEditor — create', () => {
     expect(row).not.toContain('"category":"')
   })
 
-  it('stores a size preset chosen from the Card size control', () => {
+  it('stores a day duration chosen from the Duration control', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'All day' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Whole day' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Day' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('All day')) ?? ''
-    expect(row).toContain('"size":"full"')
+    expect(row).toContain('"duration":"day"')
   })
 
-  it('omits size when left on the default (exact duration)', () => {
+  it('defaults new cards to a one-hour custom duration', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Plain' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Plain')) ?? ''
-    expect(row).not.toContain('"size":')
+    expect(row).toContain('"duration":"custom"')
+    expect(row).toContain('"durationHours":1')
   })
 
   it('omits the time fields when the time toggle is off', () => {

@@ -42,12 +42,8 @@ export interface Day {
   cityId?: string
 }
 
-/**
- * Card height preset. `auto` (the default / absent) sizes the card by its
- * duration (end−start, or a 1-hour block); the presets override that with a
- * fixed height relative to the day's timeline window (see `cardHeight.ts`).
- */
-export type CardSize = 'auto' | 'small' | 'half' | 'full'
+/** How long an activity occupies on a day timeline. */
+export type CardDuration = 'day' | 'half' | 'custom'
 
 /** Activity category — drives the card's colour chip. */
 export type CardCategory = 'indoor' | 'outdoor' | 'transit'
@@ -62,7 +58,10 @@ export interface Card {
   link?: string
   /** Clock time 'HH:mm'; its presence makes the card time-bound (auto-sorted). */
   startTime?: string
-  endTime?: string
+  /** Duration mode; day/half resolve from the trip's configured day window. */
+  duration: CardDuration
+  /** Positive number of hours, required when `duration` is `custom`. */
+  durationHours?: number
   /** Manual position among untimed cards in a day (timed cards sort by time). */
   order: number
   color?: string
@@ -75,8 +74,6 @@ export interface Card {
   transport?: boolean
   /** Activity category (see `cardCategory`); absent = uncategorised. */
   category?: CardCategory
-  /** Height preset; absent = `auto` (height from duration). */
-  size?: CardSize
 }
 
 /**

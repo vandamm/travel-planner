@@ -16,7 +16,7 @@
 // clobbering one another — the whole point of using a CRDT.
 
 import * as Y from 'yjs'
-import type { Accommodation, Card, CardCategory, CardSize, City, Trip } from './schema'
+import type { Accommodation, Card, CardCategory, CardDuration, City, Trip } from './schema'
 
 const TRIP = 'trip'
 const CITIES = 'cities'
@@ -179,14 +179,15 @@ export interface NewCard {
   note?: string
   link?: string
   startTime?: string
-  endTime?: string
+  /** Defaults to a one-hour custom duration. */
+  duration?: CardDuration
+  durationHours?: number
   /** Manual order; defaults to the end of the target day when omitted. */
   order?: number
   color?: string
   icon?: string
   transport?: boolean
   category?: CardCategory
-  size?: CardSize
   id?: string
 }
 
@@ -218,6 +219,8 @@ function nextOrder(doc: Y.Doc, dayKey: string): number {
 export function addCard(doc: Y.Doc, input: NewCard): Card {
   const id = input.id ?? newId()
   const order = input.order ?? nextOrder(doc, input.dayKey)
+  const duration = input.duration ?? 'custom'
+  const durationHours = input.durationHours && input.durationHours > 0 ? input.durationHours : 1
   const card: Card = {
     id,
     dayKey: input.dayKey,
@@ -226,12 +229,12 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
     ...(input.note !== undefined && { note: input.note }),
     ...(input.link !== undefined && { link: input.link }),
     ...(input.startTime !== undefined && { startTime: input.startTime }),
-    ...(input.endTime !== undefined && { endTime: input.endTime }),
+    duration,
+    ...(duration === 'custom' && { durationHours }),
     ...(input.color !== undefined && { color: input.color }),
     ...(input.icon !== undefined && { icon: input.icon }),
     ...(input.transport !== undefined && { transport: input.transport }),
     ...(input.category !== undefined && { category: input.category }),
-    ...(input.size !== undefined && { size: input.size }),
   }
   doc.transact(() => entityMap(doc, CARDS).set(id, toYMap(card)))
   return card

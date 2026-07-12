@@ -12,14 +12,12 @@
 import type * as Y from 'yjs'
 import { getCard, getTrip, listCards, reorderCards, updateCard } from '../../data/doc'
 import type { Card } from '../../data/schema'
-import { clockMinutes, clockString } from '../cards/cardHeight'
+import { clockMinutes, clockString, resolvedDurationHours } from '../cards/cardHeight'
 import { isTimed } from '../cards/cardSort'
 import { orderCardsForDirection, type TimeDirection } from './timeDirection'
 
 /** Snap derived drop times to this granularity (minutes). */
 const SNAP_MINUTES = 15
-/** Offset (minutes) used when a drop has a timed neighbour on only one side. */
-const NEIGHBOR_GAP_MINUTES = 60
 
 /** Prefix marking a *column's* droppable id, distinguishing it from a card id. */
 export const DAY_DROPPABLE_PREFIX = 'day:'
@@ -69,11 +67,14 @@ export function deriveDropTime(
   insertIndex: number,
   dayStart: string,
   dayEnd: string,
+  activeDurationHours = 1,
 ): string | undefined {
   let before: number | undefined
   for (let i = insertIndex - 1; i >= 0; i--) {
     if (isTimed(neighbours[i])) {
-      before = clockMinutes(neighbours[i].startTime as string)
+      before =
+        clockMinutes(neighbours[i].startTime as string) +
+        resolvedDurationHours(neighbours[i], dayStart, dayEnd) * 60
       break
     }
   }
@@ -87,12 +88,13 @@ export function deriveDropTime(
 
   let target: number
   if (before !== undefined && after !== undefined) target = (before + after) / 2
-  else if (before !== undefined) target = before + NEIGHBOR_GAP_MINUTES
-  else if (after !== undefined) target = after - NEIGHBOR_GAP_MINUTES
+  else if (before !== undefined) target = before
+  else if (after !== undefined) target = after - activeDurationHours * 60
   else return undefined
 
   const snapped = Math.round(target / SNAP_MINUTES) * SNAP_MINUTES
-  const clamped = Math.min(Math.max(snapped, clockMinutes(dayStart)), clockMinutes(dayEnd))
+  const lastStart = Math.max(clockMinutes(dayStart), clockMinutes(dayEnd) - activeDurationHours * 60)
+  const clamped = Math.min(Math.max(snapped, clockMinutes(dayStart)), lastStart)
   return clockString(clamped)
 }
 
@@ -153,7 +155,13 @@ export function applyCardDragEnd(
       .filter((c): c is Card => c !== undefined)
     const insertIndex = canonical.indexOf(activeId)
     const { dayStart, dayEnd } = getTrip(doc)
-    const time = deriveDropTime(neighbours, insertIndex, dayStart, dayEnd)
+    const time = deriveDropTime(
+      neighbours,
+      insertIndex,
+      dayStart,
+      dayEnd,
+      resolvedDurationHours(active, dayStart, dayEnd),
+    )
     if (time !== undefined) {
       updateCard(doc, activeId, { startTime: time, dayKey: targetDayKey })
       return

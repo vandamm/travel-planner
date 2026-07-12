@@ -16,6 +16,7 @@ import {
   cardHeightPx,
   clockMinutes,
   noonFraction,
+  resolvedDurationHours,
   windowHeightPx,
 } from '../cards/cardHeight'
 import { useIsDragOverDay } from './dragOverDayContext'
@@ -59,24 +60,24 @@ function cardGapPx(
   const start = clockMinutes(card.startTime)
   const top =
     direction === 'up'
-      ? clockMinutes(dayEnd) - (card.endTime ? clockMinutes(card.endTime) : start + 60)
+      ? clockMinutes(dayEnd) - (start + resolvedDurationHours(card, dayStart, dayEnd) * 60)
       : start - clockMinutes(dayStart)
   const gap = Math.max((top / 60) * PX_PER_HOUR - cursor.current, 0)
   cursor.current += gap + height
   return gap
 }
 
-function overlappingCardIds(cards: CardType[]): Set<string> {
+function overlappingCardIds(cards: CardType[], dayStart: string, dayEnd: string): Set<string> {
   const timed = cards.filter((card) => card.startTime)
   const conflicts = new Set<string>()
   for (let i = 0; i < timed.length; i += 1) {
     const a = timed[i]
     const aStart = clockMinutes(a.startTime!)
-    const aEnd = a.endTime ? clockMinutes(a.endTime) : aStart + 60
+    const aEnd = aStart + resolvedDurationHours(a, dayStart, dayEnd) * 60
     for (let j = i + 1; j < timed.length; j += 1) {
       const b = timed[j]
       const bStart = clockMinutes(b.startTime!)
-      const bEnd = b.endTime ? clockMinutes(b.endTime) : bStart + 60
+      const bEnd = bStart + resolvedDurationHours(b, dayStart, dayEnd) * 60
       if (aStart < bEnd && bStart < aEnd) {
         conflicts.add(a.id)
         conflicts.add(b.id)
@@ -100,7 +101,7 @@ export function DayColumn({
   onEditCard,
 }: DayColumnProps) {
   const ordered = orderCardsForDirection(cards, direction)
-  const conflicts = overlappingCardIds(cards)
+  const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const cardCursor = { current: 0 }
   const weekday = format(parseISO(day.key), 'EEE')
@@ -231,7 +232,7 @@ export function DayColumn({
                   marginTop: cardGapPx(c, direction, dayStart, dayEnd, cardCursor),
                 }}
               >
-                <SortableCard card={c} conflict={conflicts.has(c.id)} onEdit={onEditCard} />
+                <SortableCard card={c} conflict={conflicts.has(c.id)} onEdit={onEditCard} dayStart={dayStart} dayEnd={dayEnd} />
               </li>
             ))}
           </ol>

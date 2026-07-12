@@ -9,15 +9,16 @@ const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
 const florence: City = { id: 'florence', name: 'Florence', color: '#3b82f6' }
 
 const cards: Card[] = [
-  { id: 'a', dayKey: '2027-05-01', title: 'Stroll', order: 0 },
-  { id: 'b', dayKey: '2027-05-01', title: 'Breakfast', order: 5, startTime: '08:00' },
+  { id: 'a', dayKey: '2027-05-01', title: 'Stroll', order: 0, duration: 'custom', durationHours: 1 },
+  { id: 'b', dayKey: '2027-05-01', title: 'Breakfast', order: 5, startTime: '08:00', duration: 'custom', durationHours: 1 },
   {
     id: 'c',
     dayKey: '2027-05-01',
     title: 'Dinner',
     order: 1,
     startTime: '19:00',
-    endTime: '21:00',
+    duration: 'custom',
+    durationHours: 2,
   },
 ]
 
@@ -71,14 +72,14 @@ describe('DayColumn', () => {
   it('shows the time on time-bound cards', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const dinner = screen.getByText('Dinner').closest('[data-testid="card"]') as HTMLElement
-    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00–21:00')
+    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h')
   })
 
   it('marks every timed card involved in an overlap', () => {
     const overlapping: Card[] = [
-      { id: 'a', dayKey: day.key, title: 'Tour', order: 0, startTime: '09:00', endTime: '11:00' },
-      { id: 'b', dayKey: day.key, title: 'Museum', order: 1, startTime: '10:30', endTime: '12:00' },
-      { id: 'c', dayKey: day.key, title: 'Lunch', order: 2, startTime: '12:00', endTime: '13:00' },
+      { id: 'a', dayKey: day.key, title: 'Tour', order: 0, startTime: '09:00', duration: 'custom', durationHours: 2 },
+      { id: 'b', dayKey: day.key, title: 'Museum', order: 1, startTime: '10:30', duration: 'custom', durationHours: 1.5 },
+      { id: 'c', dayKey: day.key, title: 'Lunch', order: 2, startTime: '12:00', duration: 'custom', durationHours: 1 },
     ]
     render(<DayColumn day={day} cards={overlapping} direction="down" />)
     const card = (title: string) =>
@@ -108,19 +109,19 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
   })
 
-  it('scales each card by its duration; untimed and end-less cards get one block', () => {
+  it('scales each card by its duration', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
     const li = (title: string) => screen.getByText(title).closest('li') as HTMLElement
-    expect(li('Dinner')).toHaveStyle({ minHeight: '88px' }) // 19:00–21:00 = 2h
-    expect(li('Breakfast')).toHaveStyle({ minHeight: '44px' }) // timed, no end = 1h
-    expect(li('Stroll')).toHaveStyle({ minHeight: '44px' }) // untimed = 1 block
+    expect(li('Dinner')).toHaveStyle({ minHeight: '88px' })
+    expect(li('Breakfast')).toHaveStyle({ minHeight: '44px' })
+    expect(li('Stroll')).toHaveStyle({ minHeight: '44px' })
   })
 
   it('offsets timed cards from the configured day start', () => {
     render(
       <DayColumn
         day={day}
-        cards={[{ id: 'late', dayKey: day.key, title: 'Late start', order: 0, startTime: '10:00' }]}
+        cards={[{ id: 'late', dayKey: day.key, title: 'Late start', order: 0, startTime: '10:00', duration: 'custom', durationHours: 1 }]}
         direction="down"
         dayStart="07:00"
         dayEnd="21:00"

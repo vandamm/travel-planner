@@ -42,13 +42,13 @@ write can survive it.)
       "note": "book ahead", // optional
       "link": "https://...", // optional; must be an http(s) URL (or empty)
       "startTime": "10:00", // optional "HH:mm" — its presence makes the card time-bound
-      "endTime": "12:00", // optional "HH:mm"
+      "duration": "custom", // "day"|"half"|"custom"
+      "durationHours": 2, // required positive number when duration is "custom"
       "order": 0, // integer — manual position among untimed cards in the day
       "color": "#3b82f6", // optional
       "icon": "🎟️", // optional
       "transport": false, // optional, legacy — true renders as the "transit" category
       "category": "indoor", // optional — "indoor"|"outdoor"|"transit" (supersedes transport)
-      "size": "auto", // optional — "auto"|"small"|"half"|"full" card height (absent = "auto")
     },
   ],
   "dayOverrides": {
@@ -71,11 +71,12 @@ write can survive it.)
 | `accommodations[].startNight` / `endNight` | `"YYYY-MM-DD"`                                 | Inclusive night span; `endNight ≥ startNight`.                                                                                                                                                    |
 | `cards[].dayKey`                           | `"YYYY-MM-DD"`                                 | The day column the card belongs to.                                                                                                                                                               |
 | `cards[].link`                             | `"http(s)://…"` or `""`, optional              | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected.                                                                                            |
-| `cards[].startTime` / `endTime`            | `"HH:mm"`, optional                            | 24-hour; presence makes the card time-bound (auto-sorted by time).                                                                                                                                |
+| `cards[].startTime`                        | `"HH:mm"`, optional                            | 24-hour; presence makes the card time-bound (auto-sorted by time).                                                                                                                                |
+| `cards[].duration`                         | `"day"`/`"half"`/`"custom"`                 | Required. `day` and `half` resolve from the configured `dayStart`–`dayEnd` window.                                                                                                                |
+| `cards[].durationHours`                    | positive number                                 | Required only for `duration: "custom"`; the explicit card span in hours.                                                                                                                         |
 | `cards[].order`                            | integer                                        | Manual position among untimed cards in a day.                                                                                                                                                     |
 | `cards[].transport`                        | boolean, optional                              | Legacy transportation-leg flag. Kept valid for back-compat; `category` supersedes it and `true` is read as the `"transit"` category.                                                              |
 | `cards[].category`                         | `"indoor"`/`"outdoor"`/`"transit"`, optional   | Activity category, shown as a colour chip. Absent = uncategorised. Takes precedence over `transport`.                                                                                             |
-| `cards[].size`                             | `"auto"`/`"small"`/`"half"`/`"full"`, optional | Card height preset. `auto` (default/absent) sizes the card from its start/end time (1h when untimed); `small` ≈ half an hour; `half`/`full` are half/all of the day's `dayStart`–`dayEnd` window. |
 
 ## Defaults
 
@@ -188,7 +189,7 @@ curl -X POST https://travel.vansach.me/api/trip/italy-2027 \
     ],
     "cards": [
       { "id": "card-1", "dayKey": "2027-05-01", "title": "Colosseum",
-        "startTime": "10:00", "endTime": "12:00", "order": 0 }
+        "startTime": "10:00", "duration": "custom", "durationHours": 2, "order": 0 }
     ],
     "dayOverrides": {}
   }'

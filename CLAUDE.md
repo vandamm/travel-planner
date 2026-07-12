@@ -119,12 +119,12 @@ supersedes it. Read the effective category through `cardCategory(card)` in
 `transport: true` as `'transit'` at read time (no bulk CRDT migration; the
 editor rewrites to `category` and drops `transport` on the card's next save).
 
-A card may also carry an optional `size?: 'auto' | 'small' | 'half' | 'full'`
-height preset (absent = `auto` = sized from its start/end time). `half`/`full`
-are relative to the day's `dayStart`–`dayEnd` window. The height math is pure and
-unit-tested in `src/features/cards/cardHeight.ts`. Dragging an _untimed_ card next
-to timed cards infers a `startTime` from the drop position (snapped to 15 min) —
-see `src/features/board/dndHandlers.ts`.
+A card carries `duration: 'day' | 'half' | 'custom'`; custom cards require a
+positive `durationHours`. Day and half-day durations resolve from the trip's
+`dayStart`–`dayEnd` window. The height math is pure and unit-tested in
+`src/features/cards/cardHeight.ts`. Dragging an _untimed_ card next to timed cards
+infers a non-overlapping `startTime` from resolved card durations (snapped to 15
+minutes) — see `src/features/board/dndHandlers.ts`.
 
 ## Synced vs. per-user state
 

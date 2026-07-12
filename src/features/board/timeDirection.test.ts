@@ -28,6 +28,8 @@ function memoryStorage(): Storage {
 const card = (over: Partial<Card> & Pick<Card, 'id' | 'order'>): Card => ({
   dayKey: '2027-05-01',
   title: over.id,
+  duration: 'custom',
+  durationHours: 1,
   ...over,
 })
 

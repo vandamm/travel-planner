@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Card } from '../../data/schema'
 import { cardCategory } from './cardCategory'
 
-const base: Card = { id: 'c', dayKey: '2027-05-01', title: 'X', order: 0 }
+const base: Card = { id: 'c', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1 }
 
 describe('cardCategory', () => {
   it('returns the explicit category when set', () => {

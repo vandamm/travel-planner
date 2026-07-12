@@ -5,6 +5,8 @@ import { isTimed, sortCardsForColumn } from './cardSort'
 const card = (over: Partial<Card> & Pick<Card, 'id' | 'order'>): Card => ({
   dayKey: '2027-05-01',
   title: over.id,
+  duration: 'custom',
+  durationHours: 1,
   ...over,
 })
 
@@ -74,10 +76,10 @@ describe('sortCardsForColumn', () => {
     expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['a', 'b'])
   })
 
-  it('ignores endTime when ordering', () => {
+  it('orders by start time regardless of duration', () => {
     const cards = [
-      card({ id: 'short-late', order: 0, startTime: '10:00', endTime: '10:30' }),
-      card({ id: 'long-early', order: 1, startTime: '09:00', endTime: '23:00' }),
+      card({ id: 'short-late', order: 0, startTime: '10:00', durationHours: 0.5 }),
+      card({ id: 'long-early', order: 1, startTime: '09:00', duration: 'day', durationHours: undefined }),
     ]
     expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['long-early', 'short-late'])
   })

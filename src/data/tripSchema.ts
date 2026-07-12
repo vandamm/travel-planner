@@ -78,21 +78,25 @@ export const accommodationSchema = z
     path: ['endNight'],
   })
 
-export const cardSchema = z.object({
+const cardBaseSchema = z.object({
   id: z.string().min(1),
   dayKey: dateOnly,
   title: z.string(),
   note: z.string().optional(),
   link: webLink.optional(),
   startTime: clockTime.optional(),
-  endTime: clockTime.optional(),
   order: z.number().int(),
   color: z.string().optional(),
   icon: z.string().optional(),
   transport: z.boolean().optional(),
   category: z.enum(['indoor', 'outdoor', 'transit']).optional(),
-  size: z.enum(['auto', 'small', 'half', 'full']).optional(),
 })
+
+export const cardSchema = z.discriminatedUnion('duration', [
+  cardBaseSchema.extend({ duration: z.literal('day') }).strict(),
+  cardBaseSchema.extend({ duration: z.literal('half') }).strict(),
+  cardBaseSchema.extend({ duration: z.literal('custom'), durationHours: z.number().positive() }).strict(),
+])
 
 // Entities are keyed by `id` on apply (into `Y.Map`s), so a duplicate id would
 // silently overwrite an earlier entity and lose it. Reject duplicates here so

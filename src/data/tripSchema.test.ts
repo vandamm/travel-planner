@@ -7,7 +7,7 @@ const VALID = {
   accommodations: [
     { id: 'stay-1', label: 'Hotel Roma', cityId: 'rome', startNight: '2027-05-01', endNight: '2027-05-02' },
   ],
-  cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Colosseum', order: 0 }],
+  cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Colosseum', order: 0, duration: 'custom', durationHours: 1 }],
   dayOverrides: { '2027-05-03': 'rome' },
 }
 
@@ -54,7 +54,7 @@ describe('tripDocumentSchema', () => {
   it('accepts a card flagged as transport', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
-      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Flight', order: 0, transport: true }],
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Flight', order: 0, duration: 'custom', durationHours: 1, transport: true }],
     })
     expect(result.success).toBe(true)
     if (result.success) expect(result.data.cards[0].transport).toBe(true)
@@ -64,7 +64,7 @@ describe('tripDocumentSchema', () => {
     for (const category of ['indoor', 'outdoor', 'transit']) {
       const ok = tripDocumentSchema.safeParse({
         ...VALID,
-        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, category }],
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1, category }],
       })
       expect(ok.success).toBe(true)
       if (ok.success) expect(ok.data.cards[0].category).toBe(category)
@@ -72,15 +72,44 @@ describe('tripDocumentSchema', () => {
 
     const bad = tripDocumentSchema.safeParse({
       ...VALID,
-      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, category: 'museum' }],
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1, category: 'museum' }],
     })
     expect(bad.success).toBe(false)
+  })
+
+  it('requires a positive durationHours value for custom cards', () => {
+    for (const durationHours of [0, -1]) {
+      const result = tripDocumentSchema.safeParse({
+        ...VALID,
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours }],
+      })
+      expect(result.success).toBe(false)
+    }
+
+    expect(
+      tripDocumentSchema.safeParse({
+        ...VALID,
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1.5 }],
+      }).success,
+    ).toBe(true)
+  })
+
+  it('rejects removed card fields instead of silently stripping them', () => {
+    for (const legacyField of [{ endTime: '12:00' }, { size: 'full' }]) {
+      const result = tripDocumentSchema.safeParse({
+        ...VALID,
+        cards: [
+          { id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1, ...legacyField },
+        ],
+      })
+      expect(result.success).toBe(false)
+    }
   })
 
   it('rejects a card with a malformed date and points at the offending path', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
-      cards: [{ id: 'card-1', dayKey: '05/01/2027', title: 'Bad', order: 0 }],
+      cards: [{ id: 'card-1', dayKey: '05/01/2027', title: 'Bad', order: 0, duration: 'custom', durationHours: 1 }],
     })
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -102,8 +131,8 @@ describe('tripDocumentSchema', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
       cards: [
-        { id: 'dup', dayKey: '2027-05-01', title: 'A', order: 0 },
-        { id: 'dup', dayKey: '2027-05-01', title: 'B', order: 1 },
+        { id: 'dup', dayKey: '2027-05-01', title: 'A', order: 0, duration: 'custom', durationHours: 1 },
+        { id: 'dup', dayKey: '2027-05-01', title: 'B', order: 1, duration: 'custom', durationHours: 1 },
       ],
     })
     expect(result.success).toBe(false)
@@ -112,7 +141,7 @@ describe('tripDocumentSchema', () => {
   it('rejects a card time that is not HH:mm', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
-      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, startTime: '9am' }],
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1, startTime: '9am' }],
     })
     expect(result.success).toBe(false)
   })
@@ -170,7 +199,7 @@ describe('tripDocumentSchema', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
       cards: [
-        { id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, link: 'javascript:alert(1)' },
+        { id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1, link: 'javascript:alert(1)' },
       ],
     })
     expect(result.success).toBe(false)
@@ -181,7 +210,7 @@ describe('tripDocumentSchema', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,
       cards: [
-        { id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, link: 'https://example.com' },
+        { id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1, link: 'https://example.com' },
       ],
     })
     expect(result.success).toBe(true)

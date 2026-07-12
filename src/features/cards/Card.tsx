@@ -1,14 +1,14 @@
 // An activity card's display. Purely presentational: it shows the title, an
-// optional time range, an optional note, and an optional link, and reports clicks
+// optional start time plus duration, an optional note, and an optional link, and reports clicks
 // to `onEdit` so the owner can open the editor. Keeping it presentational makes
 // it trivial to reuse (the mobile view in Task 11). When `dragHandleProps` is
 // passed (by `SortableCard`), it also renders a drag handle wired to dnd-kit.
 
 import { useSortable } from '@dnd-kit/sortable'
 import type { CSSProperties, HTMLAttributes } from 'react'
-import { formatTimeRange } from '../../data/dateFormat'
 import type { Card as CardType, CardCategory } from '../../data/schema'
 import { cardCategory } from './cardCategory'
+import { resolvedDurationHours } from './cardHeight'
 
 /** Chip-triad token classes (text / bg / border) per category. */
 const CATEGORY_CHIP: Record<CardCategory, string> = {
@@ -29,6 +29,8 @@ export interface CardProps {
    * presentational mobile view and in isolation tests.
    */
   dragHandleProps?: HTMLAttributes<HTMLButtonElement>
+  dayStart?: string
+  dayEnd?: string
 }
 
 /** A compact, human-friendly label for a link (its host, falling back to raw). */
@@ -55,8 +57,13 @@ function isSafeHref(link: string): boolean {
   }
 }
 
-export function Card({ card, conflict = false, onEdit, dragHandleProps }: CardProps) {
+function formatDuration(hours: number): string {
+  return `${Number(hours.toFixed(2))}h`
+}
+
+export function Card({ card, conflict = false, onEdit, dragHandleProps, dayStart = '06:00', dayEnd = '21:00' }: CardProps) {
   const category = cardCategory(card)
+  const duration = formatDuration(resolvedDurationHours(card, dayStart, dayEnd))
   return (
     <article
       data-testid="card"
@@ -86,12 +93,12 @@ export function Card({ card, conflict = false, onEdit, dragHandleProps }: CardPr
           >
             {card.title}
           </span>
-          {card.startTime && (
+          {(
             <span
               data-testid="card-time"
               className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
             >
-              {formatTimeRange(card.startTime, card.endTime)}
+              {card.startTime ? `${card.startTime} · ${duration}` : duration}
             </span>
           )}
         </button>
@@ -153,6 +160,8 @@ export interface SortableCardProps {
   card: CardType
   conflict?: boolean
   onEdit?: (card: CardType) => void
+  dayStart?: string
+  dayEnd?: string
 }
 
 /**
@@ -161,7 +170,7 @@ export interface SortableCardProps {
  * another day (see `dndHandlers.ts`). Must be rendered inside a `SortableContext`
  * (its day column) and the board's `DndContext`.
  */
-export function SortableCard({ card, conflict, onEdit }: SortableCardProps) {
+export function SortableCard({ card, conflict, onEdit, dayStart, dayEnd }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
   })
@@ -178,6 +187,8 @@ export function SortableCard({ card, conflict, onEdit }: SortableCardProps) {
         card={card}
         conflict={conflict}
         onEdit={onEdit}
+        dayStart={dayStart}
+        dayEnd={dayEnd}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>

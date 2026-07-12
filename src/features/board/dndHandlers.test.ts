@@ -89,16 +89,16 @@ describe('applyCardDragEnd — move across days', () => {
 describe('deriveDropTime', () => {
   // Canonical (morning→evening) neighbour lists; insertIndex is where the
   // dragged untimed card lands among them.
-  const timed = (startTime: string): Card => ({ id: startTime, dayKey: DAY1, title: startTime, order: 0, startTime })
-  const untimed = (id: string): Card => ({ id, dayKey: DAY1, title: id, order: 0 })
+  const timed = (startTime: string, durationHours = 1): Card => ({ id: startTime, dayKey: DAY1, title: startTime, order: 0, startTime, duration: 'custom', durationHours })
+  const untimed = (id: string): Card => ({ id, dayKey: DAY1, title: id, order: 0, duration: 'custom', durationHours: 1 })
 
   it('midpoints between the timed cards above and below the drop', () => {
-    expect(deriveDropTime([timed('12:00'), timed('18:00')], 1, '06:00', '21:00')).toBe('15:00')
+    expect(deriveDropTime([timed('12:00'), timed('18:00')], 1, '06:00', '21:00')).toBe('15:30')
   })
 
   it('snaps the midpoint to 15 minutes', () => {
-    // (10:00 + 11:10) / 2 = 10:35 → 10:30
-    expect(deriveDropTime([timed('10:00'), timed('11:10')], 1, '06:00', '21:00')).toBe('10:30')
+    // (11:00 + 11:10) / 2 = 11:05 → 11:00
+    expect(deriveDropTime([timed('10:00'), timed('11:10')], 1, '06:00', '21:00')).toBe('11:00')
   })
 
   it('drops after the last timed card → a later time', () => {
@@ -110,7 +110,7 @@ describe('deriveDropTime', () => {
   })
 
   it('clamps to the day window', () => {
-    expect(deriveDropTime([timed('20:30')], 1, '06:00', '21:00')).toBe('21:00')
+    expect(deriveDropTime([timed('20:30')], 1, '06:00', '21:00')).toBe('20:00')
     expect(deriveDropTime([timed('06:30')], 0, '06:00', '21:00')).toBe('06:00')
   })
 
@@ -121,7 +121,11 @@ describe('deriveDropTime', () => {
   it('finds the nearest timed neighbour past untimed ones', () => {
     // [timed 10:00, untimed, <drop>, untimed, timed 14:00] → midpoint 12:00
     const neighbours = [timed('10:00'), untimed('u1'), untimed('u2'), timed('14:00')]
-    expect(deriveDropTime(neighbours, 2, '06:00', '21:00')).toBe('12:00')
+    expect(deriveDropTime(neighbours, 2, '06:00', '21:00')).toBe('12:30')
+  })
+
+  it('uses the preceding card duration instead of a fixed one-hour gap', () => {
+    expect(deriveDropTime([timed('10:00', 2)], 1, '06:00', '21:00')).toBe('12:00')
   })
 })
 
@@ -137,7 +141,7 @@ describe('applyCardDragEnd — assign time to an untimed card', () => {
     const u = addCard(doc, { dayKey: DAY1, title: 'U' }).id
     // Drop the untimed card onto B; canonical neighbours are A(10:00), B(16:00).
     applyCardDragEnd(doc, { activeId: u, overId: b })
-    expect(getCard(doc, u)?.startTime).toBe('13:00')
+    expect(getCard(doc, u)?.startTime).toBe('13:30')
   })
 
   it('assigns a later time when dropped at the bottom (down direction)', () => {
@@ -174,7 +178,7 @@ describe('applyCardDragEnd — assign time to an untimed card', () => {
     const u = addCard(doc, { dayKey: DAY1, title: 'U' }).id
     applyCardDragEnd(doc, { activeId: u, overId: b })
     expect(getCard(doc, u)?.dayKey).toBe(DAY2)
-    expect(getCard(doc, u)?.startTime).toBe('13:00')
+    expect(getCard(doc, u)?.startTime).toBe('13:30')
   })
 })
 

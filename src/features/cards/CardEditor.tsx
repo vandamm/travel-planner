@@ -9,7 +9,7 @@ import { Modal } from '../../components/Modal'
 import { TimePicker } from '../pickers/TimePicker'
 import { addCard, removeCard, updateCard } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
-import type { Card, CardCategory, CardSize } from '../../data/schema'
+import type { Card, CardCategory, CardDuration } from '../../data/schema'
 import { cardCategory } from './cardCategory'
 
 /** Type segments: category value + the triad classes shown when selected. */
@@ -19,12 +19,10 @@ const CATEGORIES: { value: CardCategory; label: string; selected: string }[] = [
   { value: 'transit', label: 'Transit', selected: 'border-transit bg-transit-bg text-transit' },
 ]
 
-/** Card-size segments. `auto` (ink fill when selected) = height from times. */
-const SIZES: { value: CardSize; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'small', label: 'Small' },
+const DURATIONS: { value: CardDuration; label: string }[] = [
+  { value: 'day', label: 'Day' },
   { value: 'half', label: 'Half day' },
-  { value: 'full', label: 'Whole day' },
+  { value: 'custom', label: 'Custom' },
 ]
 
 export interface CardEditorProps {
@@ -50,10 +48,10 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
   const [link, setLink] = useState(card?.link ?? '')
   const [timed, setTimed] = useState(Boolean(card?.startTime))
   const [startTime, setStartTime] = useState(card?.startTime ?? '')
-  const [endTime, setEndTime] = useState(card?.endTime ?? '')
   // Legacy `transport: true` is derived to `'transit'` so an old card pre-selects it.
   const [category, setCategory] = useState<CardCategory | undefined>(card ? cardCategory(card) : undefined)
-  const [size, setSize] = useState<CardSize>(card?.size ?? 'auto')
+  const [duration, setDuration] = useState<CardDuration>(card?.duration ?? 'custom')
+  const [durationHours, setDurationHours] = useState(card?.durationHours ?? 1)
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -61,9 +59,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
     if (!trimmedTitle) return
 
     const start = timed ? clean(startTime) : undefined
-    const end = timed && start ? clean(endTime) : undefined
-    // `auto` is the default — store `undefined` so it clears rather than persisting.
-    const cardSize = size === 'auto' ? undefined : size
+    const customHours = duration === 'custom' ? durationHours : undefined
+    if (customHours !== undefined && customHours <= 0) return
 
     if (isEdit) {
       // `undefined` clears the field, so toggling time off or emptying a field removes it.
@@ -73,10 +70,10 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         note: clean(note),
         link: clean(link),
         startTime: start,
-        endTime: end,
+        duration,
+        durationHours: customHours,
         transport: undefined,
         category,
-        size: cardSize,
       })
     } else {
       if (!dayKey) return
@@ -86,9 +83,9 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         note: clean(note),
         link: clean(link),
         startTime: start,
-        endTime: end,
+        duration,
+        durationHours: customHours,
         category,
-        size: cardSize,
       })
     }
     onClose()
@@ -168,16 +165,16 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className={sectionLabel}>Card size</span>
-            <div role="group" aria-label="Card size" className="flex gap-1.5">
-              {SIZES.map((s) => {
-                const active = size === s.value
+            <span className={sectionLabel}>Duration</span>
+            <div role="group" aria-label="Duration" className="flex gap-1.5">
+              {DURATIONS.map((s) => {
+                const active = duration === s.value
                 return (
                   <button
                     key={s.value}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => setSize(s.value)}
+                    onClick={() => setDuration(s.value)}
                     className={`flex-1 rounded-card border px-1 py-1.5 text-center font-sans text-[11.5px] font-semibold ${
                       active ? 'border-ink bg-ink text-white' : 'border-edge text-ink-600'
                     }`}
@@ -187,6 +184,21 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                 )
               })}
             </div>
+            {duration === 'custom' && (
+              <label className="flex flex-col gap-1.5">
+                <span className={sectionLabel}>Hours</span>
+                <input
+                  aria-label="Duration hours"
+                  type="number"
+                  min="0.25"
+                  step="0.25"
+                  required
+                  value={durationHours}
+                  onChange={(e) => setDurationHours(e.target.valueAsNumber)}
+                  className={fieldInput}
+                />
+              </label>
+            )}
           </div>
 
           <label className="flex items-center gap-2 text-sm font-medium text-ink-600">
@@ -209,18 +221,6 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                   onChange={setStartTime}
                   onClear={() => setStartTime('')}
                   placeholder="Set start"
-                  triggerClassName={`${fieldInput} text-center font-serif`}
-                />
-              </div>
-              <span className="pb-2.5 text-ink-400">→</span>
-              <div className="flex flex-1 flex-col gap-1.5">
-                <span className={sectionLabel}>End time</span>
-                <TimePicker
-                  label="End time"
-                  value={endTime}
-                  onChange={setEndTime}
-                  onClear={() => setEndTime('')}
-                  placeholder="Set end"
                   triggerClassName={`${fieldInput} text-center font-serif`}
                 />
               </div>

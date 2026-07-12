@@ -8,7 +8,7 @@ const TRIP = {
   trip: { title: 'Italy', startDate: '2027-05-01', endDate: '2027-05-03', dayStart: '06:00', dayEnd: '21:00' },
   cities: [],
   accommodations: [],
-  cards: [{ id: 'applied', dayKey: '2027-05-01', title: 'Museum', order: 0 }],
+  cards: [{ id: 'applied', dayKey: '2027-05-01', title: 'Museum', order: 0, duration: 'custom', durationHours: 1 }],
   dayOverrides: {},
 }
 
