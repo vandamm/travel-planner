@@ -52,17 +52,15 @@ test('Jump to today brings today’s column into view', async ({ page }) => {
 test('Jump to today is absent when today is outside the trip', async ({ page }) => {
   await page.goto(E2E_LINK)
   // A 3-day trip starting ~40 days out never contains the real "today".
-  const soon = await page.evaluate(() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 40)
-    return d.toISOString().slice(0, 10)
-  })
-  const endDate = await page.evaluate(() => {
-    const date = new Date()
-    date.setDate(date.getDate() + 9)
-    return date.toISOString().slice(0, 10)
+  const [soon, endDate] = await page.evaluate(() => {
+    const start = new Date()
+    start.setDate(start.getDate() + 40)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 2)
+    return [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]
   })
   await setupTrip(page, { title: 'Upcoming', startDate: soon, endDate })
+  await expect(page.locator('[data-testid="day-column"]')).toHaveCount(3)
   await expect(page.getByRole('button', { name: 'Jump to today' })).toHaveCount(0)
 })
 
