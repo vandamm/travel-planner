@@ -96,9 +96,8 @@ describe('deriveDropTime', () => {
     expect(deriveDropTime([timed('12:00'), timed('18:00')], 1, '06:00', '21:00')).toBe('15:30')
   })
 
-  it('snaps the midpoint to 15 minutes', () => {
-    // (11:00 + 11:10) / 2 = 11:05 → 11:00
-    expect(deriveDropTime([timed('10:00'), timed('11:10')], 1, '06:00', '21:00')).toBe('11:00')
+  it('leaves a card untimed when the slot cannot fit its duration', () => {
+    expect(deriveDropTime([timed('10:00'), timed('11:10')], 1, '06:00', '21:00')).toBeUndefined()
   })
 
   it('drops after the last timed card → a later time', () => {
@@ -109,9 +108,9 @@ describe('deriveDropTime', () => {
     expect(deriveDropTime([timed('12:00')], 0, '06:00', '21:00')).toBe('11:00')
   })
 
-  it('clamps to the day window', () => {
-    expect(deriveDropTime([timed('20:30')], 1, '06:00', '21:00')).toBe('20:00')
-    expect(deriveDropTime([timed('06:30')], 0, '06:00', '21:00')).toBe('06:00')
+  it('leaves a card untimed when no usable day-window slot exists', () => {
+    expect(deriveDropTime([timed('20:30')], 1, '06:00', '21:00')).toBeUndefined()
+    expect(deriveDropTime([timed('06:30')], 0, '06:00', '21:00')).toBeUndefined()
   })
 
   it('returns undefined among untimed-only neighbours (reorder only)', () => {
@@ -126,6 +125,10 @@ describe('deriveDropTime', () => {
 
   it('uses the preceding card duration instead of a fixed one-hour gap', () => {
     expect(deriveDropTime([timed('10:00', 2)], 1, '06:00', '21:00')).toBe('12:00')
+  })
+
+  it('fits a four-hour card into the available slot without overlapping either neighbour', () => {
+    expect(deriveDropTime([timed('10:00', 2), timed('16:00')], 1, '06:00', '21:00', 4)).toBe('12:00')
   })
 })
 
@@ -142,6 +145,15 @@ describe('applyCardDragEnd — assign time to an untimed card', () => {
     // Drop the untimed card onto B; canonical neighbours are A(10:00), B(16:00).
     applyCardDragEnd(doc, { activeId: u, overId: b })
     expect(getCard(doc, u)?.startTime).toBe('13:30')
+  })
+
+  it('uses the dragged card duration when assigning a time between cards', () => {
+    const doc = freshDoc()
+    seedTimed(doc, DAY1, '10:00', 'A')
+    const b = seedTimed(doc, DAY1, '16:00', 'B')
+    const u = addCard(doc, { dayKey: DAY1, title: 'U', duration: 'custom', durationHours: 4 }).id
+    applyCardDragEnd(doc, { activeId: u, overId: b })
+    expect(getCard(doc, u)?.startTime).toBe('12:00')
   })
 
   it('assigns a later time when dropped at the bottom (down direction)', () => {

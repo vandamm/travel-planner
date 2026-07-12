@@ -55,10 +55,10 @@ function arraysEqual(a: string[], b: string[]): boolean {
  *
  * The day column is a *stacked* timeline, not a clock ruler, so the time comes
  * from the nearest timed card on each side of the drop, not from pixels:
- * - timed neighbours both above and below → their midpoint;
+ * - timed neighbours both above and below → their midpoint within the free slot;
  * - only an earlier (above) timed neighbour → that time + a gap (later);
  * - only a later (below) timed neighbour → that time − a gap (earlier).
- * The result is snapped to {@link SNAP_MINUTES} and clamped to the day window.
+ * The result is snapped to {@link SNAP_MINUTES} and clamped to the usable slot.
  * Returns `undefined` when there is no timed neighbour to anchor against — the
  * caller then falls back to a plain untimed reorder.
  */
@@ -92,9 +92,14 @@ export function deriveDropTime(
   else if (after !== undefined) target = after - activeDurationHours * 60
   else return undefined
 
+  const firstStart = Math.max(clockMinutes(dayStart), before ?? -Infinity)
+  const lastStart = Math.min(
+    clockMinutes(dayEnd) - activeDurationHours * 60,
+    after === undefined ? Infinity : after - activeDurationHours * 60,
+  )
+  if (firstStart > lastStart) return undefined
   const snapped = Math.round(target / SNAP_MINUTES) * SNAP_MINUTES
-  const lastStart = Math.max(clockMinutes(dayStart), clockMinutes(dayEnd) - activeDurationHours * 60)
-  const clamped = Math.min(Math.max(snapped, clockMinutes(dayStart)), lastStart)
+  const clamped = Math.min(Math.max(snapped, firstStart), lastStart)
   return clockString(clamped)
 }
 

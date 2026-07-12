@@ -23,6 +23,7 @@ const CITIES = 'cities'
 const DAY_OVERRIDES = 'dayOverrides'
 const CARDS = 'cards'
 const ACCOMMODATIONS = 'accommodations'
+const DEFAULT_CUSTOM_DURATION_HOURS = 1
 
 const DEFAULT_TRIP: Trip = {
   title: '',
@@ -216,11 +217,17 @@ function nextOrder(doc: Y.Doc, dayKey: string): number {
   )
 }
 
+function validCustomDurationHours(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : DEFAULT_CUSTOM_DURATION_HOURS
+}
+
 export function addCard(doc: Y.Doc, input: NewCard): Card {
   const id = input.id ?? newId()
   const order = input.order ?? nextOrder(doc, input.dayKey)
   const duration = input.duration ?? 'custom'
-  const durationHours = input.durationHours && input.durationHours > 0 ? input.durationHours : 1
+  const durationHours = validCustomDurationHours(input.durationHours)
   const card: Card = {
     id,
     dayKey: input.dayKey,
@@ -243,7 +250,14 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
 export function updateCard(doc: Y.Doc, id: string, patch: Partial<Omit<Card, 'id'>>): void {
   const m = entityMap(doc, CARDS).get(id)
   if (!m) return
-  doc.transact(() => patchYMap(m, patch))
+  doc.transact(() => {
+    patchYMap(m, patch)
+    if (m.get('duration') === 'custom') {
+      m.set('durationHours', validCustomDurationHours(m.get('durationHours')))
+    } else {
+      m.delete('durationHours')
+    }
+  })
 }
 
 /**

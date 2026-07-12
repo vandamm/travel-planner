@@ -151,6 +151,16 @@ describe('cards', () => {
     ])
   })
 
+  it('normalizes invalid custom durations to one hour on add and update', () => {
+    const doc = freshDoc()
+    const added = addCard(doc, { dayKey: '2027-05-01', title: 'A', duration: 'custom', durationHours: 0 })
+    expect(added).toMatchObject({ duration: 'custom', durationHours: 1 })
+
+    const day = addCard(doc, { dayKey: '2027-05-01', title: 'B', duration: 'day' })
+    updateCard(doc, day.id, { duration: 'custom', durationHours: undefined })
+    expect(getCard(doc, day.id)).toMatchObject({ duration: 'custom', durationHours: 1 })
+  })
+
   it('keeps cards on different days independent', () => {
     const doc = freshDoc()
     addCard(doc, { dayKey: '2027-05-01', title: 'Day1-A' })
