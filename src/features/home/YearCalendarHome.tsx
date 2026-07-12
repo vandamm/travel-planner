@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { addDays, format, parseISO } from 'date-fns'
 import { Modal } from '../../components/Modal'
-import { buildMonth, tripsOnDay, type TripSummary } from './yearCalendar'
+import { buildMonth, ribbonEdges, tripsOnDay, type TripSummary } from './yearCalendar'
 
 const MONTHS = Array.from({ length: 12 }, (_, month) =>
   new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2024, month, 1)),
@@ -17,6 +17,7 @@ function tripLabel(trip: TripSummary): string {
 }
 
 function Month({ year, month, trips }: { year: number; month: number; trips: TripSummary[] }) {
+  const days = buildMonth(year, month)
   return (
     <section className="rounded-2xl border border-[#dce4f4] bg-white p-4 shadow-[0_10px_30px_rgba(23,35,60,0.05)]">
       <h2 className="mb-3 font-serif text-xl font-semibold text-[#17233c]">{MONTHS[month]}</h2>
@@ -29,18 +30,28 @@ function Month({ year, month, trips }: { year: number; month: number; trips: Tri
         ))}
       </div>
       <div className="mt-1 grid grid-cols-7 gap-y-1">
-        {buildMonth(year, month).map((day) => {
+        {days.map((day, index) => {
           const matches = day.inMonth ? tripsOnDay(day.key, trips) : []
           const trip = matches[0]
           const color = trip ? COLORS[trips.indexOf(trip) % COLORS.length] : undefined
-          const starts = trip?.startDate === day.key
-          const className = `relative flex h-8 items-center justify-center rounded-md text-xs ${
+          const isTripStart = trip?.startDate === day.key
+          const edges = trip ? ribbonEdges(days, index, trip, trips) : null
+          const corners = edges
+            ? edges.start && edges.end
+              ? 'rounded-md'
+              : edges.start
+                ? 'rounded-l-md'
+                : edges.end
+                  ? 'rounded-r-md'
+                  : 'rounded-none'
+            : 'rounded-md'
+          const className = `relative flex h-8 items-center justify-center ${corners} text-xs ${
             day.inMonth ? 'text-[#17233c]' : 'text-[#c7cfdd]'
           } ${trip ? 'font-bold text-white' : ''}`
           const contents = trip ? (
             <>
               <time dateTime={day.key}>{day.day}</time>
-              {starts && (
+              {isTripStart && (
                 <span className="absolute left-1 top-0 max-w-[calc(700%-0.5rem)] -translate-y-[85%] truncate rounded-full bg-[#17233c] px-2 py-0.5 text-[9px] font-bold text-white shadow-sm">
                   {tripLabel(trip)}
                 </span>

@@ -43,3 +43,19 @@ export function tripsOnDay(dayKey: string, trips: TripSummary[]): TripSummary[] 
     return dayKey >= startDate && dayKey <= format(end, 'yyyy-MM-dd')
   })
 }
+
+/** Rounded caps for one visible ribbon segment; calendar rows break on Sunday. */
+export function ribbonEdges(
+  days: CalendarDay[],
+  index: number,
+  trip: TripSummary,
+  trips: TripSummary[],
+): { start: boolean; end: boolean } {
+  const sameTrip = (day: CalendarDay | undefined) =>
+    day?.inMonth && tripsOnDay(day.key, trips)[0]?.id === trip.id
+
+  return {
+    start: index % 7 === 0 || !sameTrip(days[index - 1]),
+    end: index % 7 === 6 || !sameTrip(days[index + 1]),
+  }
+}

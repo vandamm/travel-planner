@@ -6,7 +6,7 @@ Turn the bare root route into a useful annual overview: show every trip on a twe
 
 ## Design
 
-The page is a compact "year atlas". A narrow masthead holds the product name, year controls, and the primary **New trip** button. Twelve month cards form a responsive 4x3 grid on desktop and a single column on small screens. Each date is a real calendar cell; trip dates are tinted and the trip's first visible date carries a short linked label. A linked trip index below the calendar makes every trip easy to find even when dates overlap.
+The page is a compact "year atlas". A narrow masthead holds the product name, year controls, and the primary **New trip** button. Twelve month cards form a responsive 4x3 grid on desktop and a single column on small screens. Each date is a real calendar cell; trip dates join into continuous ribbons with rounded caps only at the start and end of each visible weekly segment. The trip's first visible date carries a short linked label. A linked trip index below the calendar makes every trip easy to find even when dates overlap.
 
 Palette: midnight `#17233c`, paper `#f5f7fb`, white `#ffffff`, cobalt `#3157d5`, coral `#ef6a5b`, and mist `#dce4f4`. Lora remains the restrained display face; Manrope handles body copy and calendar data. The signature is the uninterrupted trip ribbon moving through otherwise quiet month grids.
 
