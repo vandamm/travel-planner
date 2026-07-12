@@ -86,10 +86,15 @@ describe('App without a room slug', () => {
   })
 
   it('opens the new trip form and reports creation errors', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ trips: [] }) })
-      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'room already exists' }) })
+    const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+      if (input.startsWith('https://openholidaysapi.org/')) {
+        return { ok: true, json: async () => [] }
+      }
+      if (init?.method === 'POST') {
+        return { ok: false, json: async () => ({ error: 'room already exists' }) }
+      }
+      return { ok: true, json: async () => ({ trips: [] }) }
+    })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
     render(<App />)
@@ -107,9 +112,27 @@ describe('App without a room slug', () => {
 
   it('links trip markings on the calendar to their boards', async () => {
     const year = new Date().getFullYear()
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+      if (input.startsWith('https://openholidaysapi.org/')) {
+        return { ok: true, json: async () => [] }
+      }
+      if (input.includes('cursor=page-2')) {
+        return {
+          ok: true,
+          json: async () => ({
+            trips: [
+              {
+                id: 'lisbon-autumn',
+                title: 'Lisbon',
+                startDate: `${year}-10-15`,
+                numDays: 4,
+              },
+            ],
+            nextCursor: null,
+          }),
+        }
+      }
+      return {
         ok: true,
         json: async () => ({
           trips: [
@@ -122,21 +145,8 @@ describe('App without a room slug', () => {
           ],
           nextCursor: 'page-2',
         }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          trips: [
-            {
-              id: 'lisbon-autumn',
-              title: 'Lisbon',
-              startDate: `${year}-10-15`,
-              numDays: 4,
-            },
-          ],
-          nextCursor: null,
-        }),
-      })
+      }
+    })
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
 
@@ -148,7 +158,31 @@ describe('App without a room slug', () => {
       'href',
       '/lisbon-autumn',
     )
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/rooms?cursor=page-2')
+    expect(fetchMock).toHaveBeenCalledWith('/api/rooms?cursor=page-2')
+  })
+
+  it('shows Bavaria school holidays as a light calendar background', async () => {
+    const year = new Date().getFullYear()
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => ({
+      ok: true,
+      json: async () =>
+        input.startsWith('https://openholidaysapi.org/')
+          ? [
+              {
+                startDate: `${year}-01-02`,
+                endDate: `${year}-01-03`,
+                name: [{ language: 'EN', text: 'Christmas Holidays' }],
+              },
+            ]
+          : { trips: [] },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+
+    const holidayDays = await screen.findAllByTitle('Christmas Holidays · Bavaria school holidays')
+    expect(holidayDays).toHaveLength(2)
+    expect(holidayDays.every((day) => day.classList.contains('bg-[#e8efff]'))).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('subdivisionCode=DE-BY'))
   })
 
   it('rejects non-canonical slug paths', () => {

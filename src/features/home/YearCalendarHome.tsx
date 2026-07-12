@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { addDays, format, parseISO } from 'date-fns'
 import { Modal } from '../../components/Modal'
-import { buildMonth, ribbonEdges, tripsOnDay, type TripSummary } from './yearCalendar'
+import {
+  buildMonth,
+  parseSchoolHolidays,
+  ribbonEdges,
+  schoolHolidayEdges,
+  schoolHolidayOnDay,
+  tripsOnDay,
+  type SchoolHoliday,
+  type TripSummary,
+} from './yearCalendar'
 
 const MONTHS = Array.from({ length: 12 }, (_, month) =>
   new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2024, month, 1)),
 )
 const COLORS = ['#3157d5', '#ef6a5b', '#258477', '#8b5bb5', '#d68b24']
+const SCHOOL_HOLIDAYS_API = 'https://openholidaysapi.org/SchoolHolidays'
 
 function workerBase(): string {
   return (import.meta.env.VITE_WORKER_URL ?? '').replace(/\/+$/, '')
@@ -16,7 +26,17 @@ function tripLabel(trip: TripSummary): string {
   return trip.title.trim() || trip.id
 }
 
-function Month({ year, month, trips }: { year: number; month: number; trips: TripSummary[] }) {
+function Month({
+  year,
+  month,
+  trips,
+  holidays,
+}: {
+  year: number
+  month: number
+  trips: TripSummary[]
+  holidays: SchoolHoliday[]
+}) {
   const days = buildMonth(year, month)
   return (
     <section className="rounded-2xl border border-[#dce4f4] bg-white p-4 shadow-[0_10px_30px_rgba(23,35,60,0.05)]">
@@ -32,10 +52,15 @@ function Month({ year, month, trips }: { year: number; month: number; trips: Tri
       <div className="mt-1 grid grid-cols-7 gap-y-1">
         {days.map((day, index) => {
           const matches = day.inMonth ? tripsOnDay(day.key, trips) : []
+          const holiday = day.inMonth ? schoolHolidayOnDay(day.key, holidays) : undefined
           const trip = matches[0]
           const color = trip ? COLORS[trips.indexOf(trip) % COLORS.length] : undefined
           const isTripStart = trip?.startDate === day.key
-          const edges = trip ? ribbonEdges(days, index, trip, trips) : null
+          const edges = trip
+            ? ribbonEdges(days, index, trip, trips)
+            : holiday
+              ? schoolHolidayEdges(days, index, holiday, holidays)
+              : null
           const corners = edges
             ? edges.start && edges.end
               ? 'rounded-md'
@@ -47,7 +72,8 @@ function Month({ year, month, trips }: { year: number; month: number; trips: Tri
             : 'rounded-md'
           const className = `relative flex h-8 items-center justify-center ${corners} text-xs ${
             day.inMonth ? 'text-[#17233c]' : 'text-[#c7cfdd]'
-          } ${trip ? 'font-bold text-white' : ''}`
+          } ${trip ? 'font-bold text-white' : holiday ? 'bg-[#e8efff]' : ''}`
+          const holidayTitle = holiday ? `${holiday.name} · Bavaria school holidays` : undefined
           const contents = trip ? (
             <>
               <time dateTime={day.key}>{day.day}</time>
@@ -70,13 +96,14 @@ function Month({ year, month, trips }: { year: number; month: number; trips: Tri
               key={day.key}
               href={`/${encodeURIComponent(trip.id)}`}
               aria-label={`${tripLabel(trip)} on ${format(parseISO(day.key), 'd MMMM yyyy')}`}
+              title={holidayTitle}
               className={className}
               style={{ backgroundColor: color }}
             >
               {contents}
             </a>
           ) : (
-            <time key={day.key} dateTime={day.key} className={className}>
+            <time key={day.key} dateTime={day.key} title={holidayTitle} className={className}>
               {contents}
             </time>
           )
@@ -153,6 +180,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 export function YearCalendarHome() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [trips, setTrips] = useState<TripSummary[]>([])
+  const [holidays, setHolidays] = useState<SchoolHoliday[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
@@ -189,6 +217,31 @@ export function YearCalendarHome() {
     void loadTrips()
   }, [])
 
+  useEffect(() => {
+    let active = true
+    const params = new URLSearchParams({
+      countryIsoCode: 'DE',
+      subdivisionCode: 'DE-BY',
+      languageIsoCode: 'EN',
+      validFrom: `${year}-01-01`,
+      validTo: `${year}-12-31`,
+    })
+    void fetch(`${SCHOOL_HOLIDAYS_API}?${params}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Could not load school holidays')
+        return parseSchoolHolidays(await response.json())
+      })
+      .then((next) => {
+        if (active) setHolidays(next)
+      })
+      .catch(() => {
+        if (active) setHolidays([])
+      })
+    return () => {
+      active = false
+    }
+  }, [year])
+
   const yearTrips = useMemo(
     () =>
       trips.filter((trip) => {
@@ -202,7 +255,7 @@ export function YearCalendarHome() {
   return (
     <main className="min-h-screen bg-[#f5f7fb] px-4 py-6 text-[#17233c] sm:px-7 lg:px-10">
       <div className="mx-auto max-w-[1480px]">
-        <header className="mb-8 flex flex-wrap items-end gap-5 border-b border-[#ccd6e8] pb-6">
+        <header className="mb-5 flex flex-wrap items-end gap-5 border-b border-[#ccd6e8] pb-6">
           <div className="mr-auto">
             <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.2em] text-[#3157d5]">
               Travel Planner
@@ -239,6 +292,11 @@ export function YearCalendarHome() {
           </button>
         </header>
 
+        <div className="mb-6 flex items-center gap-2 text-xs font-semibold text-[#65728b]">
+          <span className="h-4 w-4 rounded bg-[#e8efff]" aria-hidden />
+          Bavaria school holidays
+        </div>
+
         {error && (
           <div
             role="alert"
@@ -253,7 +311,7 @@ export function YearCalendarHome() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {MONTHS.map((_, month) => (
-            <Month key={month} year={year} month={month} trips={yearTrips} />
+            <Month key={month} year={year} month={month} trips={yearTrips} holidays={holidays} />
           ))}
         </div>
 

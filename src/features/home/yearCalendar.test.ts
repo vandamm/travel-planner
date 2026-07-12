@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { buildMonth, ribbonEdges, tripsOnDay, type TripSummary } from './yearCalendar'
+import {
+  buildMonth,
+  parseSchoolHolidays,
+  ribbonEdges,
+  schoolHolidayEdges,
+  schoolHolidayOnDay,
+  tripsOnDay,
+  type TripSummary,
+} from './yearCalendar'
 
 const trip: TripSummary = {
   id: 'japan-2028',
@@ -39,5 +47,37 @@ describe('year calendar', () => {
     expect(edges('2028-02-13')).toEqual({ start: false, end: true })
     expect(edges('2028-02-14')).toEqual({ start: true, end: false })
     expect(edges('2028-02-15')).toEqual({ start: false, end: true })
+  })
+
+  it('parses external school holidays and matches their inclusive date range', () => {
+    const holidays = parseSchoolHolidays([
+      {
+        startDate: '2026-08-03',
+        endDate: '2026-09-14',
+        name: [{ language: 'EN', text: 'Summer Holidays' }],
+      },
+      { startDate: 123, endDate: null },
+    ])
+
+    expect(holidays).toEqual([
+      { startDate: '2026-08-03', endDate: '2026-09-14', name: 'Summer Holidays' },
+    ])
+    expect(schoolHolidayOnDay('2026-08-03', holidays)?.name).toBe('Summer Holidays')
+    expect(schoolHolidayOnDay('2026-09-14', holidays)?.name).toBe('Summer Holidays')
+    expect(schoolHolidayOnDay('2026-09-15', holidays)).toBeUndefined()
+
+    const days = buildMonth(2026, 7)
+    expect(schoolHolidayEdges(days, 7, holidays[0], holidays)).toEqual({
+      start: true,
+      end: false,
+    })
+    expect(schoolHolidayEdges(days, 8, holidays[0], holidays)).toEqual({
+      start: false,
+      end: false,
+    })
+    expect(schoolHolidayEdges(days, 13, holidays[0], holidays)).toEqual({
+      start: false,
+      end: true,
+    })
   })
 })

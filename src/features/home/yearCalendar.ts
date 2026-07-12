@@ -23,6 +23,18 @@ export interface CalendarDay {
   inMonth: boolean
 }
 
+export interface SchoolHoliday {
+  startDate: string
+  endDate: string
+  name: string
+}
+
+function isDayKey(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
 export function buildMonth(year: number, month: number): CalendarDay[] {
   const first = startOfMonth(new Date(year, month, 1))
   return eachDayOfInterval({
@@ -54,8 +66,62 @@ export function ribbonEdges(
   const sameTrip = (day: CalendarDay | undefined) =>
     day?.inMonth && tripsOnDay(day.key, trips)[0]?.id === trip.id
 
+  return rangeEdges(days, index, sameTrip)
+}
+
+function rangeEdges(
+  days: CalendarDay[],
+  index: number,
+  sameRange: (day: CalendarDay | undefined) => boolean | undefined,
+): { start: boolean; end: boolean } {
   return {
-    start: index % 7 === 0 || !sameTrip(days[index - 1]),
-    end: index % 7 === 6 || !sameTrip(days[index + 1]),
+    start: index % 7 === 0 || !sameRange(days[index - 1]),
+    end: index % 7 === 6 || !sameRange(days[index + 1]),
   }
+}
+
+export function parseSchoolHolidays(value: unknown): SchoolHoliday[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const { startDate, endDate, name } = item as Record<string, unknown>
+    if (
+      typeof startDate !== 'string' ||
+      typeof endDate !== 'string' ||
+      !isDayKey(startDate) ||
+      !isDayKey(endDate) ||
+      endDate < startDate
+    ) {
+      return []
+    }
+    const names = Array.isArray(name) ? name : []
+    const english = names.find(
+      (entry) =>
+        entry &&
+        typeof entry === 'object' &&
+        (entry as Record<string, unknown>).language === 'EN' &&
+        typeof (entry as Record<string, unknown>).text === 'string',
+    ) as Record<string, unknown> | undefined
+    return [{ startDate, endDate, name: (english?.text as string) || 'School holidays' }]
+  })
+}
+
+export function schoolHolidayOnDay(
+  dayKey: string,
+  holidays: SchoolHoliday[],
+): SchoolHoliday | undefined {
+  return holidays.find(({ startDate, endDate }) => dayKey >= startDate && dayKey <= endDate)
+}
+
+export function schoolHolidayEdges(
+  days: CalendarDay[],
+  index: number,
+  holiday: SchoolHoliday,
+  holidays: SchoolHoliday[],
+): { start: boolean; end: boolean } {
+  return rangeEdges(
+    days,
+    index,
+    (day) => day?.inMonth && schoolHolidayOnDay(day.key, holidays)?.startDate === holiday.startDate,
+  )
 }

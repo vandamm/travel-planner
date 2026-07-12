@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test'
 
 test('the front page shows the year calendar, trip links, and new trip flow', async ({ page }) => {
+  await page.route('**/SchoolHolidays?**', (route) =>
+    route.fulfill({ contentType: 'application/json', body: '[]' }),
+  )
   await page.route('**/api/rooms', async (route) => {
     if (route.request().method() === 'POST') {
       await route.fulfill({
