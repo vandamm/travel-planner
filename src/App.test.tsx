@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
+  vi.unstubAllGlobals()
 })
 
 describe('App (with a room slug path)', () => {
@@ -70,14 +71,84 @@ describe('App (with a room slug path)', () => {
 })
 
 describe('App without a room slug', () => {
-  it('shows a notice and renders no board or editing controls', () => {
+  it('shows the year calendar and renders no board or editing controls', async () => {
     window.history.replaceState(null, '', '/')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ trips: [] }) }),
+    )
     render(<App />)
-    // A quiet notice, not the editable board.
-    expect(screen.getByText(/slug url/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /travel year/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new trip/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Trip' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-meta')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument()
+  })
+
+  it('opens the new trip form and reports creation errors', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ trips: [] }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'room already exists' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /new trip/i }))
+    await user.type(screen.getByLabelText('Trip slug'), 'japan-2028')
+    await user.click(screen.getByRole('button', { name: 'Create trip' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('room already exists')
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/rooms',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ room: 'japan-2028' }) }),
+    )
+  })
+
+  it('links trip markings on the calendar to their boards', async () => {
+    const year = new Date().getFullYear()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          trips: [
+            {
+              id: 'japan-spring',
+              title: 'Japan',
+              startDate: `${year}-03-24`,
+              numDays: 3,
+            },
+          ],
+          nextCursor: 'page-2',
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          trips: [
+            {
+              id: 'lisbon-autumn',
+              title: 'Lisbon',
+              startDate: `${year}-10-15`,
+              numDays: 4,
+            },
+          ],
+          nextCursor: null,
+        }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+
+    expect(await screen.findByRole('link', { name: /Japan on 24 March/ })).toHaveAttribute(
+      'href',
+      '/japan-spring',
+    )
+    expect(screen.getByRole('link', { name: /Lisbon on 15 October/ })).toHaveAttribute(
+      'href',
+      '/lisbon-autumn',
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/rooms?cursor=page-2')
   })
 
   it('rejects non-canonical slug paths', () => {

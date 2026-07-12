@@ -1,8 +1,10 @@
-// POST /api/rooms — create a new slug-named Liveblocks room. Cloudflare Access
-// gates the route before this handler runs.
+// GET/POST /api/rooms — list calendar summaries or create a slug room.
+// Cloudflare Access gates both operations before these handlers run.
 
+import * as Y from 'yjs'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { isValidSlug } from '../../src/data/slug'
+import { getTrip } from '../../src/data/doc'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -13,6 +15,23 @@ function json(data: unknown, status = 200): Response {
 
 interface CreateRoomBody {
   room?: unknown
+}
+
+export async function handleListRooms(request: Request, api: LiveblocksApi): Promise<Response> {
+  const cursor = new URL(request.url).searchParams.get('cursor') || undefined
+  const { rooms, nextCursor } = await api.listRooms(cursor)
+  const settled = await Promise.allSettled(
+    rooms
+      .filter(({ id }) => isValidSlug(id))
+      .map(async ({ id, createdAt }) => {
+        const doc = new Y.Doc()
+        const update = await api.getYUpdate(id)
+        if (update.byteLength) Y.applyUpdate(doc, update)
+        return { id, createdAt, ...getTrip(doc) }
+      }),
+  )
+  const trips = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
+  return json({ trips, nextCursor })
 }
 
 export async function handleCreateRoom(

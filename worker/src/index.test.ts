@@ -7,6 +7,7 @@ const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', DEV_AUTH_EMAIL: 'me@example
 
 function makeApi(overrides: Partial<LiveblocksApi> = {}): LiveblocksApi {
   return {
+    listRooms: async () => ({ rooms: [], nextCursor: null }),
     roomExists: async () => true,
     createRoom: async (id) => ({ id }),
     mintAccessToken: async (room) => `tok-${room}`,
@@ -84,6 +85,13 @@ describe('handleRequest (router + Access gate)', () => {
   })
 
   it('routes /api/rooms, /api/versions, and /mcp behind the same local identity', async () => {
+    const listRes = await handleRequest(
+      new Request('https://worker.test/api/rooms', { method: 'GET' }),
+      env,
+      makeApi(),
+    )
+    expect(listRes.status).toBe(200)
+
     const roomRes = await handleRequest(
       new Request('https://worker.test/api/rooms', {
         method: 'POST',
@@ -119,7 +127,11 @@ describe('handleRequest (router + Access gate)', () => {
       await handleRequest(new Request('https://worker.test/api/nope'), env, makeApi()),
     ).toHaveProperty('status', 404)
     expect(
-      await handleRequest(new Request('https://worker.test/mcp', { method: 'GET' }), env, makeApi()),
+      await handleRequest(
+        new Request('https://worker.test/mcp', { method: 'GET' }),
+        env,
+        makeApi(),
+      ),
     ).toHaveProperty('status', 405)
   })
 })

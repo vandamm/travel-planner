@@ -3,6 +3,7 @@
 // Routes:
 //   OPTIONS *               → CORS preflight
 //   POST /api/auth          → mint a room-scoped token for an existing slug room
+//   GET  /api/rooms         → list trip summaries for the homepage
 //   POST /api/rooms         → create a slug room
 //   GET  /api/schema        → JSON Schema for the trip document (public)
 //   GET  /api/trip/:room    → read the room's trip as JSON
@@ -15,7 +16,7 @@
 // REST-backed implementation, while tests call `handleRequest` with a fake.
 
 import { handleAuth } from './auth'
-import { handleCreateRoom } from './rooms'
+import { handleCreateRoom, handleListRooms } from './rooms'
 import {
   handleGetSchema,
   handleGetTrip,
@@ -89,10 +90,9 @@ export async function handleRequest(
           ? await handleAuth(request, env, api, identity!)
           : json({ error: 'method not allowed' }, 405)
     } else if (pathname === '/api/rooms') {
-      res =
-        request.method === 'POST'
-          ? await handleCreateRoom(request, env, api)
-          : json({ error: 'method not allowed' }, 405)
+      if (request.method === 'GET') res = await handleListRooms(request, api)
+      else if (request.method === 'POST') res = await handleCreateRoom(request, env, api)
+      else res = json({ error: 'method not allowed' }, 405)
     } else if (pathname === '/api/schema') {
       res =
         request.method === 'GET'

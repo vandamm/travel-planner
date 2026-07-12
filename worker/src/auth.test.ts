@@ -13,11 +13,15 @@ interface MintCall {
   opts: { access: 'room:read' | 'room:write'; name?: string }
 }
 
-function makeApi(overrides: Partial<LiveblocksApi> = {}): { api: LiveblocksApi; mints: MintCall[] } {
+function makeApi(overrides: Partial<LiveblocksApi> = {}): {
+  api: LiveblocksApi
+  mints: MintCall[]
+} {
   const mints: MintCall[] = []
   return {
     mints,
     api: {
+      listRooms: async () => ({ rooms: [], nextCursor: null }),
       roomExists: async () => true,
       createRoom: async (id) => ({ id }),
       mintAccessToken: async (roomId, userId, opts) => {

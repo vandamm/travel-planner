@@ -28,7 +28,14 @@ export interface Env {
 }
 
 /** The slice of Liveblocks we need. Real impl uses REST; tests inject a fake. */
+export interface RoomPage {
+  rooms: Array<{ id: string; createdAt: string }>
+  nextCursor: string | null
+}
+
 export interface LiveblocksApi {
+  /** List one page below Workers Free-plan subrequest limits. */
+  listRooms(startingAfter?: string): Promise<RoomPage>
   /** True if a room with this id already exists. */
   roomExists(roomId: string): Promise<boolean>
   /** Create a room and return its id. */
@@ -62,6 +69,25 @@ export function createLiveblocksApi(env: Env): LiveblocksApi {
   const authHeader = `Bearer ${env.LIVEBLOCKS_SECRET_KEY}`
 
   return {
+    async listRooms(startingAfter) {
+      const url = new URL(`${LIVEBLOCKS_API}/rooms`)
+      url.searchParams.set('limit', '40')
+      if (startingAfter) url.searchParams.set('startingAfter', startingAfter)
+      const res = await fetch(url, {
+        headers: { authorization: authHeader },
+      })
+      if (!res.ok) throw new Error(`Liveblocks room list failed: ${res.status}`)
+      const body = (await res.json()) as {
+        data: Array<{ id: string; createdAt: string }>
+        nextCursor?: string | null
+      }
+      // ponytail: 40 room reads plus this list call stay below the Free-plan 50-subrequest limit.
+      return {
+        rooms: body.data.map(({ id, createdAt }) => ({ id, createdAt })),
+        nextCursor: body.nextCursor ?? null,
+      }
+    },
+
     async roomExists(roomId) {
       const res = await fetch(`${LIVEBLOCKS_API}/rooms/${encodeURIComponent(roomId)}`, {
         headers: { authorization: authHeader },
@@ -101,10 +127,9 @@ export function createLiveblocksApi(env: Env): LiveblocksApi {
     },
 
     async getYUpdate(roomId) {
-      const res = await fetch(
-        `${LIVEBLOCKS_API}/rooms/${encodeURIComponent(roomId)}/ydoc-binary`,
-        { headers: { authorization: authHeader } },
-      )
+      const res = await fetch(`${LIVEBLOCKS_API}/rooms/${encodeURIComponent(roomId)}/ydoc-binary`, {
+        headers: { authorization: authHeader },
+      })
       // A room can exist without any Yjs data yet (e.g. created but never edited).
       if (res.status === 404) return new Uint8Array()
       if (!res.ok) throw new Error(`Liveblocks ydoc fetch failed: ${res.status}`)

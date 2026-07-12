@@ -13,6 +13,7 @@ function makeApi(seed?: Y.Doc, overrides: Partial<LiveblocksApi> = {}): TestApi 
   let state: Uint8Array = seed ? Y.encodeStateAsUpdate(seed) : new Uint8Array()
   let sent = 0
   return {
+    listRooms: async () => ({ rooms: [], nextCursor: null }),
     roomExists: async () => true,
     createRoom: async (id) => ({ id }),
     mintAccessToken: async (room) => `tok-${room}`,

@@ -1,15 +1,21 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { handleCreateRoom } from './rooms'
+import * as Y from 'yjs'
+import { handleCreateRoom, handleListRooms } from './rooms'
 import type { Env, LiveblocksApi } from './liveblocks'
+import { setTrip } from '../../src/data/doc'
 
 const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', DEV_AUTH_EMAIL: 'me@example.com' }
 
-function makeApi(overrides: Partial<LiveblocksApi> = {}): { api: LiveblocksApi; created: string[] } {
+function makeApi(overrides: Partial<LiveblocksApi> = {}): {
+  api: LiveblocksApi
+  created: string[]
+} {
   const created: string[] = []
   return {
     created,
     api: {
+      listRooms: async () => ({ rooms: [], nextCursor: null }),
       roomExists: async () => false,
       createRoom: async (id) => {
         created.push(id)
@@ -59,5 +65,40 @@ describe('handleCreateRoom', () => {
     const { api } = makeApi()
     const res = await handleCreateRoom(roomRequest('not json'), env, api)
     expect(res.status).toBe(400)
+  })
+})
+
+describe('handleListRooms', () => {
+  it('returns a page of valid calendar summaries and skips one bad room', async () => {
+    const doc = new Y.Doc()
+    setTrip(doc, { title: 'Japan', startDate: '2028-02-28', numDays: 3 })
+    const { api } = makeApi({
+      listRooms: async (cursor) => {
+        expect(cursor).toBe('page-1')
+        return {
+          rooms: [
+            { id: 'japan-2028', createdAt: '2027-01-01T00:00:00Z' },
+            { id: 'Bad_room', createdAt: '2027-01-01T00:00:00Z' },
+            { id: 'broken-room', createdAt: '2027-01-01T00:00:00Z' },
+          ],
+          nextCursor: 'page-2',
+        }
+      },
+      getYUpdate: async (id) => {
+        if (id === 'broken-room') throw new Error('corrupt room')
+        if (id === 'Bad_room') throw new Error('invalid IDs must not be fetched')
+        return Y.encodeStateAsUpdate(doc)
+      },
+    })
+
+    const res = await handleListRooms(
+      new Request('https://worker.test/api/rooms?cursor=page-1'),
+      api,
+    )
+
+    expect(await res.json()).toEqual({
+      trips: [expect.objectContaining({ id: 'japan-2028', title: 'Japan' })],
+      nextCursor: 'page-2',
+    })
   })
 })

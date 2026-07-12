@@ -29,12 +29,16 @@ function makeKv(): SnapshotKv & { store: Map<string, string> } {
   }
 }
 
-function makeApi(seed?: Y.Doc, overrides: Partial<LiveblocksApi> = {}): LiveblocksApi & {
+function makeApi(
+  seed?: Y.Doc,
+  overrides: Partial<LiveblocksApi> = {},
+): LiveblocksApi & {
   sentCount(): number
 } {
   let state: Uint8Array = seed ? Y.encodeStateAsUpdate(seed) : new Uint8Array()
   let sent = 0
   return {
+    listRooms: async () => ({ rooms: [], nextCursor: null }),
     roomExists: async () => true,
     createRoom: async (id) => ({ id }),
     mintAccessToken: async (room) => `tok-${room}`,
@@ -112,7 +116,12 @@ describe('trip HTTP handlers', () => {
   it('validates and applies a trip, snapshotting previous state when KV is bound', async () => {
     const kv = makeKv()
     const api = makeApi(seededDoc())
-    const res = await handlePostTrip(tripRequest('POST', validTrip), { ...env, SNAPSHOTS: kv }, api, 'room1')
+    const res = await handlePostTrip(
+      tripRequest('POST', validTrip),
+      { ...env, SNAPSHOTS: kv },
+      api,
+      'room1',
+    )
 
     expect(res.status).toBe(200)
     expect(api.sentCount()).toBe(1)
@@ -131,7 +140,12 @@ describe('trip HTTP handlers', () => {
     const kv = makeKv()
     await recordSnapshot(kv, 'room1', JSON.stringify(validTrip), 1000)
 
-    const list = await handleListVersions(versionRequest(), { ...env, SNAPSHOTS: kv }, makeApi(), 'room1')
+    const list = await handleListVersions(
+      versionRequest(),
+      { ...env, SNAPSHOTS: kv },
+      makeApi(),
+      'room1',
+    )
     expect(list.status).toBe(200)
     const body = (await list.json()) as { versions: Array<{ id: string }> }
     expect(body.versions).toHaveLength(1)

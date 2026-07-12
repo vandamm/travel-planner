@@ -4,6 +4,12 @@
 
 @layer base {
   body {
-    @apply font-sans text-ink;
+    @apply m-0 font-sans text-ink antialiased;
+  }
+
+  button,
+  a,
+  input {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3157d5] focus-visible:ring-offset-2;
   }
 }
