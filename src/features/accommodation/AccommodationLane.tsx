@@ -42,7 +42,7 @@ export function AccommodationLane({
   const gaps = uncoveredGaps(days, accommodations)
 
   return (
-    <div className="mb-2 flex items-start gap-3">
+    <div className="mb-2 flex flex-col items-start gap-3 md:flex-row">
       <div
         data-testid="accommodation-lane"
         style={{

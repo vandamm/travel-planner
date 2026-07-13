@@ -1,8 +1,7 @@
-// Viewport breakpoint detection for the board. The board is laptop-first: at or
-// above the laptop breakpoint it shows the multi-column day board; below it (a
-// phone) it switches to the single-day swipe view. Which view to show is a
-// per-device rendering concern, not synced state, so it lives here as a hook
-// over `window.innerWidth` rather than in the doc.
+// Viewport breakpoint detection for the board. At 768px and above it shows the
+// multi-column day board; below it (a phone) it switches to the single-day
+// swipe view. Which view to show is a per-device rendering concern, not synced
+// state, so it lives here as a hook over `window.innerWidth` rather than in the doc.
 
 import { useSyncExternalStore } from 'react'
 

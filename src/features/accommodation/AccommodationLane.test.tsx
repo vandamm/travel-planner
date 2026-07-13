@@ -17,6 +17,15 @@ const stay = (over: Partial<Accommodation> = {}): Accommodation => ({
 })
 
 describe('AccommodationLane', () => {
+  it('stacks the trailing stay control below the 17rem grid on phones', () => {
+    render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
+
+    expect(screen.getByTestId('accommodation-lane').parentElement).toHaveClass(
+      'flex-col',
+      'md:flex-row',
+    )
+  })
+
   it('renders a bar spanning the covered columns, colored by its city', () => {
     render(<AccommodationLane days={days} accommodations={[stay()]} cityById={cityById} />)
 
