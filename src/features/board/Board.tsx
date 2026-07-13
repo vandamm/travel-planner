@@ -225,7 +225,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
           Set start and end dates to build the board.
         </p>
       ) : viewport === 'mobile' ? (
-        // Below 768px: one day at a time, paged by swipe or the
+        // Below 640px: one day at a time, paged by swipe or the
         // prev/next controls. Same cards/accommodation/direction logic as desktop.
         <div className="min-h-0 flex-1">
           <BoardDnd doc={doc} direction={direction}>

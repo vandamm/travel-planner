@@ -18,12 +18,14 @@ function setWidth(width: number) {
 }
 
 describe('selectViewport', () => {
-  it('is mobile only below the 768px desktop breakpoint', () => {
+  it('is mobile only below the compact 640px desktop breakpoint', () => {
     expect(selectViewport(375)).toBe('mobile')
+    expect(selectViewport(639)).toBe('mobile')
     expect(selectViewport(DESKTOP_BREAKPOINT - 1)).toBe('mobile')
   })
 
-  it('is desktop at and above the 768px breakpoint', () => {
+  it('is desktop at and above the 640px breakpoint', () => {
+    expect(DESKTOP_BREAKPOINT).toBe(640)
     expect(selectViewport(DESKTOP_BREAKPOINT)).toBe('desktop')
     expect(selectViewport(1440)).toBe('desktop')
   })

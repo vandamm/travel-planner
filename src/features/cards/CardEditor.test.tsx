@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect, useState, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
@@ -25,7 +25,16 @@ function CardDump() {
     <ul aria-label="card dump">
       {listCards(doc).map((c) => (
         <li key={c.id} data-testid="dump-row">
-          {JSON.stringify({ title: c.title, startTime: c.startTime, duration: c.duration, durationHours: c.durationHours, note: c.note, link: c.link, transport: c.transport, category: c.category })}
+          {JSON.stringify({
+            title: c.title,
+            startTime: c.startTime,
+            duration: c.duration,
+            durationHours: c.durationHours,
+            note: c.note,
+            link: c.link,
+            transport: c.transport,
+            category: c.category,
+          })}
         </li>
       ))}
     </ul>
@@ -49,7 +58,14 @@ function EditHarness() {
   useDocVersion(doc)
   const [card, setCard] = useState<Card | null>(null)
   useEffect(() => {
-    setCard(addCard(doc, { dayKey: '2027-05-01', title: 'Old title', note: 'old note', startTime: '09:00' }))
+    setCard(
+      addCard(doc, {
+        dayKey: '2027-05-01',
+        title: 'Old title',
+        note: 'old note',
+        startTime: '09:00',
+      }),
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return (
@@ -191,6 +207,10 @@ describe('CardEditor — create', () => {
 
   it('defaults new cards to a one-hour custom duration', () => {
     renderInRoom(<CreateHarness />)
+    const duration = screen.getByRole('group', { name: 'Duration' })
+    expect(within(duration).getByLabelText('Duration hours')).toBeInTheDocument()
+    expect(within(duration).getByText('h')).toBeInTheDocument()
+    expect(duration).toHaveClass('items-center')
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Plain' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
@@ -252,7 +272,10 @@ describe('CardEditor — edit', () => {
   it('pre-selects Transit for a legacy transport card and rewrites it to category on save', async () => {
     renderInRoom(<TransportEditHarness />)
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Transit' })).toHaveAttribute('aria-pressed', 'true'),
+      expect(screen.getByRole('button', { name: 'Transit' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))

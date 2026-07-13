@@ -67,7 +67,7 @@ function Header({
       </p>
       {/* Desktop: inline Trip/Cities buttons. Mobile: they collapse into the ≡
           menu so the header isn't crowded on a phone. */}
-      <div className="ml-auto hidden items-center gap-2 md:flex">
+      <div className="ml-auto hidden items-center gap-2 sm:flex">
         <button
           type="button"
           onClick={onOpenTrip}
@@ -95,7 +95,7 @@ function Header({
         type="button"
         aria-label="Menu"
         onClick={onOpenMenu}
-        className="flex h-9 w-9 items-center justify-center rounded-card border border-edge-300 bg-white text-xl leading-none text-ink-600 hover:bg-surface-chip md:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-card border border-edge-300 bg-white text-xl leading-none text-ink-600 hover:bg-surface-chip sm:hidden"
       >
         <span aria-hidden>≡</span>
       </button>
@@ -145,7 +145,7 @@ function AppShell() {
   const [shareOpen, setShareOpen] = useState(false)
 
   return (
-    <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink md:h-auto md:min-h-screen md:overflow-visible">
+    <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink sm:h-auto sm:min-h-screen sm:overflow-visible">
       <Header
         onOpenTrip={() => setTripOpen(true)}
         onOpenCities={() => setCitiesOpen(true)}

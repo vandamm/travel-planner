@@ -19,12 +19,12 @@ describe('isTimed', () => {
 })
 
 describe('sortCardsForColumn', () => {
-  it('orders timed cards ahead of untimed ones', () => {
+  it('keeps untimed cards in their manual slots', () => {
     const cards = [
       card({ id: 'untimed', order: 0 }),
       card({ id: 'timed', order: 9, startTime: '09:00' }),
     ]
-    expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['timed', 'untimed'])
+    expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['untimed', 'timed'])
   })
 
   it('sorts timed cards ascending by start time regardless of manual order', () => {
@@ -45,14 +45,14 @@ describe('sortCardsForColumn', () => {
     expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['first', 'second', 'third'])
   })
 
-  it('interleaves a scrambled mix: timed by time, then untimed by order', () => {
+  it('keeps untimed slots while sorting timed cards by time', () => {
     const cards = [
       card({ id: 'A', order: 0 }), // untimed, first
       card({ id: 'B', order: 5, startTime: '08:00' }), // timed, earliest
       card({ id: 'C', order: 1, startTime: '19:00' }), // timed, latest
       card({ id: 'D', order: 2 }), // untimed, second
     ]
-    expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['B', 'C', 'A', 'D'])
+    expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['A', 'B', 'D', 'C'])
   })
 
   it('breaks ties between equal start times by manual order', () => {
@@ -64,7 +64,11 @@ describe('sortCardsForColumn', () => {
   })
 
   it('breaks ties between equal-order untimed cards by id for a stable order', () => {
-    const cards = [card({ id: 'b', order: 0 }), card({ id: 'a', order: 0 }), card({ id: 'c', order: 0 })]
+    const cards = [
+      card({ id: 'b', order: 0 }),
+      card({ id: 'a', order: 0 }),
+      card({ id: 'c', order: 0 }),
+    ]
     expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['a', 'b', 'c'])
   })
 
@@ -79,16 +83,19 @@ describe('sortCardsForColumn', () => {
   it('orders by start time regardless of duration', () => {
     const cards = [
       card({ id: 'short-late', order: 0, startTime: '10:00', durationHours: 0.5 }),
-      card({ id: 'long-early', order: 1, startTime: '09:00', duration: 'day', durationHours: undefined }),
+      card({
+        id: 'long-early',
+        order: 1,
+        startTime: '09:00',
+        duration: 'day',
+        durationHours: undefined,
+      }),
     ]
     expect(sortCardsForColumn(cards).map((c) => c.id)).toEqual(['long-early', 'short-late'])
   })
 
   it('does not mutate the input array', () => {
-    const cards = [
-      card({ id: 'A', order: 0 }),
-      card({ id: 'B', order: 5, startTime: '08:00' }),
-    ]
+    const cards = [card({ id: 'A', order: 0 }), card({ id: 'B', order: 5, startTime: '08:00' })]
     sortCardsForColumn(cards)
     expect(cards.map((c) => c.id)).toEqual(['A', 'B'])
   })

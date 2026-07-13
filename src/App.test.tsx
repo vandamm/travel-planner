@@ -24,14 +24,14 @@ describe('App (with a room slug path)', () => {
     expect(seal).toHaveTextContent('I')
   })
 
-  it('uses the desktop board inset for the full-width trip header at 768px', () => {
+  it('uses the desktop board inset for the full-width trip header at 640px', () => {
     render(<App />)
 
     const header = screen.getByTestId('app-seal').closest('header')
     expect(header).toHaveClass('w-full', 'px-6')
     expect(header).not.toHaveClass('max-w-2xl')
-    expect(screen.getByRole('button', { name: 'Trip' }).parentElement).toHaveClass('md:flex')
-    expect(screen.getByRole('button', { name: 'Menu' })).toHaveClass('md:hidden')
+    expect(screen.getByRole('button', { name: 'Trip' }).parentElement).toHaveClass('sm:flex')
+    expect(screen.getByRole('button', { name: 'Menu' })).toHaveClass('sm:hidden')
   })
 
   it('renders the meta line with day and city counts', () => {

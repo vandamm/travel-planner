@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Popover } from './Popover'
 import { Modal } from './Modal'
 
-// jsdom reports window.innerWidth = 1024 (>= the shared 768px / Tailwind `md`
+// jsdom reports window.innerWidth = 1024 (>= the 640px / Tailwind `sm` board
 // breakpoint), so these exercise the desktop anchored-panel path. The mobile
 // Modal-sheet fallback is covered by the pickers' e2e (they render through this same primitive).
 

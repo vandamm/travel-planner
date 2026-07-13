@@ -9,7 +9,6 @@
 // drop-target highlight (the "where it lands" hint).
 
 import {
-  closestCenter,
   DndContext,
   DragOverlay,
   KeyboardSensor,
@@ -26,6 +25,7 @@ import type * as Y from 'yjs'
 import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
 import { Card } from '../cards/Card'
+import { boardCollisionDetection } from './dndCollision'
 import { DragOverDayContext } from './dragOverDayContext'
 import { applyCardDragEnd, dayKeyFromDroppableId, isDayDroppableId } from './dndHandlers'
 import type { TimeDirection } from './timeDirection'
@@ -77,12 +77,11 @@ export function BoardDnd({ doc, direction, children }: BoardDndProps) {
   }
 
   return (
-    // closestCenter is the recommended strategy for sortable lists: it always
-    // resolves to the nearest card/column center, so reorders register reliably
-    // even as items reflow mid-drag.
+    // A card's timing gap is part of its drop zone. Prefer that card over the
+    // day body below it, then use closest-center when the pointer hits neither.
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={boardCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

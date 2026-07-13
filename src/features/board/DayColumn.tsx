@@ -144,19 +144,9 @@ export function DayColumn({
           <div className="flex items-center justify-between gap-1.5">
             <span
               data-testid="city-name"
-              className="flex items-center gap-1 font-serif text-lg font-bold leading-tight text-ink"
+              className="font-serif text-lg font-bold leading-tight text-ink"
             >
               {city ? city.name : <span className="text-ink-300">No city</span>}
-              {overrideCityId && (
-                <span
-                  data-testid="override-indicator"
-                  title="Manual city override"
-                  aria-label="Manual city override"
-                  className="text-ink-300"
-                >
-                  📌
-                </span>
-              )}
             </span>
             {cities.length > 0 && (
               <select
@@ -167,10 +157,15 @@ export function DayColumn({
                   onSetCity?.(day.key, e.target.value === '' ? null : e.target.value)
                 }
                 className="max-w-[6rem] rounded-chip border border-edge bg-white px-1 py-0.5 text-xs text-ink-600"
+                style={
+                  overrideCityId && city
+                    ? { borderColor: city.color, color: city.color }
+                    : undefined
+                }
               >
                 <option value="">Auto</option>
                 {cities.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.id} style={{ color: c.color }}>
                     {c.name}
                   </option>
                 ))}
@@ -206,18 +201,17 @@ export function DayColumn({
           <span className="h-px flex-1 bg-edge-100" />
         </div>
 
-        {/* Continuous time scale at the left edge. Cards intentionally get the
-            full body width and may overlap this decorative scale. */}
+        {/* Continuous time scale anchored at the top and bottom of the card. */}
         <ol
           data-testid="scale"
           aria-hidden
-          className="pointer-events-none absolute inset-y-2 left-0 flex w-6 flex-col"
+          className="pointer-events-none absolute inset-x-0 inset-y-2 flex flex-col justify-between"
         >
           {scale.map((label) => (
             <li
               key={label}
               data-testid="scale-label"
-              className="flex flex-1 -translate-x-1 rotate-180 items-start px-0 text-[24px] font-semibold uppercase tracking-wide text-ink-300 [writing-mode:vertical-rl]"
+              className="text-center text-[10px] font-semibold uppercase tracking-wide text-ink-300"
             >
               {label}
             </li>
@@ -226,17 +220,20 @@ export function DayColumn({
 
         <SortableContext items={ordered.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           <ol data-testid="card-list" className="relative flex flex-col gap-2 pl-0">
-            {ordered.map((c) => (
-              <li
-                key={c.id}
-                style={{
-                  minHeight: cardHeightPx(c, dayStart, dayEnd),
-                  marginTop: cardGapPx(c, direction, dayStart, dayEnd, cardCursor),
-                }}
-              >
-                <SortableCard card={c} conflict={conflicts.has(c.id)} onEdit={onEditCard} dayStart={dayStart} dayEnd={dayEnd} />
-              </li>
-            ))}
+            {ordered.map((c) => {
+              const gap = cardGapPx(c, direction, dayStart, dayEnd, cardCursor)
+              return (
+                <SortableCard
+                  key={c.id}
+                  card={c}
+                  conflict={conflicts.has(c.id)}
+                  onEdit={onEditCard}
+                  dayStart={dayStart}
+                  dayEnd={dayEnd}
+                  layoutStyle={{ minHeight: cardHeightPx(c, dayStart, dayEnd), paddingTop: gap }}
+                />
+              )
+            })}
           </ol>
         </SortableContext>
       </div>

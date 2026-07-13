@@ -1,9 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { DndContext } from '@dnd-kit/core'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card as CardType } from '../../data/schema'
-import { Card } from './Card'
+import { Card, SortableCard } from './Card'
 
-const base: CardType = { id: 'x', dayKey: '2027-05-01', title: 'Colosseum', order: 0, duration: 'custom', durationHours: 1 }
+const base: CardType = {
+  id: 'x',
+  dayKey: '2027-05-01',
+  title: 'Colosseum',
+  order: 0,
+  duration: 'custom',
+  durationHours: 1,
+}
 
 describe('Card', () => {
   it('renders the title', () => {
@@ -20,7 +28,13 @@ describe('Card', () => {
   it('lets title and time share the remaining row beside the drag handle', () => {
     render(
       <Card
-        card={{ ...base, title: 'Brunch reservation', startTime: '10:00', duration: 'custom', durationHours: 1 }}
+        card={{
+          ...base,
+          title: 'Brunch reservation',
+          startTime: '10:00',
+          duration: 'custom',
+          durationHours: 1,
+        }}
         dragHandleProps={{}}
       />,
     )
@@ -30,6 +44,15 @@ describe('Card', () => {
       'flex-col',
     )
     expect(screen.getByTestId('card-title')).toHaveClass('min-w-0')
+  })
+
+  it('does not offer a drag handle for a timed card', () => {
+    render(
+      <DndContext>
+        <SortableCard card={{ ...base, startTime: '10:00' }} />
+      </DndContext>,
+    )
+    expect(screen.queryByRole('button', { name: 'Drag Colosseum' })).not.toBeInTheDocument()
   })
 
   it('shows the duration for an untimed card', () => {

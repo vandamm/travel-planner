@@ -5,7 +5,7 @@
 //
 // Responsive (Phase 3): base (mobile) classes make it a full-screen slide-up
 // sheet; `lg:` classes restore the Phase-2 centered scrim card. The board uses
-// the shared 768px / Tailwind `md` breakpoint; this sheet↔scrim switch is pure
+// the 640px / Tailwind `sm` board breakpoint; this sheet↔scrim switch is pure
 // CSS — no `useViewport` branch, no SSR/hydration mismatch.
 
 import { useEffect, useRef, type ReactNode } from 'react'

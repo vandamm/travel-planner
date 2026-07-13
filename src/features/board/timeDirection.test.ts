@@ -67,8 +67,8 @@ describe('time-direction preference', () => {
 })
 
 describe('canonicalCardOrder', () => {
-  it('puts timed cards first in time order, then untimed by manual order', () => {
-    expect(canonicalCardOrder(MIX).map((c) => c.id)).toEqual(['B', 'C', 'A', 'D'])
+  it('keeps untimed cards in their manual slots while sorting timed cards by time', () => {
+    expect(canonicalCardOrder(MIX).map((c) => c.id)).toEqual(['A', 'B', 'D', 'C'])
   })
 
   it('does not mutate the input array', () => {
@@ -80,11 +80,11 @@ describe('canonicalCardOrder', () => {
 
 describe('orderCardsForDirection', () => {
   it('keeps the canonical (morning→evening) order when direction is down', () => {
-    expect(orderCardsForDirection(MIX, 'down').map((c) => c.id)).toEqual(['B', 'C', 'A', 'D'])
+    expect(orderCardsForDirection(MIX, 'down').map((c) => c.id)).toEqual(['A', 'B', 'D', 'C'])
   })
 
   it('reverses every card uniformly when direction is up', () => {
-    expect(orderCardsForDirection(MIX, 'up').map((c) => c.id)).toEqual(['D', 'A', 'C', 'B'])
+    expect(orderCardsForDirection(MIX, 'up').map((c) => c.id)).toEqual(['C', 'D', 'B', 'A'])
   })
 
   it('is the exact reverse of the down order across timed + untimed cards', () => {

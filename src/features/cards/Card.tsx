@@ -61,7 +61,14 @@ function formatDuration(hours: number): string {
   return `${Number(hours.toFixed(2))}h`
 }
 
-export function Card({ card, conflict = false, onEdit, dragHandleProps, dayStart = '06:00', dayEnd = '21:00' }: CardProps) {
+export function Card({
+  card,
+  conflict = false,
+  onEdit,
+  dragHandleProps,
+  dayStart = '06:00',
+  dayEnd = '21:00',
+}: CardProps) {
   const category = cardCategory(card)
   const duration = formatDuration(resolvedDurationHours(card, dayStart, dayEnd))
   return (
@@ -93,14 +100,14 @@ export function Card({ card, conflict = false, onEdit, dragHandleProps, dayStart
           >
             {card.title}
           </span>
-          {(
+          {
             <span
               data-testid="card-time"
               className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
             >
               {card.startTime ? `${card.startTime} · ${duration}` : duration}
             </span>
-          )}
+          }
         </button>
       </div>
 
@@ -162,35 +169,46 @@ export interface SortableCardProps {
   onEdit?: (card: CardType) => void
   dayStart?: string
   dayEnd?: string
+  /** Layout for the sortable list item, including its preceding drop area. */
+  layoutStyle?: CSSProperties
 }
 
 /**
- * A `Card` made draggable/sortable via dnd-kit. The card's id is the sortable
- * id; dragging the rendered handle reorders it within its day or moves it to
- * another day (see `dndHandlers.ts`). Must be rendered inside a `SortableContext`
- * (its day column) and the board's `DndContext`.
+ * An untimed `Card` made draggable/sortable via dnd-kit. Timed cards stay fixed
+ * to their chosen start time. Must be rendered inside a `SortableContext` (its
+ * day column) and the board's `DndContext`.
  */
-export function SortableCard({ card, conflict, onEdit, dayStart, dayEnd }: SortableCardProps) {
+export function SortableCard({
+  card,
+  conflict,
+  onEdit,
+  dayStart,
+  dayEnd,
+  layoutStyle,
+}: SortableCardProps) {
+  const timed = Boolean(card.startTime)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
+    disabled: timed,
   })
 
   const style: CSSProperties = {
+    ...layoutStyle,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0.4 : undefined,
   }
 
   return (
-    <div ref={setNodeRef} style={style} data-testid="sortable-card">
+    <li ref={setNodeRef} style={style} data-testid="sortable-card">
       <Card
         card={card}
         conflict={conflict}
         onEdit={onEdit}
         dayStart={dayStart}
         dayEnd={dayEnd}
-        dragHandleProps={{ ...attributes, ...listeners }}
+        dragHandleProps={timed ? undefined : { ...attributes, ...listeners }}
       />
-    </div>
+    </li>
   )
 }

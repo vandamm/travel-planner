@@ -1,4 +1,4 @@
-// Viewport breakpoint detection for the board. At 768px and above it shows the
+// Viewport breakpoint detection for the board. At 640px and above it shows the
 // multi-column day board; below it (a phone) it switches to the single-day
 // swipe view. Which view to show is a per-device rendering concern, not synced
 // state, so it lives here as a hook over `window.innerWidth` rather than in the doc.
@@ -9,9 +9,9 @@ export type Viewport = 'mobile' | 'desktop'
 
 /**
  * Widths below this (px) get the mobile single-day view; at or above it, the
- * desktop multi-column board. Tablets and larger use the desktop board.
+ * desktop multi-column board. Larger phones, tablets, and desktops use the board.
  */
-export const DESKTOP_BREAKPOINT = 768
+export const DESKTOP_BREAKPOINT = 640
 
 /** Pure breakpoint decision, so it can be unit-tested without a DOM. */
 export function selectViewport(width: number): Viewport {

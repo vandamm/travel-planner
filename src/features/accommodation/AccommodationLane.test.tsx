@@ -22,7 +22,7 @@ describe('AccommodationLane', () => {
 
     expect(screen.getByTestId('accommodation-lane').parentElement).toHaveClass(
       'flex-col',
-      'md:flex-row',
+      'sm:flex-row',
     )
   })
 

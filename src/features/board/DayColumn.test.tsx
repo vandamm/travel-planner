@@ -9,8 +9,23 @@ const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
 const florence: City = { id: 'florence', name: 'Florence', color: '#3b82f6' }
 
 const cards: Card[] = [
-  { id: 'a', dayKey: '2027-05-01', title: 'Stroll', order: 0, duration: 'custom', durationHours: 1 },
-  { id: 'b', dayKey: '2027-05-01', title: 'Breakfast', order: 5, startTime: '08:00', duration: 'custom', durationHours: 1 },
+  {
+    id: 'a',
+    dayKey: '2027-05-01',
+    title: 'Stroll',
+    order: 0,
+    duration: 'custom',
+    durationHours: 1,
+  },
+  {
+    id: 'b',
+    dayKey: '2027-05-01',
+    title: 'Breakfast',
+    order: 5,
+    startTime: '08:00',
+    duration: 'custom',
+    durationHours: 1,
+  },
   {
     id: 'c',
     dayKey: '2027-05-01',
@@ -59,13 +74,13 @@ describe('DayColumn', () => {
 
   it('lays out cards morning→evening with the down direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
-    expect(titles()).toEqual(['Breakfast', 'Dinner', 'Stroll'])
+    expect(titles()).toEqual(['Stroll', 'Breakfast', 'Dinner'])
     expect(scaleLabels()).toEqual(['Morning', 'Evening'])
   })
 
   it('reverses both the cards and the time scale with the up direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="up" />)
-    expect(titles()).toEqual(['Stroll', 'Dinner', 'Breakfast'])
+    expect(titles()).toEqual(['Dinner', 'Breakfast', 'Stroll'])
     expect(scaleLabels()).toEqual(['Evening', 'Morning'])
   })
 
@@ -77,9 +92,33 @@ describe('DayColumn', () => {
 
   it('marks every timed card involved in an overlap', () => {
     const overlapping: Card[] = [
-      { id: 'a', dayKey: day.key, title: 'Tour', order: 0, startTime: '09:00', duration: 'custom', durationHours: 2 },
-      { id: 'b', dayKey: day.key, title: 'Museum', order: 1, startTime: '10:30', duration: 'custom', durationHours: 1.5 },
-      { id: 'c', dayKey: day.key, title: 'Lunch', order: 2, startTime: '12:00', duration: 'custom', durationHours: 1 },
+      {
+        id: 'a',
+        dayKey: day.key,
+        title: 'Tour',
+        order: 0,
+        startTime: '09:00',
+        duration: 'custom',
+        durationHours: 2,
+      },
+      {
+        id: 'b',
+        dayKey: day.key,
+        title: 'Museum',
+        order: 1,
+        startTime: '10:30',
+        duration: 'custom',
+        durationHours: 1.5,
+      },
+      {
+        id: 'c',
+        dayKey: day.key,
+        title: 'Lunch',
+        order: 2,
+        startTime: '12:00',
+        duration: 'custom',
+        durationHours: 1,
+      },
     ]
     render(<DayColumn day={day} cards={overlapping} direction="down" />)
     const card = (title: string) =>
@@ -96,17 +135,19 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('day-body')).toHaveStyle({ minHeight: '660px' })
   })
 
-  it('keeps a large edge scale while cards use the full body width', () => {
+  it('anchors the time scale above and below the full-width card list', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
-    expect(screen.getByTestId('scale')).toHaveClass('left-0', 'w-6')
-    expect(screen.getAllByTestId('scale-label')[0]).toHaveClass(
-      '[writing-mode:vertical-rl]',
-      'text-[24px]',
-      'px-0',
-      'rotate-180',
-      '-translate-x-1',
-    )
+    expect(screen.getByTestId('scale')).toHaveClass('inset-x-0', 'justify-between')
+    expect(screen.getAllByTestId('scale-label')[0]).toHaveClass('text-center', 'text-[10px]')
+    for (const label of screen.getAllByTestId('scale-label')) {
+      expect(label).toHaveClass('text-ink-300')
+      expect(label).not.toHaveClass('rotate-180')
+      expect(hasSlateClass(label)).toBe(false)
+    }
     expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
+    const addCard = screen.getByRole('button', { name: /Add card/ })
+    expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
+    expect(addCard.className).not.toMatch(/slate-/)
   })
 
   it('scales each card by its duration', () => {
@@ -121,13 +162,23 @@ describe('DayColumn', () => {
     render(
       <DayColumn
         day={day}
-        cards={[{ id: 'late', dayKey: day.key, title: 'Late start', order: 0, startTime: '10:00', duration: 'custom', durationHours: 1 }]}
+        cards={[
+          {
+            id: 'late',
+            dayKey: day.key,
+            title: 'Late start',
+            order: 0,
+            startTime: '10:00',
+            duration: 'custom',
+            durationHours: 1,
+          },
+        ]}
         direction="down"
         dayStart="07:00"
         dayEnd="21:00"
       />,
     )
-    expect(screen.getByText('Late start').closest('li')).toHaveStyle({ marginTop: '132px' })
+    expect(screen.getByText('Late start').closest('li')).toHaveStyle({ paddingTop: '132px' })
   })
 
   it('offers an Auto + per-city override control, defaulting to Auto', () => {
@@ -137,9 +188,12 @@ describe('DayColumn', () => {
     const select = screen.getByTestId('city-override') as HTMLSelectElement
     expect([...select.options].map((o) => o.textContent)).toEqual(['Auto', 'Rome', 'Florence'])
     expect(select.value).toBe('') // no override → Auto
+    expect(select).not.toHaveAttribute('style')
+    expect(select.options[1]).toHaveStyle({ color: '#ef4444' })
+    expect(select.options[2]).toHaveStyle({ color: '#3b82f6' })
   })
 
-  it('reflects an existing manual override and flags it as manual', () => {
+  it('reflects an existing manual override without an extra marker', () => {
     render(
       <DayColumn
         day={day}
@@ -150,14 +204,9 @@ describe('DayColumn', () => {
         overrideCityId="florence"
       />,
     )
-    expect((screen.getByTestId('city-override') as HTMLSelectElement).value).toBe('florence')
-    expect(screen.getByTestId('override-indicator')).toBeInTheDocument()
-  })
-
-  it('shows no manual indicator for an accommodation-resolved city', () => {
-    render(
-      <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
-    )
+    const select = screen.getByTestId('city-override') as HTMLSelectElement
+    expect(select.value).toBe('florence')
+    expect(select).toHaveStyle({ borderColor: '#3b82f6', color: '#3b82f6' })
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
@@ -203,17 +252,6 @@ describe('DayColumn', () => {
     const band = screen.getByTestId('city-band')
     expect(band).toHaveStyle({ backgroundColor: '#ef4444' })
     expect(band).toHaveClass('h-[3px]')
-  })
-
-  it('tints the scale labels and add-card button with ink/edge tokens, not slate', () => {
-    render(<DayColumn day={day} cards={cards} direction="down" />)
-    for (const label of screen.getAllByTestId('scale-label')) {
-      expect(label).toHaveClass('text-ink-300')
-      expect(hasSlateClass(label)).toBe(false)
-    }
-    const addCard = screen.getByRole('button', { name: /Add card/ })
-    expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
-    expect(addCard.className).not.toMatch(/slate-/)
   })
 
   it('renders a labelled NOON divider in the body', () => {

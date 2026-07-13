@@ -89,24 +89,22 @@ describe('Board', () => {
       })
     })
     const column = screen.getAllByTestId('day-column')[0]
-    // Accommodation-resolved → Rome, no manual flag.
+    // Accommodation-resolved → Rome.
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
-    expect(within(column).queryByTestId('override-indicator')).not.toBeInTheDocument()
 
-    // Pin Florence via the header picker → recolors and flags as manual.
+    // Choose Florence via the header picker → recolors the day.
     const select = within(column).getByTestId('city-override')
     act(() => {
       fireEvent.change(select, { target: { value: 'florence' } })
     })
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#3b82f6' })
-    expect(within(column).getByTestId('override-indicator')).toBeInTheDocument()
+    expect(within(column).queryByTestId('override-indicator')).not.toBeInTheDocument()
 
     // Auto clears the override → back to the accommodation's Rome.
     act(() => {
       fireEvent.change(within(column).getByTestId('city-override'), { target: { value: '' } })
     })
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
-    expect(within(column).queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
   it('opens the accommodation editor from the Add stay button', () => {
