@@ -27,7 +27,7 @@ import { DayColumn } from './DayColumn'
 import { MobileDayView } from './MobileDayView'
 import { useTimeDirection } from './useTimeDirection'
 import { useUndoManager } from './undoManager'
-import { useColumnsThatFit, useViewport } from './useViewport'
+import { COLUMN_GAP_REM, useColumnsThatFit, useViewport } from './useViewport'
 
 /** Which card the editor is open on: a new card on a day, or an existing card. */
 type EditorState = { mode: 'create'; dayKey: string } | { mode: 'edit'; card: Card }
@@ -267,7 +267,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
               onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
             />
             <BoardDnd doc={doc} direction={direction}>
-              <div data-testid="board" className="flex gap-3">
+              <div data-testid="board" className="flex" style={{ gap: COLUMN_GAP_REM }}>
                 {days.map((day) => {
                   const cityId = resolveDayCity(day.key, accommodations, overrides)
                   return (

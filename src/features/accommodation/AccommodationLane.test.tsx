@@ -97,8 +97,14 @@ describe('AccommodationLane', () => {
     expect(cellA).toHaveStyle({ gridRow: '1' })
     expect(cellB).toHaveStyle({ gridRow: '1' })
     // The half-day inset is applied so the bars meet at the middle of the shared day.
-    expect(cellA.querySelector('div')).toHaveStyle({ marginRight: 'calc((14rem + 0.75rem) / 2)' })
-    expect(cellB.querySelector('div')).toHaveStyle({ marginLeft: 'calc((14rem + 0.75rem) / 2)' })
+    expect(cellA.querySelector('div')).toHaveAttribute(
+      'style',
+      expect.stringContaining('margin-right: calc(8.875rem);'),
+    )
+    expect(cellB.querySelector('div')).toHaveAttribute(
+      'style',
+      expect.stringContaining('margin-left: calc(8.875rem);'),
+    )
   })
 
   it('renders nothing when there are no days', () => {

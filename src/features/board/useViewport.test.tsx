@@ -1,8 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  COLUMN_WIDTH_PX,
   columnsThatFit,
-  LAPTOP_BREAKPOINT,
+  DESKTOP_BREAKPOINT,
   selectViewport,
   useColumnsThatFit,
   useViewport,
@@ -17,13 +18,13 @@ function setWidth(width: number) {
 }
 
 describe('selectViewport', () => {
-  it('is mobile below the laptop breakpoint', () => {
+  it('is mobile only below the 768px desktop breakpoint', () => {
     expect(selectViewport(375)).toBe('mobile')
-    expect(selectViewport(LAPTOP_BREAKPOINT - 1)).toBe('mobile')
+    expect(selectViewport(DESKTOP_BREAKPOINT - 1)).toBe('mobile')
   })
 
-  it('is desktop at and above the laptop breakpoint', () => {
-    expect(selectViewport(LAPTOP_BREAKPOINT)).toBe('desktop')
+  it('is desktop at and above the 768px breakpoint', () => {
+    expect(selectViewport(DESKTOP_BREAKPOINT)).toBe('desktop')
     expect(selectViewport(1440)).toBe('desktop')
   })
 })
@@ -34,11 +35,12 @@ describe('columnsThatFit', () => {
     expect(columnsThatFit(375)).toBe(1)
   })
 
-  it('fits more 224px columns (plus 12px gaps) as the viewport widens', () => {
-    // 224 + 12 gap + 224 = 460, plus 32px container padding = 492.
-    expect(columnsThatFit(492)).toBe(2)
+  it('uses 272px / 17rem columns everywhere in fit calculations', () => {
+    expect(COLUMN_WIDTH_PX).toBe(272)
+    // 272 + 12 gap + 272 = 556, plus 32px container padding = 588.
+    expect(columnsThatFit(588)).toBe(2)
     // One pixel short of a clean two-column fit drops back to one.
-    expect(columnsThatFit(491)).toBe(1)
+    expect(columnsThatFit(587)).toBe(1)
     expect(columnsThatFit(900)).toBe(3)
   })
 })

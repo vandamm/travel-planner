@@ -22,6 +22,7 @@ import {
 import { useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
+import { COLUMN_WIDTH_REM } from './useViewport'
 
 export interface DayColumnProps {
   day: Day
@@ -129,7 +130,8 @@ export function DayColumn({
       data-day={day.key}
       data-drag-over={dragOver ? '' : undefined}
       aria-label={`${weekday} ${dateLabel}${city ? ` — ${city.name}` : ''}`}
-      className={`flex w-56 shrink-0 flex-col rounded-frame border bg-white shadow-sm ${dragOver ? 'border-sky-400 ring-2 ring-sky-300' : 'border-edge'}`}
+      style={{ width: COLUMN_WIDTH_REM }}
+      className={`flex shrink-0 flex-col rounded-frame border bg-white shadow-sm ${dragOver ? 'border-sky-400 ring-2 ring-sky-300' : 'border-edge'}`}
     >
       <header className="rounded-t-frame">
         <div className="flex flex-col gap-0.5 px-3 pb-2 pt-2.5">

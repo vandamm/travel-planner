@@ -44,10 +44,10 @@ describe('visibleRange', () => {
   })
 
   it('derives the first visible column from the scroll offset', () => {
-    // 3 strides scrolled → first visible is column 3; ~4 columns fit 1000px.
+    // 3 strides scrolled → first visible is column 3; 3 columns fit 1000px.
     expect(visibleRange(14, { clientWidth: 1000, scrollLeft: 3 * stride })).toEqual({
       first: 3,
-      last: 6,
+      last: 5,
     })
   })
 
@@ -71,7 +71,7 @@ describe('rangeLabel', () => {
   })
 
   it('renders a European dd.MM span for the visible columns', () => {
-    expect(rangeLabel(days, { clientWidth: 1000, scrollLeft: 0 })).toBe('01.05 – 04.05')
+    expect(rangeLabel(days, { clientWidth: 1000, scrollLeft: 0 })).toBe('01.05 – 03.05')
   })
 
   it('renders a single date when only one column is visible', () => {
