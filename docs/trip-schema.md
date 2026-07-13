@@ -20,7 +20,7 @@ write can survive it.)
   "trip": {
     "title": "Italy 2027", // string (may be empty)
     "startDate": "2027-05-01", // "YYYY-MM-DD", or "" when not set up
-    "numDays": 14, // integer 0–730 — day columns, counted from startDate
+    "endDate": "2027-05-14", // inclusive last day, or "" when not set up
     "dayStart": "06:00", // "HH:mm" — top of each day's timeline window (default "06:00")
     "dayEnd": "21:00", // "HH:mm" — bottom of the window (default "21:00")
   },
@@ -42,13 +42,13 @@ write can survive it.)
       "note": "book ahead", // optional
       "link": "https://...", // optional; must be an http(s) URL (or empty)
       "startTime": "10:00", // optional "HH:mm" — its presence makes the card time-bound
-      "endTime": "12:00", // optional "HH:mm"
+      "duration": "custom", // "day"|"half"|"custom"
+      "durationHours": 2, // required positive number when duration is "custom"
       "order": 0, // integer — manual position among untimed cards in the day
       "color": "#3b82f6", // optional
       "icon": "🎟️", // optional
       "transport": false, // optional, legacy — true renders as the "transit" category
       "category": "indoor", // optional — "indoor"|"outdoor"|"transit" (supersedes transport)
-      "size": "auto", // optional — "auto"|"small"|"half"|"full" card height (absent = "auto")
     },
   ],
   "dayOverrides": {
@@ -63,7 +63,7 @@ write can survive it.)
 | ------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `trip.title`                               | string                                         | May be empty.                                                                                                                                                                                     |
 | `trip.startDate`                           | `"YYYY-MM-DD"` or `""`                         | Empty only before the trip is set up.                                                                                                                                                             |
-| `trip.numDays`                             | integer 0–730                                  | Number of day columns from `startDate` (inclusive). Bounded at 730 (~2 years) to keep the board finite; a larger count is rejected.                                                               |
+| `trip.endDate`                             | `"YYYY-MM-DD"` or `""`                         | Inclusive last day. A populated end date must not precede `startDate`; rendering clamps the board to 730 days.                                                                                       |
 | `trip.dayStart` / `dayEnd`                 | `"HH:mm"`, optional                            | The day's timeline window — cards are scaled and placed within it. Default `"06:00"` / `"21:00"` when omitted.                                                                                    |
 | `cities[].id`                              | non-empty string                               | Referenced by `accommodations[].cityId` and `dayOverrides`.                                                                                                                                       |
 | `cities[].color`                           | non-empty string                               | Any CSS color, e.g. `#ef4444`.                                                                                                                                                                    |
@@ -71,17 +71,18 @@ write can survive it.)
 | `accommodations[].startNight` / `endNight` | `"YYYY-MM-DD"`                                 | Inclusive night span; `endNight ≥ startNight`.                                                                                                                                                    |
 | `cards[].dayKey`                           | `"YYYY-MM-DD"`                                 | The day column the card belongs to.                                                                                                                                                               |
 | `cards[].link`                             | `"http(s)://…"` or `""`, optional              | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected.                                                                                            |
-| `cards[].startTime` / `endTime`            | `"HH:mm"`, optional                            | 24-hour; presence makes the card time-bound (auto-sorted by time).                                                                                                                                |
+| `cards[].startTime`                        | `"HH:mm"`, optional                            | 24-hour; presence makes the card time-bound (auto-sorted by time).                                                                                                                                |
+| `cards[].duration`                         | `"day"`/`"half"`/`"custom"`                 | Required. `day` and `half` resolve from the configured `dayStart`–`dayEnd` window.                                                                                                                |
+| `cards[].durationHours`                    | positive number                                 | Required only for `duration: "custom"`; the explicit card span in hours.                                                                                                                         |
 | `cards[].order`                            | integer                                        | Manual position among untimed cards in a day.                                                                                                                                                     |
 | `cards[].transport`                        | boolean, optional                              | Legacy transportation-leg flag. Kept valid for back-compat; `category` supersedes it and `true` is read as the `"transit"` category.                                                              |
 | `cards[].category`                         | `"indoor"`/`"outdoor"`/`"transit"`, optional   | Activity category, shown as a colour chip. Absent = uncategorised. Takes precedence over `transport`.                                                                                             |
-| `cards[].size`                             | `"auto"`/`"small"`/`"half"`/`"full"`, optional | Card height preset. `auto` (default/absent) sizes the card from its start/end time (1h when untimed); `small` ≈ half an hour; `half`/`full` are half/all of the day's `dayStart`–`dayEnd` window. |
 
 ## Defaults
 
 The four collections are optional on input and default to empty, and
 `trip.dayStart`/`dayEnd` default to `"06:00"`/`"21:00"` — a minimal valid
-document is just `{ "trip": { "title": "", "startDate": "", "numDays": 0 } }`.
+document is just `{ "trip": { "title": "", "startDate": "", "endDate": "" } }`.
 An export always emits the collections (sorted deterministically) and the
 default-filled window, so every export round-trips through `POST` unchanged.
 Exports also defensively prune dangling city references that can appear after a
@@ -180,7 +181,7 @@ Write a trip (full replace) — connected clients update live:
 curl -X POST https://travel.vansach.me/api/trip/italy-2027 \
   -H "content-type: application/json" \
   -d '{
-    "trip": { "title": "Italy 2027", "startDate": "2027-05-01", "numDays": 3 },
+    "trip": { "title": "Italy 2027", "startDate": "2027-05-01", "endDate": "2027-05-03" },
     "cities": [{ "id": "rome", "name": "Rome", "color": "#ef4444" }],
     "accommodations": [
       { "id": "stay-1", "label": "Hotel Roma", "cityId": "rome",
@@ -188,12 +189,12 @@ curl -X POST https://travel.vansach.me/api/trip/italy-2027 \
     ],
     "cards": [
       { "id": "card-1", "dayKey": "2027-05-01", "title": "Colosseum",
-        "startTime": "10:00", "endTime": "12:00", "order": 0 }
+        "startTime": "10:00", "duration": "custom", "durationHours": 2, "order": 0 }
     ],
     "dayOverrides": {}
   }'
 ```
 
-The minimal valid body is just `{ "trip": { "title": "", "startDate": "", "numDays": 0 } }`
+The minimal valid body is just `{ "trip": { "title": "", "startDate": "", "endDate": "" } }`
 (the four collections default to empty). See
 [`docs/deployment.md`](./deployment.md) for creating a room and a live smoke test.

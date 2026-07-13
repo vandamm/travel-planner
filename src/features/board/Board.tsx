@@ -27,7 +27,7 @@ import { DayColumn } from './DayColumn'
 import { MobileDayView } from './MobileDayView'
 import { useTimeDirection } from './useTimeDirection'
 import { useUndoManager } from './undoManager'
-import { useColumnsThatFit, useViewport } from './useViewport'
+import { COLUMN_GAP_REM, useColumnsThatFit, useViewport } from './useViewport'
 
 /** Which card the editor is open on: a new card on a day, or an existing card. */
 type EditorState = { mode: 'create'; dayKey: string } | { mode: 'edit'; card: Card }
@@ -66,7 +66,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   }, [addStayNonce])
 
   const trip = getTrip(doc)
-  const days = generateDays(trip.startDate, trip.numDays)
+  const days = generateDays(trip.startDate, trip.endDate)
   const accommodations = listAccommodations(doc)
   const overrides = listDayOverrides(doc)
   const cities = listCities(doc)
@@ -222,10 +222,10 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
 
       {days.length === 0 ? (
         <p data-testid="board-empty" className="px-6 text-ink-500">
-          Set a start date and number of days to build the board.
+          Set start and end dates to build the board.
         </p>
       ) : viewport === 'mobile' ? (
-        // Below the laptop breakpoint: one day at a time, paged by swipe or the
+        // Below 640px: one day at a time, paged by swipe or the
         // prev/next controls. Same cards/accommodation/direction logic as desktop.
         <div className="min-h-0 flex-1">
           <BoardDnd doc={doc} direction={direction}>
@@ -267,7 +267,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
               onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
             />
             <BoardDnd doc={doc} direction={direction}>
-              <div data-testid="board" className="flex gap-3">
+              <div data-testid="board" className="flex" style={{ gap: COLUMN_GAP_REM }}>
                 {days.map((day) => {
                   const cityId = resolveDayCity(day.key, accommodations, overrides)
                   return (

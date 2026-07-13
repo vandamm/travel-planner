@@ -29,7 +29,7 @@ async function seed(page: Page) {
 
 test('per-day city override recolors the header and Auto reverts it', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 2 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-02' })
   await seed(page)
 
   const first = page.locator('[data-testid="day-column"]').nth(0)

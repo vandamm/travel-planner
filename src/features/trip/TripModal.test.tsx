@@ -27,7 +27,7 @@ function sync(from: Y.Doc, to: Y.Doc) {
 function docWithMergedInvertedWindow(): Y.Doc {
   const a = new Y.Doc()
   const b = new Y.Doc()
-  setTrip(a, { title: 'Broken', startDate: '2027-05-10', numDays: 1 })
+  setTrip(a, { title: 'Broken', startDate: '2027-05-10', endDate: '2027-05-10' })
   sync(a, b)
   setTrip(a, { dayStart: '20:00' })
   setTrip(b, { dayEnd: '07:00' })
@@ -55,13 +55,11 @@ describe('TripModal', () => {
     vi.restoreAllMocks()
   })
 
-  it('writes title and day count into the trip live', () => {
+  it('writes title into the trip live', () => {
     renderInRoom(<TripModal onClose={() => {}} />)
     fireEvent.change(screen.getByLabelText('Trip title'), { target: { value: 'Italy' } })
-    fireEvent.change(screen.getByLabelText('Number of days'), { target: { value: '12' } })
 
     expect(screen.getByLabelText('Trip title')).toHaveValue('Italy')
-    expect(screen.getByLabelText('Number of days')).toHaveValue(12)
   })
 
   it('picks the start date through the calendar and shows it European', async () => {

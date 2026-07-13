@@ -5,7 +5,7 @@ import { pickDate, pickRange, setupTrip, E2E_LINK } from './helpers'
 
 test('picking the trip start via the calendar rebuilds the board to that date', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Cal Trip', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Cal Trip', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   // Board rebuilt from the picked ISO date; headers show European dd.MM.
   const labels = page.getByTestId('day-label')
@@ -22,7 +22,7 @@ test('picking the trip start via the calendar rebuilds the board to that date', 
 
 test('a stay range highlights both endpoints and the days between', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 5 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
 
   await page.getByTestId('add-stay').click()
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })

@@ -7,7 +7,7 @@ import { formatDay } from '../../data/dateFormat'
 import type { Day } from '../../data/schema'
 import { COLUMN_GAP_PX, COLUMN_WIDTH_PX } from './useViewport'
 
-/** Column stride: DayColumn's `w-56` + the board row's `gap-3`. Derived from the
+/** Column stride: DayColumn width + the board row gap. Derived from the
  *  single width/gap source in useViewport.ts, so narrowing the column updates it
  *  automatically. */
 export const COLUMN_STRIDE_PX = COLUMN_WIDTH_PX + COLUMN_GAP_PX

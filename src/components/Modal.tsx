@@ -4,8 +4,8 @@
 // per-modal drift. Extracted from the Phase-1 CardEditor shell.
 //
 // Responsive (Phase 3): base (mobile) classes make it a full-screen slide-up
-// sheet; `lg:` classes restore the Phase-2 centered scrim card. The 1024px
-// `lg` breakpoint equals `LAPTOP_BREAKPOINT`, so the sheet↔scrim switch is pure
+// sheet; `lg:` classes restore the Phase-2 centered scrim card. The board uses
+// the 640px / Tailwind `sm` board breakpoint; this sheet↔scrim switch is pure
 // CSS — no `useViewport` branch, no SSR/hydration mismatch.
 
 import { useEffect, useRef, type ReactNode } from 'react'

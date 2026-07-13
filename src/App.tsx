@@ -4,6 +4,7 @@ import { useRoom } from './data/RoomContext'
 import { RoomProvider } from './data/RoomProvider'
 import { slugFromPath } from './data/slug'
 import { getTrip, listCities } from './data/doc'
+import { inclusiveDayCount } from './data/days'
 import { useDocVersion } from './data/useDoc'
 import { Board } from './features/board/Board'
 import { CityModal } from './features/cities/CityModal'
@@ -28,7 +29,7 @@ function Header({
   const cityCount = listCities(doc).length
   // Wordmark is the trip title; untitled falls back to the app name.
   const wordmark = trip.title.trim() || 'Travel Planner'
-  const days = trip.numDays
+  const days = inclusiveDayCount(trip.startDate, trip.endDate)
   const meta = `${days} ${days === 1 ? 'day' : 'days'} · ${cityCount} ${cityCount === 1 ? 'city' : 'cities'}`
   const statusLabel = {
     local: 'Local',
@@ -38,7 +39,7 @@ function Header({
   }[status]
 
   return (
-    <header className="mx-auto flex w-full max-w-2xl items-center gap-3 px-6">
+    <header className="flex w-full items-center gap-3 px-6">
       {/* Vermilion seal — a square accent with a Lora italic monogram. */}
       <div
         data-testid="app-seal"
@@ -66,7 +67,7 @@ function Header({
       </p>
       {/* Desktop: inline Trip/Cities buttons. Mobile: they collapse into the ≡
           menu so the header isn't crowded on a phone. */}
-      <div className="ml-auto hidden items-center gap-2 lg:flex">
+      <div className="ml-auto hidden items-center gap-2 sm:flex">
         <button
           type="button"
           onClick={onOpenTrip}
@@ -94,7 +95,7 @@ function Header({
         type="button"
         aria-label="Menu"
         onClick={onOpenMenu}
-        className="flex h-9 w-9 items-center justify-center rounded-card border border-edge-300 bg-white text-xl leading-none text-ink-600 hover:bg-surface-chip lg:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-card border border-edge-300 bg-white text-xl leading-none text-ink-600 hover:bg-surface-chip sm:hidden"
       >
         <span aria-hidden>≡</span>
       </button>
@@ -144,7 +145,7 @@ function AppShell() {
   const [shareOpen, setShareOpen] = useState(false)
 
   return (
-    <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink lg:h-auto lg:min-h-screen lg:overflow-visible">
+    <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink sm:h-auto sm:min-h-screen sm:overflow-visible">
       <Header
         onOpenTrip={() => setTripOpen(true)}
         onOpenCities={() => setCitiesOpen(true)}

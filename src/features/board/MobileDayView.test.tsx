@@ -12,8 +12,8 @@ const days: Day[] = [
 ]
 
 const cardsByDay = new Map<string, Card[]>([
-  ['2027-05-01', [{ id: 'a', dayKey: '2027-05-01', title: 'Arrive', order: 0 }]],
-  ['2027-05-02', [{ id: 'b', dayKey: '2027-05-02', title: 'Museum', order: 0 }]],
+  ['2027-05-01', [{ id: 'a', dayKey: '2027-05-01', title: 'Arrive', order: 0, duration: 'custom', durationHours: 1 }]],
+  ['2027-05-02', [{ id: 'b', dayKey: '2027-05-02', title: 'Museum', order: 0, duration: 'custom', durationHours: 1 }]],
 ])
 
 function renderView(extra: Partial<Parameters<typeof MobileDayView>[0]> = {}) {

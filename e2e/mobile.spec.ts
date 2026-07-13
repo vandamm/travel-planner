@@ -6,7 +6,7 @@ import { setupTrip, E2E_LINK } from './helpers'
 test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true })
 
 async function setUpTrip(page: import('@playwright/test').Page) {
-  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 }
 
 test('mobile shows one day at a time and pages with prev/next, clamping at the ends', async ({

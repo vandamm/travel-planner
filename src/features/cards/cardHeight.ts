@@ -1,19 +1,15 @@
 // The vertical scale of the day timeline and a card's height on it.
 //
 // Pure logic (no React/dnd imports) so `DayColumn` stays presentational and the
-// math is unit-testable. A card's height is normally its *duration* (empty time
-// stays visible); a `size` preset overrides that with a height relative to the
-// day's timeline window — `small` a sliver, `half` half the window, `full` the
-// whole window.
+// math is unit-testable. A card's duration is either the configured day, half
+// that window, or its explicit custom-hour value.
 
 import type { Card } from '../../data/schema'
 
 /** Pixels per hour of the time window — the timeline's vertical scale. */
 export const PX_PER_HOUR = 44
-/** Fallback span (hours) for an untimed card or a timed card with no end. */
+/** Default span for a new custom card. */
 export const DEFAULT_CARD_HOURS = 1
-/** Height (hours) of the `small` preset. */
-const SMALL_CARD_HOURS = 0.5
 
 /** Minutes since midnight for an 'HH:mm' clock string; 0 when unparseable. */
 export function clockMinutes(hhmm: string): number {
@@ -49,23 +45,19 @@ export function noonFraction(dayStart: string, dayEnd: string): number {
   return Math.min(1, Math.max(0, (clockMinutes('12:00') - start) / span))
 }
 
-/**
- * A card's height (px). A `size` preset (other than `auto`) sets a fixed height
- * relative to the day window; otherwise the height is scaled by the card's
- * duration: end−start, with a timed card lacking an end (and any untimed card)
- * given the default block. Bad/overnight ranges floor to the default block.
- */
-export function cardHeightPx(card: Card, dayStart: string, dayEnd: string): number {
-  switch (card.size) {
-    case 'small':
-      return SMALL_CARD_HOURS * PX_PER_HOUR
+/** Resolve a card duration to positive hours for layout, labels, and drag math. */
+export function resolvedDurationHours(card: Card, dayStart: string, dayEnd: string): number {
+  switch (card.duration) {
+    case 'day':
+      return windowHours(dayStart, dayEnd)
     case 'half':
-      return Math.max(windowHours(dayStart, dayEnd) / 2, DEFAULT_CARD_HOURS) * PX_PER_HOUR
-    case 'full':
-      return windowHours(dayStart, dayEnd) * PX_PER_HOUR
+      return windowHours(dayStart, dayEnd) / 2
+    case 'custom':
+      return card.durationHours && card.durationHours > 0 ? card.durationHours : DEFAULT_CARD_HOURS
   }
-  if (!card.startTime) return DEFAULT_CARD_HOURS * PX_PER_HOUR
-  const start = clockMinutes(card.startTime)
-  const end = card.endTime ? clockMinutes(card.endTime) : start + 60
-  return Math.max((end - start) / 60, DEFAULT_CARD_HOURS) * PX_PER_HOUR
+}
+
+/** A card's height in pixels. */
+export function cardHeightPx(card: Card, dayStart: string, dayEnd: string): number {
+  return resolvedDurationHours(card, dayStart, dayEnd) * PX_PER_HOUR
 }

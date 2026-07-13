@@ -18,7 +18,7 @@ test.describe('mobile: ≡ menu', () => {
     await expect(menuButton).toBeVisible()
 
     // A trip so "Add stay" has sensible night defaults.
-    await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
+    await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
     // ≡ → Trip setup opens the Trip sheet.
     await menuButton.click()

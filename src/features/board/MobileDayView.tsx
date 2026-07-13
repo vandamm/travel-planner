@@ -1,4 +1,4 @@
-// The mobile single-day view: one day at a time below the laptop breakpoint,
+// The mobile single-day view: one day at a time below 640px,
 // with prev/next controls and left/right swipe to page between days. It reuses
 // the exact same building blocks as the desktop board — `resolveDayCity` for the
 // day's accommodation-driven city/color and `<DayColumn>` for the cards laid out

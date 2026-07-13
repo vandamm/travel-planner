@@ -5,7 +5,7 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   await page.goto(E2E_LINK)
 
   // A trip with days, so the board renders columns to drop cards into.
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 

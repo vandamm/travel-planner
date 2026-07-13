@@ -3,7 +3,7 @@ import { pickTime, setupTrip, E2E_LINK } from './helpers'
 
 test('undo removes a hand-added card; redo restores it', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 

@@ -11,7 +11,7 @@ test('a locally edited trip survives a reload', async ({ page }) => {
   await setupTrip(page, {
     title: 'Persistent trip',
     startDate: '2027-05-01',
-    numDays: 3,
+    endDate: '2027-05-03',
   })
 
   await page.reload()

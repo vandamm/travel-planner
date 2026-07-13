@@ -3,7 +3,7 @@ import { generateDays } from '../../data/days'
 import type { Accommodation } from '../../data/schema'
 import { accommodationColumnSpan, packAccommodations } from './accommodationSpan'
 
-const days = generateDays('2027-05-01', 5) // 05-01 … 05-05
+const days = generateDays('2027-05-01', '2027-05-05') // 05-01 … 05-05
 
 const stay = (over: Partial<Accommodation> = {}): Accommodation => ({
   id: 'a',

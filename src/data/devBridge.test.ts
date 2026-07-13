@@ -13,7 +13,7 @@ describe('installDevBridge', () => {
     installDevBridge(doc)
     installDevBridge(doc)
 
-    expect(getTrip(doc)).toMatchObject({ title: 'Berlin Weekend', numDays: 4, dayStart: '07:00' })
+    expect(getTrip(doc)).toMatchObject({ title: 'Berlin Weekend', endDate: '2026-07-13', dayStart: '07:00' })
     expect(listCities(doc)).toHaveLength(1)
     expect(listAccommodations(doc)).toHaveLength(1)
     expect(listCards(doc)).toHaveLength(5)

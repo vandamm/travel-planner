@@ -57,7 +57,7 @@ function makeApi(
 
 function seededDoc(): Y.Doc {
   const doc = new Y.Doc()
-  setTrip(doc, { title: 'Seed Trip', startDate: '2027-01-01', numDays: 2 })
+  setTrip(doc, { title: 'Seed Trip', startDate: '2027-01-01', endDate: '2027-01-02' })
   addCity(doc, { id: 'c1', name: 'Paris', color: '#0000ff' })
   addCard(doc, { id: 'k1', dayKey: '2027-01-01', title: 'Louvre' })
   return doc
@@ -76,10 +76,10 @@ function versionRequest(path = '/api/versions/room1'): Request {
 }
 
 const validTrip = {
-  trip: { title: 'Italy', startDate: '2027-05-01', numDays: 3, dayStart: '06:00', dayEnd: '21:00' },
+  trip: { title: 'Italy', startDate: '2027-05-01', endDate: '2027-05-03', dayStart: '06:00', dayEnd: '21:00' },
   cities: [{ id: 'c2', name: 'Rome', color: '#ff0000' }],
   accommodations: [],
-  cards: [{ id: 'k2', dayKey: '2027-05-01', title: 'Colosseum', order: 0 }],
+  cards: [{ id: 'k2', dayKey: '2027-05-01', title: 'Colosseum', order: 0, duration: 'custom', durationHours: 1 }],
   dayOverrides: {},
 }
 

@@ -71,7 +71,7 @@ describe('handleCreateRoom', () => {
 describe('handleListRooms', () => {
   it('returns a page of valid calendar summaries and skips one bad room', async () => {
     const doc = new Y.Doc()
-    setTrip(doc, { title: 'Japan', startDate: '2028-02-28', numDays: 3 })
+    setTrip(doc, { title: 'Japan', startDate: '2028-02-28', endDate: '2028-03-01' })
     const { api } = makeApi({
       listRooms: async (cursor) => {
         expect(cursor).toBe('page-1')

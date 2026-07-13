@@ -1,9 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { DndContext } from '@dnd-kit/core'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card as CardType } from '../../data/schema'
-import { Card } from './Card'
+import { Card, SortableCard } from './Card'
 
-const base: CardType = { id: 'x', dayKey: '2027-05-01', title: 'Colosseum', order: 0 }
+const base: CardType = {
+  id: 'x',
+  dayKey: '2027-05-01',
+  title: 'Colosseum',
+  order: 0,
+  duration: 'custom',
+  durationHours: 1,
+}
 
 describe('Card', () => {
   it('renders the title', () => {
@@ -11,15 +19,22 @@ describe('Card', () => {
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
   })
 
-  it('shows a start–end time when the card is time-bound', () => {
-    render(<Card card={{ ...base, startTime: '19:00', endTime: '21:00' }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('19:00–21:00')
+  it('shows the start time and duration without an end time', () => {
+    render(<Card card={{ ...base, startTime: '10:00', duration: 'custom', durationHours: 2 }} />)
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 2h')
+    expect(screen.getByTestId('card-time')).not.toHaveTextContent('–')
   })
 
   it('lets title and time share the remaining row beside the drag handle', () => {
     render(
       <Card
-        card={{ ...base, title: 'Brunch reservation', startTime: '10:00', endTime: '11:00' }}
+        card={{
+          ...base,
+          title: 'Brunch reservation',
+          startTime: '10:00',
+          duration: 'custom',
+          durationHours: 1,
+        }}
         dragHandleProps={{}}
       />,
     )
@@ -31,15 +46,23 @@ describe('Card', () => {
     expect(screen.getByTestId('card-title')).toHaveClass('min-w-0')
   })
 
-  it('shows only the start time when there is no end time', () => {
-    render(<Card card={{ ...base, startTime: '08:00' }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('08:00')
-    expect(screen.getByTestId('card-time')).not.toHaveTextContent('–')
+  it('does not offer a drag handle for a timed card', () => {
+    render(
+      <DndContext>
+        <SortableCard card={{ ...base, startTime: '10:00' }} />
+      </DndContext>,
+    )
+    expect(screen.queryByRole('button', { name: 'Drag Colosseum' })).not.toBeInTheDocument()
   })
 
-  it('omits the time when the card is untimed', () => {
+  it('shows the duration for an untimed card', () => {
+    render(<Card card={{ ...base, duration: 'custom', durationHours: 1.5 }} />)
+    expect(screen.getByTestId('card-time')).toHaveTextContent('1.5h')
+  })
+
+  it('shows a duration when the card is untimed', () => {
     render(<Card card={base} />)
-    expect(screen.queryByTestId('card-time')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card-time')).toHaveTextContent('1h')
   })
 
   it('renders an optional note', () => {

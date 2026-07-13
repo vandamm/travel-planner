@@ -4,7 +4,7 @@ import { generateDays } from '../../data/days'
 import type { Accommodation, City } from '../../data/schema'
 import { AccommodationLane } from './AccommodationLane'
 
-const days = generateDays('2027-05-01', 5)
+const days = generateDays('2027-05-01', '2027-05-05')
 const cityById = new Map<string, City>([['rome', { id: 'rome', name: 'Rome', color: '#ef4444' }]])
 
 const stay = (over: Partial<Accommodation> = {}): Accommodation => ({
@@ -17,6 +17,15 @@ const stay = (over: Partial<Accommodation> = {}): Accommodation => ({
 })
 
 describe('AccommodationLane', () => {
+  it('stacks the trailing stay control below the 17rem grid on phones', () => {
+    render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
+
+    expect(screen.getByTestId('accommodation-lane').parentElement).toHaveClass(
+      'flex-col',
+      'sm:flex-row',
+    )
+  })
+
   it('renders a bar spanning the covered columns, colored by its city', () => {
     render(<AccommodationLane days={days} accommodations={[stay()]} cityById={cityById} />)
 
@@ -97,8 +106,14 @@ describe('AccommodationLane', () => {
     expect(cellA).toHaveStyle({ gridRow: '1' })
     expect(cellB).toHaveStyle({ gridRow: '1' })
     // The half-day inset is applied so the bars meet at the middle of the shared day.
-    expect(cellA.querySelector('div')).toHaveStyle({ marginRight: 'calc((14rem + 0.75rem) / 2)' })
-    expect(cellB.querySelector('div')).toHaveStyle({ marginLeft: 'calc((14rem + 0.75rem) / 2)' })
+    expect(cellA.querySelector('div')).toHaveAttribute(
+      'style',
+      expect.stringContaining('margin-right: calc(8.875rem);'),
+    )
+    expect(cellB.querySelector('div')).toHaveAttribute(
+      'style',
+      expect.stringContaining('margin-left: calc(8.875rem);'),
+    )
   })
 
   it('renders nothing when there are no days', () => {

@@ -9,7 +9,7 @@ test('pager dots match the day count, mark the current day, and navigate on tap'
   page,
 }) => {
   await page.goto(E2E_LINK)
-  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', numDays: 3 })
+  await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const dots = page.getByTestId('mobile-day-dot')
   const position = page.getByTestId('mobile-day-position')

@@ -9,12 +9,10 @@ import { uncoveredGaps } from '../../data/cityResolution'
 import type { Accommodation, City, Day } from '../../data/schema'
 import { AccommodationBar } from './AccommodationBar'
 import { packAccommodations } from './accommodationSpan'
+import { COLUMN_GAP_REM, COLUMN_WIDTH_REM } from '../board/useViewport'
 
-/** Must match the day columns: `w-56` (14rem) tracks, `gap-3` (0.75rem) gaps. */
-const COLUMN_WIDTH = '14rem'
-const COLUMN_GAP = '0.75rem'
 /** Half a column (incl. its gap) — a changeover bar starts/ends at the day's middle. */
-const HALF_DAY_INSET = `calc((${COLUMN_WIDTH} + ${COLUMN_GAP}) / 2)`
+const HALF_DAY_INSET = `calc((${COLUMN_WIDTH_REM} + ${COLUMN_GAP_REM}) / 2)`
 
 export interface AccommodationLaneProps {
   days: Day[]
@@ -44,13 +42,13 @@ export function AccommodationLane({
   const gaps = uncoveredGaps(days, accommodations)
 
   return (
-    <div className="mb-2 flex items-start gap-3">
+    <div className="mb-2 flex flex-col items-start gap-3 sm:flex-row">
       <div
         data-testid="accommodation-lane"
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${days.length}, ${COLUMN_WIDTH})`,
-          columnGap: COLUMN_GAP,
+          gridTemplateColumns: `repeat(${days.length}, ${COLUMN_WIDTH_REM})`,
+          columnGap: COLUMN_GAP_REM,
           rowGap: '0.25rem',
         }}
       >

@@ -5,7 +5,7 @@
 // is the single source of truth; every write goes through a mutator here.
 //
 // Layout (all top-level containers on one shared `Y.Doc`):
-//   trip            Y.Map  — title / startDate / numDays (plain values)
+//   trip            Y.Map  — title / startDate / endDate (plain values)
 //   cities          Y.Map<Y.Map>  — id → { id, name, color }
 //   dayOverrides    Y.Map  — 'YYYY-MM-DD' → cityId (manual per-day city)
 //   cards           Y.Map<Y.Map>  — id → Card fields
@@ -16,19 +16,19 @@
 // clobbering one another — the whole point of using a CRDT.
 
 import * as Y from 'yjs'
-import { MAX_TRIP_DAYS } from './days'
-import type { Accommodation, Card, CardCategory, CardSize, City, Trip } from './schema'
+import type { Accommodation, Card, CardCategory, CardDuration, City, Trip } from './schema'
 
 const TRIP = 'trip'
 const CITIES = 'cities'
 const DAY_OVERRIDES = 'dayOverrides'
 const CARDS = 'cards'
 const ACCOMMODATIONS = 'accommodations'
+const DEFAULT_CUSTOM_DURATION_HOURS = 1
 
 const DEFAULT_TRIP: Trip = {
   title: '',
   startDate: '',
-  numDays: 0,
+  endDate: '',
   dayStart: '06:00',
   dayEnd: '21:00',
 }
@@ -91,35 +91,32 @@ export function getTrip(doc: Y.Doc): Trip {
   return {
     title: (m.get('title') as string | undefined) ?? DEFAULT_TRIP.title,
     startDate: (m.get('startDate') as string | undefined) ?? DEFAULT_TRIP.startDate,
-    numDays: (m.get('numDays') as number | undefined) ?? DEFAULT_TRIP.numDays,
+    endDate: (m.get('endDate') as string | undefined) ?? DEFAULT_TRIP.endDate,
     dayStart: (m.get('dayStart') as string | undefined) ?? DEFAULT_TRIP.dayStart,
     dayEnd: (m.get('dayEnd') as string | undefined) ?? DEFAULT_TRIP.dayEnd,
   }
-}
-
-/**
- * Coerce a day count into the schema's valid range — a non-negative integer no
- * greater than {@link MAX_TRIP_DAYS}. Clamping here (not just via the setup UI's
- * `max` attribute, which a typed or pasted value bypasses) keeps the doc from
- * ever holding a count that `tripDocumentSchema` would later reject on export.
- */
-function clampNumDays(value: number): number {
-  if (!Number.isFinite(value)) return 0
-  return Math.min(Math.max(Math.floor(value), 0), MAX_TRIP_DAYS)
 }
 
 export function setTrip(doc: Y.Doc, patch: Partial<Trip>): void {
   const m = doc.getMap(TRIP)
   doc.transact(() => {
     if (patch.title !== undefined) m.set('title', patch.title)
-    if (patch.startDate !== undefined) m.set('startDate', patch.startDate)
-    if (patch.numDays !== undefined) m.set('numDays', clampNumDays(patch.numDays))
+    if (patch.startDate !== undefined || patch.endDate !== undefined) {
+      const current = getTrip(doc)
+      const startDate = patch.startDate ?? current.startDate
+      const endDate = patch.endDate ?? current.endDate
+      // Keep live picker edits exportable. A user can move an existing range by
+      // changing the non-reversing bound first; blank setup fields stay allowed.
+      if (!startDate || !endDate || endDate >= startDate) {
+        if (patch.startDate !== undefined) m.set('startDate', startDate)
+        if (patch.endDate !== undefined) m.set('endDate', endDate)
+      }
+    }
     // The day window must stay non-empty (dayEnd > dayStart, comparing 'HH:mm'
     // lexicographically) — `tripDocumentSchema` refines on it, so an inverted
     // window in the doc would make `exportTrip`/agent-GET throw. Resolve the
     // candidate against the current values and only write when valid, so the doc
-    // can never hold a window export rejects (same guarantee `clampNumDays` gives
-    // numDays). ponytail: a single-field edit that would invert is dropped (input
+    // can never hold a window export rejects. ponytail: a single-field edit that would invert is dropped (input
     // snaps back); edit the other bound first to move the whole window past it.
     if (patch.dayStart !== undefined || patch.dayEnd !== undefined) {
       const current = getTrip(doc)
@@ -183,14 +180,15 @@ export interface NewCard {
   note?: string
   link?: string
   startTime?: string
-  endTime?: string
+  /** Defaults to a one-hour custom duration. */
+  duration?: CardDuration
+  durationHours?: number
   /** Manual order; defaults to the end of the target day when omitted. */
   order?: number
   color?: string
   icon?: string
   transport?: boolean
   category?: CardCategory
-  size?: CardSize
   id?: string
 }
 
@@ -219,9 +217,17 @@ function nextOrder(doc: Y.Doc, dayKey: string): number {
   )
 }
 
+function validCustomDurationHours(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : DEFAULT_CUSTOM_DURATION_HOURS
+}
+
 export function addCard(doc: Y.Doc, input: NewCard): Card {
   const id = input.id ?? newId()
   const order = input.order ?? nextOrder(doc, input.dayKey)
+  const duration = input.duration ?? 'custom'
+  const durationHours = validCustomDurationHours(input.durationHours)
   const card: Card = {
     id,
     dayKey: input.dayKey,
@@ -230,12 +236,12 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
     ...(input.note !== undefined && { note: input.note }),
     ...(input.link !== undefined && { link: input.link }),
     ...(input.startTime !== undefined && { startTime: input.startTime }),
-    ...(input.endTime !== undefined && { endTime: input.endTime }),
+    duration,
+    ...(duration === 'custom' && { durationHours }),
     ...(input.color !== undefined && { color: input.color }),
     ...(input.icon !== undefined && { icon: input.icon }),
     ...(input.transport !== undefined && { transport: input.transport }),
     ...(input.category !== undefined && { category: input.category }),
-    ...(input.size !== undefined && { size: input.size }),
   }
   doc.transact(() => entityMap(doc, CARDS).set(id, toYMap(card)))
   return card
@@ -244,7 +250,14 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
 export function updateCard(doc: Y.Doc, id: string, patch: Partial<Omit<Card, 'id'>>): void {
   const m = entityMap(doc, CARDS).get(id)
   if (!m) return
-  doc.transact(() => patchYMap(m, patch))
+  doc.transact(() => {
+    patchYMap(m, patch)
+    if (m.get('duration') === 'custom') {
+      m.set('durationHours', validCustomDurationHours(m.get('durationHours')))
+    } else {
+      m.delete('durationHours')
+    }
+  })
 }
 
 /**

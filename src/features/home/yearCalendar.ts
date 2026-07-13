@@ -4,17 +4,17 @@ import {
   endOfWeek,
   format,
   isSameMonth,
-  parseISO,
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
+import { inclusiveDayCount } from '../../data/days'
 
 export interface TripSummary {
   id: string
   createdAt?: string
   title: string
   startDate: string
-  numDays: number
+  endDate: string
 }
 
 export interface CalendarDay {
@@ -48,11 +48,9 @@ export function buildMonth(year: number, month: number): CalendarDay[] {
 }
 
 export function tripsOnDay(dayKey: string, trips: TripSummary[]): TripSummary[] {
-  return trips.filter(({ startDate, numDays }) => {
-    if (!startDate || numDays < 1) return false
-    const end = new Date(parseISO(startDate))
-    end.setDate(end.getDate() + numDays - 1)
-    return dayKey >= startDate && dayKey <= format(end, 'yyyy-MM-dd')
+  return trips.filter(({ startDate, endDate }) => {
+    if (inclusiveDayCount(startDate, endDate) === 0) return false
+    return dayKey >= startDate && dayKey <= endDate
   })
 }
 

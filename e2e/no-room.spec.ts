@@ -16,7 +16,7 @@ test('the front page shows the year calendar, trip links, and new trip flow', as
         contentType: 'application/json',
         body: JSON.stringify({
           trips: [
-            { id: 'summer-2026', title: 'Summer coast', startDate: '2026-07-15', numDays: 8 },
+            { id: 'summer-2026', title: 'Summer coast', startDate: '2026-07-15', endDate: '2026-07-22' },
           ],
         }),
       })
