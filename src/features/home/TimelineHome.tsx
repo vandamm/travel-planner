@@ -100,6 +100,25 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
   )
   const markers = useMemo(() => timelineMonthMarkers(today, end, upcoming, holidays), [today, end, upcoming, holidays])
 
+  if (!upcoming.length) {
+    return (
+      <section className="mx-auto max-w-[900px] px-4 pb-24 pt-8 sm:px-7">
+        <div className="max-w-xl border-t border-edge-300 py-12">
+          <p className="text-[10px] font-bold uppercase tracking-[.16em] text-city-vermilion">No journeys yet</p>
+          <h3 className="mt-2 font-serif text-3xl font-semibold tracking-tight">Plan your first journey</h3>
+          <p className="mt-3 text-sm leading-6 text-ink-600">Give the trip a name and date; its place in the timeline follows.</p>
+          <button
+            type="button"
+            onClick={() => onAddTrip('')}
+            className="mt-6 rounded-card bg-city-vermilion px-4 py-2.5 text-sm font-bold text-white hover:bg-[#a83226]"
+          >
+            Start a trip
+          </button>
+        </div>
+      </section>
+    )
+  }
+
   const pointerMove = (event: PointerEvent<HTMLElement>) => {
     if (!matchMedia('(hover: hover)').matches || !root.current) return
     if (event.target instanceof Element && event.target.closest('[data-timeline-trip]')) return setHover(null)

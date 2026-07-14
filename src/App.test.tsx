@@ -81,7 +81,7 @@ describe('App (with a room slug path)', () => {
 })
 
 describe('App without a room slug', () => {
-  it('shows the timeline by default and renders no board controls', async () => {
+  it('prompts for a first journey when no dated trips exist', async () => {
     window.history.replaceState(null, '', '/')
     vi.stubGlobal(
       'fetch',
@@ -89,6 +89,8 @@ describe('App without a room slug', () => {
     )
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Your travel timeline' })).toBeInTheDocument()
+    expect(screen.getByText('Plan your first journey')).toBeInTheDocument()
+    expect(screen.queryByText('Continue planning')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /new trip/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Trip' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-meta')).not.toBeInTheDocument()
