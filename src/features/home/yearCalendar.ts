@@ -1,4 +1,5 @@
 import {
+  addDays,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -15,6 +16,55 @@ export interface TripSummary {
   title: string
   startDate: string
   endDate: string
+  color?: string
+}
+
+export const TRIP_COLORS = ['#c0392b', '#5f6f44', '#3a4a5c', '#8a5a78'] as const
+
+export function tripDurationDays({ startDate, endDate }: Pick<TripSummary, 'startDate' | 'endDate'>): number {
+  return inclusiveDayCount(startDate, endDate)
+}
+
+export function tripHeight(durationDays: number): number {
+  return Math.max(44, durationDays * 12)
+}
+
+export function gapHeight(emptyDays: number): number {
+  return Math.max(48, Math.min(emptyDays * 4, 180))
+}
+
+export function formatCountdown(daysUntil: number): string {
+  if (daysUntil < 1) return 'Starting soon'
+  if (daysUntil < 14) return `in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`
+  if (daysUntil < 60) {
+    const weeks = Math.round(daysUntil / 7)
+    return `in ${weeks} week${weeks === 1 ? '' : 's'}`
+  }
+  const months = Math.round(daysUntil / 30)
+  return `in ${months} month${months === 1 ? '' : 's'}`
+}
+
+export function futureDatedTrips(trips: TripSummary[], referenceDate: Date = new Date()): TripSummary[] {
+  const today = format(referenceDate, 'yyyy-MM-dd')
+  return trips
+    .filter((trip) => tripDurationDays(trip) > 0 && trip.endDate >= today)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+}
+
+export function timelineMonthMarkers(
+  startDate: string,
+  endDate: string,
+  trips: TripSummary[],
+  holidays: SchoolHoliday[],
+): Array<{ date: string; embedded: boolean }> {
+  const markers: Array<{ date: string; embedded: boolean }> = []
+  for (let date = startOfMonth(new Date(`${startDate}T00:00:00`)); format(date, 'yyyy-MM-dd') <= endDate; date = addDays(endOfMonth(date), 1)) {
+    const key = format(date, 'yyyy-MM-dd')
+    if (key >= startDate && !tripsOnDay(key, trips).length) {
+      markers.push({ date: key, embedded: Boolean(schoolHolidayOnDay(key, holidays)) })
+    }
+  }
+  return markers
 }
 
 export interface CalendarDay {

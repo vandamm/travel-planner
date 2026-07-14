@@ -5,6 +5,8 @@ import * as Y from 'yjs'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { isValidSlug } from '../../src/data/slug'
 import { getTrip } from '../../src/data/doc'
+import { setTrip } from '../../src/data/doc'
+import { TRIP_COLORS } from '../../src/features/home/yearCalendar'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -15,6 +17,12 @@ function json(data: unknown, status = 200): Response {
 
 interface CreateRoomBody {
   room?: unknown
+  startDate?: unknown
+  color?: unknown
+}
+
+function randomTripColor(): string {
+  return TRIP_COLORS[Math.floor(Math.random() * TRIP_COLORS.length)]
 }
 
 export async function handleListRooms(request: Request, api: LiveblocksApi): Promise<Response> {
@@ -27,6 +35,11 @@ export async function handleListRooms(request: Request, api: LiveblocksApi): Pro
         const doc = new Y.Doc()
         const update = await api.getYUpdate(id)
         if (update.byteLength) Y.applyUpdate(doc, update)
+        const trip = getTrip(doc)
+        if (!trip.color) {
+          setTrip(doc, { color: randomTripColor() })
+          await api.sendYUpdate(id, Y.encodeStateAsUpdate(doc))
+        }
         return { id, createdAt, ...getTrip(doc) }
       }),
   )
@@ -56,5 +69,13 @@ export async function handleCreateRoom(
   }
 
   const created = await api.createRoom(roomId)
+  const doc = new Y.Doc()
+  setTrip(doc, {
+    color: typeof body.color === 'string' && body.color ? body.color : randomTripColor(),
+    ...(typeof body.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.startDate)
+      ? { startDate: body.startDate, endDate: body.startDate }
+      : {}),
+  })
+  await api.sendYUpdate(created.id, Y.encodeStateAsUpdate(doc))
   return json({ id: created.id }, 201)
 }

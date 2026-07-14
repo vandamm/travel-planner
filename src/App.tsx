@@ -10,7 +10,7 @@ import { Board } from './features/board/Board'
 import { CityModal } from './features/cities/CityModal'
 import { TripModal } from './features/trip/TripModal'
 import { ShareModal } from './features/share/ShareModal'
-import { YearCalendarHome } from './features/home/YearCalendarHome'
+import { HomeShell } from './features/home/HomeShell'
 
 function Header({
   onOpenTrip,
@@ -196,7 +196,7 @@ function NoRoom() {
 export default function App() {
   const pathname = typeof location !== 'undefined' ? location.pathname : '/'
   const roomId = slugFromPath(pathname)
-  if (!roomId) return pathname === '/' ? <YearCalendarHome /> : <NoRoom />
+  if (!roomId) return pathname === '/' ? <HomeShell /> : <NoRoom />
   return (
     <RoomProvider roomId={roomId}>
       <AppShell />

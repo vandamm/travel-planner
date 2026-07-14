@@ -92,6 +92,7 @@ export function getTrip(doc: Y.Doc): Trip {
     title: (m.get('title') as string | undefined) ?? DEFAULT_TRIP.title,
     startDate: (m.get('startDate') as string | undefined) ?? DEFAULT_TRIP.startDate,
     endDate: (m.get('endDate') as string | undefined) ?? DEFAULT_TRIP.endDate,
+    color: m.get('color') as string | undefined,
     dayStart: (m.get('dayStart') as string | undefined) ?? DEFAULT_TRIP.dayStart,
     dayEnd: (m.get('dayEnd') as string | undefined) ?? DEFAULT_TRIP.dayEnd,
   }
@@ -112,6 +113,7 @@ export function setTrip(doc: Y.Doc, patch: Partial<Trip>): void {
         if (patch.endDate !== undefined) m.set('endDate', endDate)
       }
     }
+    if (patch.color !== undefined) m.set('color', patch.color)
     // The day window must stay non-empty (dayEnd > dayStart, comparing 'HH:mm'
     // lexicographically) — `tripDocumentSchema` refines on it, so an inverted
     // window in the doc would make `exportTrip`/agent-GET throw. Resolve the

@@ -164,6 +164,17 @@ export function TripModal({ onClose }: TripModalProps) {
         </div>
       </div>
 
+      <label className="flex flex-col gap-1.5">
+        <span className={sectionLabel}>Trip colour</span>
+        <input
+          type="color"
+          aria-label="Trip colour"
+          value={trip.color ?? '#c0392b'}
+          onChange={(e) => setTrip(doc, { color: e.target.value })}
+          className="h-9 w-14 cursor-pointer rounded-card border border-edge bg-transparent p-0"
+        />
+      </label>
+
       <div className="flex flex-col gap-1.5">
         <span className={sectionLabel}>
           Day window{' '}

@@ -5,6 +5,12 @@ import {
   ribbonEdges,
   schoolHolidayEdges,
   schoolHolidayOnDay,
+  timelineMonthMarkers,
+  formatCountdown,
+  futureDatedTrips,
+  gapHeight,
+  tripHeight,
+  tripDurationDays,
   tripsOnDay,
   type TripSummary,
 } from './yearCalendar'
@@ -79,5 +85,44 @@ describe('year calendar', () => {
       start: false,
       end: true,
     })
+  })
+
+  it('scales trip and empty time without losing either', () => {
+    expect(tripDurationDays(trip)).toBe(3)
+    expect(tripHeight(1)).toBe(44)
+    expect(tripHeight(10)).toBe(120)
+    expect(gapHeight(1)).toBe(48)
+    expect(gapHeight(20)).toBe(80)
+    expect(gapHeight(999)).toBe(180)
+  })
+
+  it('uses days, weeks, and months for countdowns', () => {
+    expect(formatCountdown(1)).toBe('in 1 day')
+    expect(formatCountdown(15)).toBe('in 2 weeks')
+    expect(formatCountdown(75)).toBe('in 3 months')
+  })
+
+  it('keeps ongoing trips, drops finished trips, and sorts the timeline', () => {
+    expect(
+      futureDatedTrips(
+        [
+          { ...trip, id: 'finished', startDate: '2026-01-01', endDate: '2026-01-02' },
+          { ...trip, id: 'later', startDate: '2026-08-01', endDate: '2026-08-02' },
+          { ...trip, id: 'ongoing', startDate: '2026-07-10', endDate: '2026-07-12' },
+        ],
+        new Date('2026-07-12T12:00:00'),
+      ).map((item) => item.id),
+    ).toEqual(['ongoing', 'later'])
+  })
+
+  it('suppresses month ticks inside trips but embeds them in holidays', () => {
+    expect(
+      timelineMonthMarkers(
+        '2026-07-12',
+        '2026-09-30',
+        [{ ...trip, startDate: '2026-07-30', endDate: '2026-08-03' }],
+        [{ startDate: '2026-09-01', endDate: '2026-09-10', name: 'Summer Holidays' }],
+      ),
+    ).toEqual([{ date: '2026-09-01', embedded: true }])
   })
 })
