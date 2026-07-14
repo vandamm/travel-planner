@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route segments · Travel Planner</title>
+  <link rel="stylesheet" href="shared.css">
+  <script src="shared.js" defer></script>
+</head>
+<body class="route-segments">
+  <header class="site-header">
+    <div class="brand"><span class="seal" aria-hidden="true">I</span><div class="brand-copy"><p class="eyebrow">Travel Planner</p><h1>Our journeys</h1></div></div>
+    <nav class="view-switch" data-view-switch aria-label="Choose home view"><a href="route-ledger.html" aria-current="page">Timeline</a><a href="year-calendar.html">Calendar</a></nav>
+    <div class="header-actions"><button class="new-trip" type="button" aria-label="New trip" data-prototype-action="New trip would open here"><span aria-hidden="true">＋</span><span class="new-trip-label">Trip</span></button></div>
+  </header>
+  <div class="timeline-title"><h2>Your travel timeline</h2></div>
+  <main class="timeline segment-timeline">
+    <div class="today"><span class="today-dot" aria-hidden="true"></span><time class="today-stamp" datetime="2026-07-12">Today · 12 July 2026</time></div>
+    <div class="month-marker"><span>July 2026</span></div>
+    <section class="segment-row" style="--gap: 72px; --trip-days: 10"><span class="holiday-band"><span>3 Aug. – 14 Sep.</span></span><span class="trip-countdown">in <strong>15 days</strong></span><a class="segment-copy" href="#"><strong>Lake Garda</strong><span>27 July–5 August · 10 days</span></a><span class="route-segment vermilion" aria-hidden="true"></span></section>
+    <div class="month-marker"><span>August 2026</span></div>
+    <section class="segment-row" style="--gap: 54px; --trip-days: 8"><span class="holiday-band"><span>3 Aug. – 14 Sep.</span></span><span class="trip-countdown">in <strong>4 weeks</strong></span><a class="segment-copy" href="#"><strong>Hiking in Tyrol</strong><span>15–22 August · 8 days</span></a><span class="route-segment pine" aria-hidden="true"></span></section>
+    <div class="empty-stretch" aria-hidden="true"></div>
+    <div class="month-marker"><span>October 2026</span></div>
+    <section class="segment-row" style="--gap: 76px; --trip-days: 4"><span class="trip-countdown">in <strong>3 months</strong></span><a class="segment-copy" href="#"><strong>Lisbon long weekend</strong><span>16–19 October · 4 days</span></a><span class="route-segment indigo" aria-hidden="true"></span></section>
+    <div class="month-marker"><span>November 2026</span></div>
+    <div class="holiday-only"><span>2 Nov. – 6 Nov.</span></div>
+    <div class="empty-stretch long" aria-hidden="true"></div>
+    <div class="month-marker"><span>December 2026</span></div>
+    <section class="segment-row winter-span" style="--gap: 76px; --trip-days: 4"><span class="holiday-band"><span>24 Dec. – 8 Jan.</span><span class="embedded-month">January 2027</span></span><span class="trip-countdown">in <strong>5 months</strong></span><a class="segment-copy" href="#"><strong>Vienna at Christmas</strong><span>27–30 December · 4 days</span></a><span class="route-segment plum" aria-hidden="true"></span></section>
+    <div class="empty-stretch" aria-hidden="true"></div>
+    <div class="month-marker"><span>February 2027</span></div>
+    <section class="segment-row" style="--gap: 70px; --trip-days: 9"><span class="trip-countdown">in <strong>7 months</strong></span><a class="segment-copy" href="#"><strong>Norway winter</strong><span>13–21 February · 9 days</span></a><span class="route-segment pine" aria-hidden="true"></span></section>
+    <button class="timeline-add" type="button" aria-label="Add a trip at this point" data-prototype-action="Add a trip at this point">+</button>
+    <p class="timeline-end">Continue planning 2027</p>
+  </main>
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+</body>
+</html>

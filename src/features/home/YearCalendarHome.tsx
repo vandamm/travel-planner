@@ -26,7 +26,7 @@ function tripLabel(trip: TripSummary): string {
   return trip.title.trim() || trip.id
 }
 
-function Month({
+export function Month({
   year,
   month,
   trips,
@@ -72,7 +72,7 @@ function Month({
             : 'rounded-md'
           const className = `relative flex h-8 items-center justify-center ${corners} text-xs ${
             day.inMonth ? 'text-[#17233c]' : 'text-[#c7cfdd]'
-          } ${trip ? 'font-bold text-white' : holiday ? 'bg-[#e8efff]' : ''}`
+          } ${trip ? 'font-bold text-white' : holiday ? 'bg-[#edf1e1]' : ''}`
           const holidayTitle = holiday ? `${holiday.name} · Bavaria school holidays` : undefined
           const contents = trip ? (
             <>

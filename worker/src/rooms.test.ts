@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { handleCreateRoom, handleListRooms } from './rooms'
 import type { Env, LiveblocksApi } from './liveblocks'
-import { setTrip } from '../../src/data/doc'
+import { getTrip, setTrip } from '../../src/data/doc'
 
 const env: Env = { LIVEBLOCKS_SECRET_KEY: 'sk_test', DEV_AUTH_EMAIL: 'me@example.com' }
 
@@ -45,6 +45,32 @@ describe('handleCreateRoom', () => {
     expect(res.status).toBe(201)
     expect(await res.json()).toEqual({ id: 'rome-2027' })
     expect(created).toEqual(['rome-2027'])
+  })
+
+  it('stores a stable homepage colour when it creates a room', async () => {
+    let update = new Uint8Array()
+    const { api } = makeApi({
+      sendYUpdate: async (_id, next) => {
+        update = next
+      },
+    })
+    await handleCreateRoom(roomRequest({ room: 'rome-2027', color: '#5f6f44' }), env, api)
+    const doc = new Y.Doc()
+    Y.applyUpdate(doc, update)
+    expect(getTrip(doc).color).toBe('#5f6f44')
+  })
+
+  it('initializes a start-date room as a one-day trip', async () => {
+    let update = new Uint8Array()
+    const { api } = makeApi({
+      sendYUpdate: async (_id, next) => {
+        update = next
+      },
+    })
+    await handleCreateRoom(roomRequest({ room: 'rome-2027', startDate: '2027-05-04' }), env, api)
+    const doc = new Y.Doc()
+    Y.applyUpdate(doc, update)
+    expect(getTrip(doc)).toMatchObject({ startDate: '2027-05-04', endDate: '2027-05-04' })
   })
 
   it('rejects invalid slugs', async () => {

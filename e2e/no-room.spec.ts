@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('the front page shows the year calendar, trip links, and new trip flow', async ({ page }) => {
+test('the front page shows the timeline and exposes the linked calendar', async ({ page }) => {
   await page.route('**/SchoolHolidays?**', (route) =>
     route.fulfill({ contentType: 'application/json', body: '[]' }),
   )
@@ -22,12 +22,13 @@ test('the front page shows the year calendar, trip links, and new trip flow', as
       })
     }
   })
-  await page.goto('/')
+  await page.goto('/?view=calendar')
 
-  await expect(page.getByRole('heading', { name: 'Your travel year' })).toBeVisible()
-  await expect(
-    page.getByRole('link', { name: 'Summer coast 15 Jul – 22 Jul', exact: true }),
-  ).toHaveAttribute('href', '/summer-2026')
+  await expect(page.getByRole('heading', { name: 'Your travel calendar' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Summer coast on 15 July' })).toHaveAttribute(
+    'href',
+    '/summer-2026',
+  )
   await expect(page.getByRole('region', { name: 'Board' })).toHaveCount(0)
 
   await page.getByRole('button', { name: /New trip/ }).click()

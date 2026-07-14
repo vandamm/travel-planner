@@ -39,6 +39,7 @@ export const tripSettingsSchema = z
     startDate: z.union([dateOnly, z.literal('')]),
     // Empty while the trip is not yet set up; otherwise the inclusive last day.
     endDate: z.union([dateOnly, z.literal('')]),
+    color: z.string().min(1).optional(),
     // The day's timeline window; defaults mirror DEFAULT_TRIP in doc.ts.
     dayStart: clockTime.default('06:00'),
     dayEnd: clockTime.default('21:00'),

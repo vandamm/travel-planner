@@ -81,18 +81,46 @@ describe('App (with a room slug path)', () => {
 })
 
 describe('App without a room slug', () => {
-  it('shows the year calendar and renders no board or editing controls', async () => {
+  it('shows the timeline by default and renders no board controls', async () => {
     window.history.replaceState(null, '', '/')
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ trips: [] }) }),
     )
     render(<App />)
-    expect(await screen.findByRole('heading', { name: /travel year/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your travel timeline' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /new trip/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Trip' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-meta')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument()
+  })
+
+  it('renders one timeline page for dated trips', async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          trips: [{ id: 'summer', title: 'Summer coast', startDate: today, endDate: today }],
+        }),
+      }),
+    )
+    render(<App />)
+
+    await screen.findByRole('link', { name: /Summer coast/ })
+    expect(screen.getAllByRole('heading', { name: 'Your travel timeline' })).toHaveLength(1)
+    expect(document.querySelectorAll('main')).toHaveLength(1)
+  })
+
+  it('shows the calendar when selected by the query string', async () => {
+    window.history.replaceState(null, '', '/?view=calendar')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ trips: [] }) }),
+    )
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Your travel calendar' })).toBeInTheDocument()
   })
 
   it('opens the new trip form and reports creation errors', async () => {
@@ -116,12 +144,16 @@ describe('App without a room slug', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('room already exists')
     expect(fetchMock).toHaveBeenLastCalledWith(
       '/api/rooms',
-      expect.objectContaining({ method: 'POST', body: JSON.stringify({ room: 'japan-2028' }) }),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"room":"japan-2028"'),
+      }),
     )
   })
 
   it('links trip markings on the calendar to their boards', async () => {
     const year = new Date().getFullYear()
+    window.history.replaceState(null, '', '/?view=calendar')
     const fetchMock = vi.fn().mockImplementation(async (input: string) => {
       if (input.startsWith('https://openholidaysapi.org/')) {
         return { ok: true, json: async () => [] }
@@ -173,6 +205,7 @@ describe('App without a room slug', () => {
 
   it('shows Bavaria school holidays as a light calendar background', async () => {
     const year = new Date().getFullYear()
+    window.history.replaceState(null, '', '/?view=calendar')
     const fetchMock = vi.fn().mockImplementation(async (input: string) => ({
       ok: true,
       json: async () =>
@@ -191,7 +224,7 @@ describe('App without a room slug', () => {
 
     const holidayDays = await screen.findAllByTitle('Christmas Holidays · Bavaria school holidays')
     expect(holidayDays).toHaveLength(2)
-    expect(holidayDays.every((day) => day.classList.contains('bg-[#e8efff]'))).toBe(true)
+    expect(holidayDays.every((day) => day.classList.contains('bg-[#edf1e1]'))).toBe(true)
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('subdivisionCode=DE-BY'))
   })
 
