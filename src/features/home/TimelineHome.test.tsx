@@ -29,5 +29,7 @@ it('reserves the Today label lane for an active holiday', () => {
     />,
   )
 
-  expect(getByText(`${format(new Date(), 'd MMM.')} – ${format(addDays(new Date(), 1), 'd MMM.')}`)).toHaveClass('pt-7')
+  const label = getByText(`${format(new Date(), 'd MMM.')} – ${format(addDays(new Date(), 1), 'd MMM.')}`)
+  expect(label).toHaveStyle({ top: '28px' })
+  expect(label).not.toHaveClass('pt-7')
 })

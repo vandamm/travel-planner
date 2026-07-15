@@ -161,9 +161,12 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
           Today · {format(todayDate, 'd MMMM yyyy')}
         </time>
         {holidayViews.map(({ holiday, active, top, height }) => (
-          <time key={holiday.startDate} className={`absolute right-1/2 w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70 pr-4 ${active ? 'pt-7' : 'pt-2'} text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine`} style={{ top, height }}>
-            {format(parseISO(holiday.startDate), 'd MMM.')} – {format(parseISO(holiday.endDate), 'd MMM.')}
-          </time>
+          <span key={holiday.startDate}>
+            <span aria-hidden="true" className="absolute right-1/2 w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70" style={{ top, height }} />
+            <time className="absolute right-[calc(50%+16px)] whitespace-nowrap text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine" style={{ top: top + (active ? 28 : 8) }}>
+              {format(parseISO(holiday.startDate), 'd MMM.')} – {format(parseISO(holiday.endDate), 'd MMM.')}
+            </time>
+          </span>
         ))}
         {markers.map((marker) => (
           <time key={marker.date} dateTime={marker.date} className={`absolute right-[calc(50%+16px)] z-10 text-right text-[9px] font-bold uppercase tracking-[.1em] ${marker.embedded ? 'text-city-pine' : 'text-ink-500'}`} style={{ top: timelineHeight(differenceInDays(parseISO(marker.date), todayDate)) }}>
