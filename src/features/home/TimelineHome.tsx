@@ -7,6 +7,7 @@ import {
   futureDatedTrips,
   timelineDaysForHeight,
   timelineHeight,
+  timelineLabelTops,
   timelineMonthMarkers,
   tripDurationDays,
   type SchoolHoliday,
@@ -91,113 +92,107 @@ interface TimelineHomeProps {
 
 export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) {
   const root = useRef<HTMLElement>(null)
+  const canvas = useRef<HTMLDivElement>(null)
   const [hover, setHover] = useState<{ top: number; date: string } | null>(null)
   const [minimumHeight, setMinimumHeight] = useState(0)
   const today = format(new Date(), 'yyyy-MM-dd')
+  const todayDate = parseISO(today)
   const upcoming = useMemo(() => futureDatedTrips(trips), [trips])
 
   useLayoutEffect(() => {
     const measure = () => {
-      if (!root.current) return
-      setMinimumHeight(Math.max(112, window.innerHeight - root.current.getBoundingClientRect().top - 222))
+      if (!canvas.current) return
+      setMinimumHeight(Math.max(112, window.innerHeight - canvas.current.getBoundingClientRect().top - 56))
     }
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
   }, [])
 
-  const end = upcoming.reduce(
-    (latest, trip) => (trip.endDate > latest ? trip.endDate : latest),
-    format(addDays(parseISO(today), timelineDaysForHeight(minimumHeight)), 'yyyy-MM-dd'),
+  const baseDays = Math.max(
+    1,
+    timelineDaysForHeight(minimumHeight),
+    ...upcoming.map((trip) => differenceInDays(addDays(parseISO(trip.endDate), 1), todayDate)),
   )
+  const tripPositions = upcoming.map((trip) => {
+    const start = trip.startDate < today ? todayDate : parseISO(trip.startDate)
+    const top = timelineHeight(differenceInDays(start, todayDate))
+    const height = timelineHeight(differenceInDays(addDays(parseISO(trip.endDate), 1), start))
+    return { trip, top, height }
+  })
+  const labelTops = timelineLabelTops(tripPositions.map(({ top, height }) => Math.max(0, top + height / 2 - 21)))
+  const tripViews = tripPositions.map((position, index) => ({ ...position, labelTop: labelTops[index] }))
+  const labelBottom = tripViews.length ? tripViews[tripViews.length - 1].labelTop + 98 : 0
+  const canvasDays = Math.max(baseDays, timelineDaysForHeight(labelBottom))
+  const end = format(addDays(todayDate, canvasDays - 1), 'yyyy-MM-dd')
   const markers = useMemo(() => timelineMonthMarkers(today, end, upcoming, holidays), [today, end, upcoming, holidays])
 
   const pointerMove = (event: PointerEvent<HTMLElement>) => {
-    if (!matchMedia('(hover: hover)').matches || !root.current) return
+    if (!matchMedia('(hover: hover)').matches || !root.current || !canvas.current) return
     if (event.target instanceof Element && event.target.closest('[data-timeline-trip]')) return setHover(null)
-    const rect = root.current.getBoundingClientRect()
+    const rect = canvas.current.getBoundingClientRect()
     const top = event.clientY - rect.top
     const nearRail = Math.abs(event.clientX - (rect.left + rect.width / 2)) < 22
-    const timelineTop = 96
-    const totalDays = Math.max(1, differenceInDays(parseISO(end), parseISO(today)))
-    if (!nearRail || top <= timelineTop || top >= timelineTop + timelineHeight(totalDays)) return setHover(null)
-    setHover({ top, date: format(addDays(parseISO(today), Math.round((top - timelineTop) / timelineHeight(1))), 'yyyy-MM-dd') })
+    if (!nearRail || top < 0 || top >= rect.height) return setHover(null)
+    setHover({
+      top: event.clientY,
+      date: format(addDays(todayDate, Math.min(canvasDays - 1, Math.max(0, Math.round(top / timelineHeight(1))))), 'yyyy-MM-dd'),
+    })
   }
 
-  let cursor = today
-  const timeline = upcoming.flatMap((trip) => {
-    const gap = { start: cursor, end: trip.startDate }
-    cursor = format(addDays(parseISO(trip.endDate), 1), 'yyyy-MM-dd')
-    return [gap, { trip }]
+  const holidayViews = holidays.flatMap((holiday) => {
+    const start = Math.max(0, differenceInDays(parseISO(holiday.startDate), todayDate))
+    const endDay = Math.min(canvasDays, differenceInDays(addDays(parseISO(holiday.endDate), 1), todayDate))
+    return endDay > start ? [{ holiday, top: timelineHeight(start), height: timelineHeight(endDay - start) }] : []
   })
-  timeline.push({ start: cursor, end: format(addDays(parseISO(end), 1), 'yyyy-MM-dd') })
-
-  const holidaysFor = (start: string, endDate: string) =>
-    holidays.filter((holiday) => holiday.startDate < endDate && holiday.endDate >= start)
 
   return (
     <section
       ref={root}
-      data-timeline-canvas
       onPointerMove={pointerMove}
       onPointerLeave={() => setHover(null)}
-      className="relative mx-auto max-w-[900px] px-4 pb-14 pt-8 before:absolute before:bottom-6 before:left-1/2 before:top-3 before:w-[2px] before:-translate-x-1/2 before:bg-edge-300 after:absolute after:bottom-4 after:left-1/2 after:h-2 after:w-2 after:-translate-x-1/2 after:rotate-45 after:border-b-2 after:border-r-2 after:border-edge-300"
+      className="relative mx-auto max-w-[900px] px-4 pb-14 pt-8"
     >
-      <div className="relative z-10 mb-7 h-9">
-        <span className="absolute left-1/2 top-0 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[3px] border-surface bg-city-vermilion shadow-[0_0_0_1px_#c0392b]" />
-        <time className="absolute right-[calc(50%+18px)] top-0 whitespace-nowrap text-right text-[9px] font-bold uppercase tracking-[.12em] text-ink-600">
-          Today · {format(parseISO(today), 'd MMMM yyyy')}
+      <div ref={canvas} data-timeline-canvas className="relative" style={{ height: timelineHeight(canvasDays) }}>
+        <span className="absolute bottom-0 left-1/2 top-0 w-[2px] -translate-x-1/2 bg-edge-300" />
+        <span className="absolute left-1/2 top-0 z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[3px] border-surface bg-city-vermilion shadow-[0_0_0_1px_#c0392b]" />
+        <time className="absolute right-[calc(50%+18px)] top-0 z-10 whitespace-nowrap text-right text-[9px] font-bold uppercase tracking-[.12em] text-ink-600">
+          Today · {format(todayDate, 'd MMMM yyyy')}
         </time>
-      </div>
-      {timeline.map((item, index) => {
-        if ('trip' in item) {
-          const trip = item.trip
-          return (
-            <section key={trip.id} data-timeline-trip className="relative z-10" style={{ height: timelineHeight(tripDurationDays(trip)) }}>
-              {holidaysFor(trip.startDate, format(addDays(parseISO(trip.endDate), 1), 'yyyy-MM-dd')).map((holiday) => (
-                <time key={holiday.startDate} className="absolute right-1/2 top-0 h-full w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70 pr-4 pt-2 text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine">
-                  {format(parseISO(holiday.startDate), 'd MMM.')} – {format(parseISO(holiday.endDate), 'd MMM.')}
-                </time>
-              ))}
-              <span className="absolute left-1/2 top-1/2 block h-full min-h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-[10px] border-4 border-surface shadow-[0_0_0_1px_currentColor]" style={{ color: tripColor(trip), backgroundColor: tripColor(trip) }} />
-              <span className="absolute right-[calc(50%+30px)] top-1/2 -translate-y-1/2 whitespace-nowrap text-right text-[9px] font-bold uppercase text-ink-600">
-                {formatCountdown(Math.max(0, differenceInDays(parseISO(trip.startDate), parseISO(today))))}
+        {holidayViews.map(({ holiday, top, height }) => (
+          <time key={holiday.startDate} className="absolute right-1/2 w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70 pr-4 pt-2 text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine" style={{ top, height }}>
+            {format(parseISO(holiday.startDate), 'd MMM.')} – {format(parseISO(holiday.endDate), 'd MMM.')}
+          </time>
+        ))}
+        {markers.map((marker) => (
+          <time key={marker.date} dateTime={marker.date} className={`absolute right-[calc(50%+16px)] z-10 text-right text-[9px] font-bold uppercase tracking-[.1em] ${marker.embedded ? 'text-city-pine' : 'text-ink-500'}`} style={{ top: timelineHeight(differenceInDays(parseISO(marker.date), todayDate)) }}>
+            {format(parseISO(marker.date), 'MMMM yyyy')}
+          </time>
+        ))}
+        {tripViews.map(({ trip, top, height, labelTop }) => (
+          <section key={trip.id} data-timeline-trip>
+            <span className="absolute left-1/2 z-10 block w-5 -translate-x-1/2 rounded-[10px] border-4 border-surface shadow-[0_0_0_1px_currentColor]" style={{ top, height, color: tripColor(trip), backgroundColor: tripColor(trip) }} />
+            <span className="absolute right-[calc(50%+30px)] z-10 h-[42px] -translate-y-1/2 whitespace-nowrap text-right text-[9px] font-bold uppercase text-ink-600" style={{ top: labelTop + 21 }}>
+              {formatCountdown(Math.max(0, differenceInDays(parseISO(trip.startDate), todayDate)))}
+            </span>
+            <a href={`/${encodeURIComponent(trip.id)}`} className="absolute left-[calc(50%+30px)] z-10 flex h-[42px] w-[calc(50%-42px)] flex-col justify-center gap-1 no-underline" style={{ top: labelTop }}>
+              <strong className="font-serif text-lg font-semibold sm:text-[22px]">{tripLabel(trip)}</strong>
+              <span className="text-[10px] font-bold text-ink-600">
+                {format(parseISO(trip.startDate), 'd MMM')} – {format(parseISO(trip.endDate), 'd MMM')} · {tripDurationDays(trip)} days
               </span>
-              <a href={`/${encodeURIComponent(trip.id)}`} className="absolute left-[calc(50%+30px)] top-1/2 flex w-[calc(50%-42px)] -translate-y-1/2 flex-col gap-1 no-underline">
-                <strong className="font-serif text-lg font-semibold sm:text-[22px]">{tripLabel(trip)}</strong>
-                <span className="text-[10px] font-bold text-ink-600">
-                  {format(parseISO(trip.startDate), 'd MMM')} – {format(parseISO(trip.endDate), 'd MMM')} · {tripDurationDays(trip)} days
-                </span>
-              </a>
-            </section>
-          )
-        }
-
-        const days = Math.max(0, differenceInDays(parseISO(item.end), parseISO(item.start)))
-        const gapMarkers = markers.filter((marker) => marker.date >= item.start && marker.date < item.end)
-        return (
-          <div key={`${item.start}-${index}`} className="relative" style={{ height: timelineHeight(days) }}>
-            {gapMarkers.map((marker) => (
-              <time key={marker.date} dateTime={marker.date} className={`absolute right-[calc(50%+16px)] text-right text-[9px] font-bold uppercase tracking-[.1em] ${marker.embedded ? 'text-city-pine' : 'text-ink-500'}`} style={{ top: `${Math.max(8, Math.min(88, (differenceInDays(parseISO(marker.date), parseISO(item.start)) / Math.max(1, days)) * 100))}%` }}>
-                {format(parseISO(marker.date), 'MMMM yyyy')}
-              </time>
-            ))}
-            {holidaysFor(item.start, item.end).map((holiday) => (
-              <time key={holiday.startDate} className="absolute right-1/2 top-1/2 w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70 py-1 pr-4 text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine">
-                {format(parseISO(holiday.startDate), 'd MMM.')} – {format(parseISO(holiday.endDate), 'd MMM.')}
-              </time>
-            ))}
-          </div>
-        )
-      })}
-      <p className="relative z-10 mx-auto mt-10 w-max bg-surface px-3 py-2 text-[9px] font-bold uppercase tracking-[.1em] text-ink-500">Continue planning</p>
+            </a>
+          </section>
+        ))}
+        <p className="absolute bottom-6 left-1/2 z-10 w-max -translate-x-1/2 bg-surface px-3 py-2 text-[9px] font-bold uppercase tracking-[.1em] text-ink-500">Continue planning</p>
+        <span className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-edge-300" />
+      </div>
       {hover && (
         <button
           type="button"
           aria-label="Add a trip at this point"
           onClick={() => onAddTrip(hover.date)}
           className="fixed z-20 grid h-[22px] w-[22px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-city-vermilion bg-surface text-sm text-city-vermilion"
-          style={{ left: root.current ? root.current.getBoundingClientRect().left + root.current.getBoundingClientRect().width / 2 : 0, top: root.current ? root.current.getBoundingClientRect().top + hover.top : 0 }}
+          style={{ left: root.current ? root.current.getBoundingClientRect().left + root.current.getBoundingClientRect().width / 2 : 0, top: hover.top }}
         >
           +
         </button>

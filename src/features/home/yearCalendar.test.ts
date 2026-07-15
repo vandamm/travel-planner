@@ -10,6 +10,7 @@ import {
   futureDatedTrips,
   timelineDaysForHeight,
   timelineHeight,
+  timelineLabelTops,
   tripsOnDay,
   type TripSummary,
 } from './yearCalendar'
@@ -89,6 +90,10 @@ describe('year calendar', () => {
   it('uses one fixed scale for timeline dates', () => {
     expect(timelineHeight(30)).toBe(112)
     expect(timelineDaysForHeight(225)).toBe(61)
+  })
+
+  it('stacks nearby timeline labels without changing their date positions', () => {
+    expect(timelineLabelTops([0, timelineHeight(1), timelineHeight(2)])).toEqual([0, 42, 84])
   })
 
   it('uses days, weeks, and months for countdowns', () => {

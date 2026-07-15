@@ -33,6 +33,15 @@ export function timelineDaysForHeight(height: number): number {
   return Math.ceil((Math.max(0, height) * 30) / 112)
 }
 
+export function timelineLabelTops(tops: number[], labelHeight: number = 42): number[] {
+  let nextTop = 0
+  return tops.map((top) => {
+    const labelTop = Math.max(top, nextTop)
+    nextTop = labelTop + labelHeight
+    return labelTop
+  })
+}
+
 export function formatCountdown(daysUntil: number): string {
   if (daysUntil < 1) return 'Starting soon'
   if (daysUntil < 14) return `in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`
