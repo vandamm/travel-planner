@@ -93,7 +93,7 @@ describe('year calendar', () => {
   })
 
   it('stacks nearby timeline labels without changing their date positions', () => {
-    expect(timelineLabelTops([0, timelineHeight(1), timelineHeight(2)])).toEqual([0, 42, 84])
+    expect(timelineLabelTops([0, timelineHeight(1), timelineHeight(2)])).toEqual([0, 52, 104])
   })
 
   it('uses days, weeks, and months for countdowns', () => {
@@ -124,5 +124,11 @@ describe('year calendar', () => {
         [{ startDate: '2026-09-01', endDate: '2026-09-10', name: 'Summer Holidays' }],
       ),
     ).toEqual([{ date: '2026-09-01', embedded: true }])
+  })
+
+  it('omits the starting month marker because Today already names it', () => {
+    expect(timelineMonthMarkers('2026-08-01', '2026-09-30', [], [])).toEqual([
+      { date: '2026-09-01', embedded: false },
+    ])
   })
 })

@@ -20,6 +20,7 @@ export interface TripSummary {
 }
 
 export const TRIP_COLORS = ['#c0392b', '#5f6f44', '#3a4a5c', '#8a5a78'] as const
+export const TIMELINE_LABEL_HEIGHT = 52
 
 export function tripDurationDays({ startDate, endDate }: Pick<TripSummary, 'startDate' | 'endDate'>): number {
   return inclusiveDayCount(startDate, endDate)
@@ -33,7 +34,7 @@ export function timelineDaysForHeight(height: number): number {
   return Math.ceil((Math.max(0, height) * 30) / 112)
 }
 
-export function timelineLabelTops(tops: number[], labelHeight: number = 42): number[] {
+export function timelineLabelTops(tops: number[], labelHeight: number = TIMELINE_LABEL_HEIGHT): number[] {
   let nextTop = 0
   return tops.map((top) => {
     const labelTop = Math.max(top, nextTop)
@@ -69,7 +70,7 @@ export function timelineMonthMarkers(
   const markers: Array<{ date: string; embedded: boolean }> = []
   for (let date = startOfMonth(new Date(`${startDate}T00:00:00`)); format(date, 'yyyy-MM-dd') <= endDate; date = addDays(endOfMonth(date), 1)) {
     const key = format(date, 'yyyy-MM-dd')
-    if (key >= startDate && !tripsOnDay(key, trips).length) {
+    if (key > startDate && !tripsOnDay(key, trips).length) {
       markers.push({ date: key, embedded: Boolean(schoolHolidayOnDay(key, holidays)) })
     }
   }

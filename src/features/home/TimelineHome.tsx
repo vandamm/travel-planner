@@ -7,6 +7,7 @@ import {
   futureDatedTrips,
   timelineDaysForHeight,
   timelineHeight,
+  TIMELINE_LABEL_HEIGHT,
   timelineLabelTops,
   timelineMonthMarkers,
   tripDurationDays,
@@ -120,7 +121,7 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
     const height = timelineHeight(differenceInDays(addDays(parseISO(trip.endDate), 1), start))
     return { trip, top, height }
   })
-  const labelTops = timelineLabelTops(tripPositions.map(({ top, height }) => Math.max(0, top + height / 2 - 21)))
+  const labelTops = timelineLabelTops(tripPositions.map(({ top, height }) => Math.max(0, top + height / 2 - TIMELINE_LABEL_HEIGHT / 2)))
   const tripViews = tripPositions.map((position, index) => ({ ...position, labelTop: labelTops[index] }))
   const labelBottom = tripViews.length ? tripViews[tripViews.length - 1].labelTop + 98 : 0
   const canvasDays = Math.max(baseDays, timelineDaysForHeight(labelBottom))
@@ -171,11 +172,11 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
         ))}
         {tripViews.map(({ trip, top, height, labelTop }) => (
           <section key={trip.id} data-timeline-trip>
-            <span className="absolute left-1/2 z-10 block w-5 -translate-x-1/2 rounded-[10px] border-4 border-surface shadow-[0_0_0_1px_currentColor]" style={{ top, height, color: tripColor(trip), backgroundColor: tripColor(trip) }} />
-            <span className="absolute right-[calc(50%+30px)] z-10 h-[42px] -translate-y-1/2 whitespace-nowrap text-right text-[9px] font-bold uppercase text-ink-600" style={{ top: labelTop + 21 }}>
+            <span className="absolute left-1/2 z-10 block w-5 -translate-x-1/2 rounded-[10px] ring-4 ring-surface shadow-[0_0_0_1px_currentColor]" style={{ top, height, color: tripColor(trip), backgroundColor: tripColor(trip) }} />
+            <span className="absolute right-[calc(50%+30px)] z-10 h-[52px] -translate-y-1/2 whitespace-nowrap text-right text-[9px] font-bold uppercase text-ink-600" style={{ top: labelTop + TIMELINE_LABEL_HEIGHT / 2 }}>
               {formatCountdown(Math.max(0, differenceInDays(parseISO(trip.startDate), todayDate)))}
             </span>
-            <a href={`/${encodeURIComponent(trip.id)}`} className="absolute left-[calc(50%+30px)] z-10 flex h-[42px] w-[calc(50%-42px)] flex-col justify-center gap-1 no-underline" style={{ top: labelTop }}>
+            <a href={`/${encodeURIComponent(trip.id)}`} className="absolute left-[calc(50%+30px)] z-10 flex h-[52px] w-[calc(50%-42px)] flex-col justify-center gap-1 no-underline" style={{ top: labelTop }}>
               <strong className="font-serif text-lg font-semibold sm:text-[22px]">{tripLabel(trip)}</strong>
               <span className="text-[10px] font-bold text-ink-600">
                 {format(parseISO(trip.startDate), 'd MMM')} – {format(parseISO(trip.endDate), 'd MMM')} · {tripDurationDays(trip)} days
