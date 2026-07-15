@@ -144,7 +144,7 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
   const holidayViews = holidays.flatMap((holiday) => {
     const start = Math.max(0, differenceInDays(parseISO(holiday.startDate), todayDate))
     const endDay = Math.min(canvasDays, differenceInDays(addDays(parseISO(holiday.endDate), 1), todayDate))
-    return endDay > start ? [{ holiday, top: timelineHeight(start), height: timelineHeight(endDay - start) }] : []
+    return endDay > start ? [{ holiday, active: start === 0, top: timelineHeight(start), height: timelineHeight(endDay - start) }] : []
   })
 
   return (
@@ -160,8 +160,8 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
         <time className="absolute right-[calc(50%+18px)] top-0 z-10 whitespace-nowrap text-right text-[9px] font-bold uppercase tracking-[.12em] text-ink-600">
           Today · {format(todayDate, 'd MMMM yyyy')}
         </time>
-        {holidayViews.map(({ holiday, top, height }) => (
-          <time key={holiday.startDate} className="absolute right-1/2 w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70 pr-4 pt-2 text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine" style={{ top, height }}>
+        {holidayViews.map(({ holiday, active, top, height }) => (
+          <time key={holiday.startDate} className={`absolute right-1/2 w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70 pr-4 ${active ? 'pt-7' : 'pt-2'} text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine`} style={{ top, height }}>
             {format(parseISO(holiday.startDate), 'd MMM.')} – {format(parseISO(holiday.endDate), 'd MMM.')}
           </time>
         ))}
