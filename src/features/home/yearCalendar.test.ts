@@ -8,9 +8,8 @@ import {
   timelineMonthMarkers,
   formatCountdown,
   futureDatedTrips,
-  gapHeight,
-  tripHeight,
-  tripDurationDays,
+  timelineDaysForHeight,
+  timelineHeight,
   tripsOnDay,
   type TripSummary,
 } from './yearCalendar'
@@ -87,13 +86,9 @@ describe('year calendar', () => {
     })
   })
 
-  it('scales trip and empty time without losing either', () => {
-    expect(tripDurationDays(trip)).toBe(3)
-    expect(tripHeight(1)).toBe(44)
-    expect(tripHeight(10)).toBe(120)
-    expect(gapHeight(1)).toBe(48)
-    expect(gapHeight(20)).toBe(80)
-    expect(gapHeight(999)).toBe(180)
+  it('uses one fixed scale for timeline dates', () => {
+    expect(timelineHeight(30)).toBe(112)
+    expect(timelineDaysForHeight(225)).toBe(61)
   })
 
   it('uses days, weeks, and months for countdowns', () => {

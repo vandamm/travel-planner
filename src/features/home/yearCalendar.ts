@@ -25,12 +25,12 @@ export function tripDurationDays({ startDate, endDate }: Pick<TripSummary, 'star
   return inclusiveDayCount(startDate, endDate)
 }
 
-export function tripHeight(durationDays: number): number {
-  return Math.max(44, durationDays * 12)
+export function timelineHeight(days: number): number {
+  return (Math.max(0, days) * 112) / 30
 }
 
-export function gapHeight(emptyDays: number): number {
-  return Math.max(48, Math.min(emptyDays * 4, 180))
+export function timelineDaysForHeight(height: number): number {
+  return Math.ceil((Math.max(0, height) * 30) / 112)
 }
 
 export function formatCountdown(daysUntil: number): string {
