@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent } from 'react'
-import { addDays, differenceInDays, format, parseISO } from 'date-fns'
+import { addDays, differenceInDays, format, isFirstDayOfMonth, parseISO } from 'date-fns'
 import { Modal } from '../../components/Modal'
 import {
   TRIP_COLORS,
@@ -144,7 +144,7 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
   const holidayViews = holidays.flatMap((holiday) => {
     const start = Math.max(0, differenceInDays(parseISO(holiday.startDate), todayDate))
     const endDay = Math.min(canvasDays, differenceInDays(addDays(parseISO(holiday.endDate), 1), todayDate))
-    return endDay > start ? [{ holiday, active: start === 0, top: timelineHeight(start), height: timelineHeight(endDay - start) }] : []
+    return endDay > start ? [{ holiday, active: start === 0 || isFirstDayOfMonth(parseISO(holiday.startDate)), top: timelineHeight(start), height: timelineHeight(endDay - start) }] : []
   })
 
   return (
