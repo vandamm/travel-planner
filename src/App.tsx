@@ -120,7 +120,7 @@ function MobileMenu({
   const item =
     'w-full rounded-card border border-edge-300 bg-white px-4 py-3 text-left font-sans text-base font-medium text-ink-600 hover:bg-surface-chip'
   return (
-    <Modal label="Menu" onClose={onClose} className="flex w-full flex-col gap-3 lg:max-w-xs">
+    <Modal label="Menu" onClose={onClose} className="flex w-full flex-col gap-3 sm:max-w-xs">
       <h2 className="font-serif text-xl font-semibold text-ink">Menu</h2>
       <button type="button" className={item} onClick={onOpenTrip}>
         <span aria-hidden>✎</span> Trip setup

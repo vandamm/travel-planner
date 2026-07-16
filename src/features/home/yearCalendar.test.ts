@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildMonth,
+  parsePublicHolidays,
   parseSchoolHolidays,
+  publicHolidayOnDay,
   ribbonEdges,
   schoolHolidayEdges,
   schoolHolidayOnDay,
@@ -87,9 +89,32 @@ describe('year calendar', () => {
     })
   })
 
+  it('parses Bavarian public holidays while excluding municipal-only dates', () => {
+    const holidays = parsePublicHolidays([
+      {
+        startDate: '2026-01-06',
+        endDate: '2026-01-06',
+        regionalScope: 'Regional',
+        name: [{ language: 'EN', text: 'Epiphany' }],
+      },
+      {
+        startDate: '2026-08-08',
+        endDate: '2026-08-08',
+        regionalScope: 'Local',
+        name: [{ language: 'EN', text: 'High Festival of Peace' }],
+      },
+    ])
+
+    expect(holidays).toEqual([
+      { startDate: '2026-01-06', endDate: '2026-01-06', name: 'Epiphany' },
+    ])
+    expect(publicHolidayOnDay('2026-01-06', holidays)?.name).toBe('Epiphany')
+    expect(publicHolidayOnDay('2026-08-08', holidays)).toBeUndefined()
+  })
+
   it('uses one fixed scale for timeline dates', () => {
-    expect(timelineHeight(30)).toBe(112)
-    expect(timelineDaysForHeight(225)).toBe(61)
+    expect(timelineHeight(30)).toBe(270)
+    expect(timelineDaysForHeight(270)).toBe(30)
   })
 
   it('stacks nearby timeline labels without changing their date positions', () => {

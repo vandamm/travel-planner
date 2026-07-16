@@ -74,8 +74,9 @@ export function AccommodationEditor({
   return (
     <Modal
       label="Accommodation editor"
+      title={isEdit ? 'Edit stay' : 'Add stay'}
       onClose={onClose}
-      className="flex w-full flex-col gap-4 lg:max-w-md"
+      className="flex w-full flex-col gap-4 sm:max-w-md"
     >
       <h2 className="font-serif text-xl font-semibold text-ink">
         {isEdit ? 'Edit stay' : 'Add stay'}

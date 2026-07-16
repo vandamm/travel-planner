@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
+import { addMonths, parseISO } from 'date-fns'
 import {
+  parsePublicHolidays,
   parseSchoolHolidays,
+  type PublicHoliday,
   type SchoolHoliday,
   type TripSummary,
 } from './yearCalendar'
-import { TimelineHome, NewTripModal } from './TimelineHome'
+import { TimelineHome } from './TimelineHome'
+import { NewTripModal } from './NewTripModal'
 import { Month } from './YearCalendarHome'
 
 const SCHOOL_HOLIDAYS_API = 'https://openholidaysapi.org/SchoolHolidays'
+const PUBLIC_HOLIDAYS_API = 'https://openholidaysapi.org/PublicHolidays'
 const MONTHS = Array.from({ length: 12 }, (_, month) =>
   new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2024, month, 1)),
 )
@@ -73,12 +78,24 @@ export function HomeShell() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [holidays, setHolidays] = useState<SchoolHoliday[]>([])
+  const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creatingDate, setCreatingDate] = useState<string | null>(null)
 
   const view =
     new URLSearchParams(location.search).get('view') === 'calendar' ? 'calendar' : 'timeline'
+  const currentYear = new Date().getFullYear()
+  const timelineEndYear = Math.max(
+    currentYear,
+    ...trips.flatMap((trip) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(trip.endDate)
+        ? [addMonths(parseISO(trip.endDate), 1).getFullYear()]
+        : [],
+    ),
+  )
+  const holidayStartYear = view === 'calendar' ? year : currentYear
+  const holidayEndYear = view === 'calendar' ? year : timelineEndYear
 
   useEffect(() => {
     async function loadTrips() {
@@ -124,8 +141,8 @@ export function HomeShell() {
       countryIsoCode: 'DE',
       subdivisionCode: 'DE-BY',
       languageIsoCode: 'EN',
-      validFrom: `${year}-01-01`,
-      validTo: `${year}-12-31`,
+      validFrom: `${holidayStartYear}-01-01`,
+      validTo: `${holidayEndYear}-12-31`,
     })
 
     void fetch(`${SCHOOL_HOLIDAYS_API}?${params}`)
@@ -137,10 +154,19 @@ export function HomeShell() {
         if (active) setHolidays([])
       })
 
+    void fetch(`${PUBLIC_HOLIDAYS_API}?${params}`)
+      .then(async (response) => (response.ok ? parsePublicHolidays(await response.json()) : []))
+      .then((value) => {
+        if (active) setPublicHolidays(value)
+      })
+      .catch(() => {
+        if (active) setPublicHolidays([])
+      })
+
     return () => {
       active = false
     }
-  }, [year])
+  }, [holidayEndYear, holidayStartYear])
 
   const yearTrips = trips.filter(
     (trip) =>
@@ -179,10 +205,16 @@ export function HomeShell() {
         </section>
 
         <div className="mx-auto max-w-[1320px] px-4 pb-20 sm:px-7">
-          <p className="mb-5 flex items-center gap-2 text-[11px] font-semibold text-ink-600">
-            <span className="h-2 w-6 border border-[#d2dcbb] bg-[#edf1e1]" />
-            Bavaria school holidays
-          </p>
+          <div className="mb-5 flex flex-wrap items-center gap-4 text-[11px] font-semibold text-ink-600">
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-6 border border-[#d2dcbb] bg-[#edf1e1]" />
+              Bavaria school holidays
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-6 border border-[#f0c4bd] bg-[#fff0ee]" />
+              Weekends &amp; Bavaria public holidays
+            </span>
+          </div>
 
           {error && (
             <p
@@ -204,6 +236,8 @@ export function HomeShell() {
                 month={month}
                 trips={yearTrips}
                 holidays={holidays}
+                publicHolidays={publicHolidays}
+                onAddTrip={setCreatingDate}
               />
             ))}
           </div>
@@ -215,7 +249,9 @@ export function HomeShell() {
           )}
         </div>
 
-        {creatingDate !== null && <NewTripModal startDate={creatingDate || undefined} onClose={() => setCreatingDate(null)} />}
+        {creatingDate !== null && (
+          <NewTripModal startDate={creatingDate || undefined} endDate="" onClose={() => setCreatingDate(null)} />
+        )}
       </main>
     )
   }

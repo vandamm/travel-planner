@@ -27,11 +27,11 @@ export function tripDurationDays({ startDate, endDate }: Pick<TripSummary, 'star
 }
 
 export function timelineHeight(days: number): number {
-  return (Math.max(0, days) * 112) / 30
+  return Math.max(0, days) * 9
 }
 
 export function timelineDaysForHeight(height: number): number {
-  return Math.ceil((Math.max(0, height) * 30) / 112)
+  return Math.ceil(Math.max(0, height) / 9)
 }
 
 export function timelineLabelTops(tops: number[], labelHeight: number = TIMELINE_LABEL_HEIGHT): number[] {
@@ -84,6 +84,12 @@ export interface CalendarDay {
 }
 
 export interface SchoolHoliday {
+  startDate: string
+  endDate: string
+  name: string
+}
+
+export interface PublicHoliday {
   startDate: string
   endDate: string
   name: string
@@ -164,10 +170,44 @@ export function parseSchoolHolidays(value: unknown): SchoolHoliday[] {
   })
 }
 
+export function parsePublicHolidays(value: unknown): PublicHoliday[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const { startDate, endDate, name, regionalScope } = item as Record<string, unknown>
+    if (
+      regionalScope === 'Local' ||
+      typeof startDate !== 'string' ||
+      typeof endDate !== 'string' ||
+      !isDayKey(startDate) ||
+      !isDayKey(endDate) ||
+      endDate < startDate
+    ) {
+      return []
+    }
+    const names = Array.isArray(name) ? name : []
+    const english = names.find(
+      (entry) =>
+        entry &&
+        typeof entry === 'object' &&
+        (entry as Record<string, unknown>).language === 'EN' &&
+        typeof (entry as Record<string, unknown>).text === 'string',
+    ) as Record<string, unknown> | undefined
+    return [{ startDate, endDate, name: (english?.text as string) || 'Public holiday' }]
+  })
+}
+
 export function schoolHolidayOnDay(
   dayKey: string,
   holidays: SchoolHoliday[],
 ): SchoolHoliday | undefined {
+  return holidays.find(({ startDate, endDate }) => dayKey >= startDate && dayKey <= endDate)
+}
+
+export function publicHolidayOnDay(
+  dayKey: string,
+  holidays: PublicHoliday[],
+): PublicHoliday | undefined {
   return holidays.find(({ startDate, endDate }) => dayKey >= startDate && dayKey <= endDate)
 }
 

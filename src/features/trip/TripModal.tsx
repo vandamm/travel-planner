@@ -115,9 +115,9 @@ export function TripModal({ onClose }: TripModalProps) {
     <Modal
       label="Trip details"
       onClose={onClose}
-      className="flex w-full flex-col gap-4 lg:max-w-md"
+      className="flex w-full flex-col gap-4 sm:max-w-md"
     >
-      <div className="flex items-center gap-3 border-b border-edge pb-3">
+      <div className="hidden items-center gap-3 border-b border-edge pb-3 sm:flex">
         {/* Vermilion seal — mirrors the header mark, per the mock. */}
         <div
           aria-hidden

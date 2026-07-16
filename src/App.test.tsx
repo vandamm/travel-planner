@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -116,6 +116,53 @@ describe('App without a room slug', () => {
     expect(document.querySelectorAll('main')).toHaveLength(1)
   })
 
+  it('loads school holidays through the final timeline year', async () => {
+    const year = new Date().getFullYear()
+    const nextYear = year + 1
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+      if (input.startsWith('https://openholidaysapi.org/SchoolHolidays')) {
+        return {
+          ok: true,
+          json: async () =>
+            input.includes(`validTo=${nextYear}-12-31`)
+              ? [
+                  {
+                    startDate: `${nextYear}-04-05`,
+                    endDate: `${nextYear}-04-09`,
+                    name: [{ language: 'EN', text: 'Spring Holidays' }],
+                  },
+                ]
+              : [],
+        }
+      }
+      if (input.startsWith('https://openholidaysapi.org/PublicHolidays')) {
+        return { ok: true, json: async () => [] }
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          trips: [
+            {
+              id: 'japan-spring',
+              title: 'Japan',
+              startDate: `${nextYear}-03-22`,
+              endDate: `${nextYear}-03-22`,
+            },
+          ],
+        }),
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+
+    expect(await screen.findByText('5–9 Apr')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining(`validTo=${nextYear}-12-31`),
+      ),
+    )
+  })
+
   it('shows the calendar when selected by the query string', async () => {
     window.history.replaceState(null, '', '/?view=calendar')
     vi.stubGlobal(
@@ -124,6 +171,23 @@ describe('App without a room slug', () => {
     )
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Your travel calendar' })).toBeInTheDocument()
+  })
+
+  it('opens a trip draft from an empty calendar date with only its start date selected', async () => {
+    const year = new Date().getFullYear()
+    window.history.replaceState(null, '', '/?view=calendar')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ trips: [] }) }),
+    )
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole('button', { name: `Plan trip starting 3 January ${year}` }),
+    )
+    expect(screen.getByLabelText('Start date')).toHaveValue(`${year}-01-03`)
+    expect(screen.getByLabelText('End date')).toHaveValue('')
   })
 
   it('opens the new trip form and reports creation errors', async () => {
@@ -141,7 +205,27 @@ describe('App without a room slug', () => {
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /new trip/i }))
-    await user.type(screen.getByLabelText('Trip slug'), 'japan-2028')
+    expect(screen.getByRole('dialog', { name: 'Plan new trip' })).toBeInTheDocument()
+    const name = screen.getByLabelText('Trip name')
+    const slug = screen.getByLabelText('Trip slug')
+    const startDate = screen.getByLabelText('Start date')
+    const endDate = screen.getByLabelText('End date')
+    const dateGroup = screen.getByRole('group', { name: 'Trip dates' })
+    expect(dateGroup.firstElementChild).toHaveClass('sr-only')
+    expect(dateGroup.children[1]).toHaveClass('grid-cols-2')
+    expect(name).toBeRequired()
+    expect(slug).toBeRequired()
+    expect(startDate).toBeRequired()
+    expect(endDate).toBeRequired()
+
+    await user.type(name, 'Japan Spring')
+    expect(slug).toHaveValue('japan-spring')
+    await user.clear(slug)
+    await user.type(slug, 'japan-2028')
+    await user.type(name, ' 2028')
+    expect(slug).toHaveValue('japan-2028')
+    await user.type(startDate, '2028-03-10')
+    await user.type(endDate, '2028-03-24')
     await user.click(screen.getByRole('button', { name: 'Create trip' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('room already exists')
@@ -149,9 +233,15 @@ describe('App without a room slug', () => {
       '/api/rooms',
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('"room":"japan-2028"'),
       }),
     )
+    const [, createInit] = fetchMock.mock.calls.at(-1)!
+    expect(JSON.parse(createInit?.body as string)).toEqual(expect.objectContaining({
+      room: 'japan-2028',
+      title: 'Japan Spring 2028',
+      startDate: '2028-03-10',
+      endDate: '2028-03-24',
+    }))
   })
 
   it('links trip markings on the calendar to their boards', async () => {
@@ -212,7 +302,7 @@ describe('App without a room slug', () => {
     const fetchMock = vi.fn().mockImplementation(async (input: string) => ({
       ok: true,
       json: async () =>
-        input.startsWith('https://openholidaysapi.org/')
+        input.startsWith('https://openholidaysapi.org/SchoolHolidays')
           ? [
               {
                 startDate: `${year}-01-02`,
@@ -227,8 +317,41 @@ describe('App without a room slug', () => {
 
     const holidayDays = await screen.findAllByTitle('Christmas Holidays · Bavaria school holidays')
     expect(holidayDays).toHaveLength(2)
-    expect(holidayDays.every((day) => day.classList.contains('bg-[#edf1e1]'))).toBe(true)
+    expect(holidayDays[0]).toHaveClass('bg-[#edf1e1]')
+    expect(holidayDays[1]).toHaveClass('bg-[#edf1e1]', 'text-city-vermilion')
+    expect(holidayDays[1]).not.toHaveClass('bg-[#fff0ee]')
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('subdivisionCode=DE-BY'))
+  })
+
+  it('loads Bavaria public holidays into the calendar', async () => {
+    const year = new Date().getFullYear()
+    window.history.replaceState(null, '', '/?view=calendar')
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => ({
+      ok: true,
+      json: async () =>
+        input.startsWith('https://openholidaysapi.org/PublicHolidays')
+          ? [
+              {
+                startDate: `${year}-01-06`,
+                endDate: `${year}-01-06`,
+                regionalScope: 'Regional',
+                name: [{ language: 'EN', text: 'Epiphany' }],
+              },
+            ]
+          : input.startsWith('https://openholidaysapi.org/')
+            ? []
+            : { trips: [] },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+
+    expect(await screen.findByTitle('Epiphany · Bavaria public holiday')).toHaveClass(
+      'bg-[#fff0ee]',
+      'text-city-vermilion',
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/PublicHolidays?countryIsoCode=DE'),
+    )
   })
 
   it('rejects non-canonical slug paths', () => {

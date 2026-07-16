@@ -38,9 +38,14 @@ function roomRequest(body: unknown): Request {
 }
 
 describe('handleCreateRoom', () => {
-  it('creates a slug room and returns its id', async () => {
+  it('creates a complete slug room and returns its id', async () => {
     const { api, created } = makeApi()
-    const res = await handleCreateRoom(roomRequest({ room: 'rome-2027' }), env, api)
+    const res = await handleCreateRoom(roomRequest({
+      room: 'rome-2027',
+      title: 'Rome',
+      startDate: '2027-05-04',
+      endDate: '2027-05-10',
+    }), env, api)
 
     expect(res.status).toBe(201)
     expect(await res.json()).toEqual({ id: 'rome-2027' })
@@ -54,35 +59,79 @@ describe('handleCreateRoom', () => {
         update = next
       },
     })
-    await handleCreateRoom(roomRequest({ room: 'rome-2027', color: '#5f6f44' }), env, api)
+    await handleCreateRoom(roomRequest({
+      room: 'rome-2027',
+      title: 'Rome',
+      startDate: '2027-05-04',
+      endDate: '2027-05-10',
+      color: '#5f6f44',
+    }), env, api)
     const doc = new Y.Doc()
     Y.applyUpdate(doc, update)
     expect(getTrip(doc).color).toBe('#5f6f44')
   })
 
-  it('initializes a start-date room as a one-day trip', async () => {
+  it('stores the complete trip payload in the initial room update', async () => {
     let update = new Uint8Array()
     const { api } = makeApi({
       sendYUpdate: async (_id, next) => {
         update = next
       },
     })
-    await handleCreateRoom(roomRequest({ room: 'rome-2027', startDate: '2027-05-04' }), env, api)
+    await handleCreateRoom(roomRequest({
+      room: 'rome-2027',
+      title: 'Roman Holiday',
+      startDate: '2027-05-04',
+      endDate: '2027-05-12',
+    }), env, api)
     const doc = new Y.Doc()
     Y.applyUpdate(doc, update)
-    expect(getTrip(doc)).toMatchObject({ startDate: '2027-05-04', endDate: '2027-05-04' })
+    expect(getTrip(doc)).toMatchObject({
+      title: 'Roman Holiday',
+      startDate: '2027-05-04',
+      endDate: '2027-05-12',
+    })
+  })
+
+  it.each([
+    { room: 'rome-2027', title: '', startDate: '2027-05-04', endDate: '2027-05-10' },
+    { room: 'rome-2027', title: 'Rome', startDate: '', endDate: '2027-05-10' },
+    { room: 'rome-2027', title: 'Rome', startDate: '2027-05-11', endDate: '2027-05-10' },
+    { room: 'rome-2027', title: 'Rome', startDate: '2027-02-30', endDate: '2027-03-01' },
+  ])('rejects an incomplete or invalid trip before creating its room', async (body) => {
+    const { api, created } = makeApi()
+    const res = await handleCreateRoom(roomRequest(body), env, api)
+    expect(res.status).toBe(400)
+    expect(created).toEqual([])
+  })
+
+  it('rejects a null JSON body before creating a room', async () => {
+    const { api, created } = makeApi()
+    const res = await handleCreateRoom(roomRequest(null), env, api)
+    expect(res.status).toBe(400)
+    expect(created).toEqual([])
   })
 
   it('rejects invalid slugs', async () => {
     const { api, created } = makeApi()
-    const res = await handleCreateRoom(roomRequest({ room: 'Rome_2027' }), env, api)
+    const res = await handleCreateRoom(roomRequest({
+      room: 'Rome_2027',
+      title: 'Rome',
+      startDate: '2027-05-04',
+      endDate: '2027-05-10',
+    }), env, api)
     expect(res.status).toBe(400)
     expect(created).toEqual([])
   })
 
   it('rejects duplicate rooms', async () => {
     const { api, created } = makeApi({ roomExists: async () => true })
-    const res = await handleCreateRoom(roomRequest({ room: 'rome-2027' }), env, api)
+    const res = await handleCreateRoom(roomRequest({
+      room: 'rome-2027',
+      title: 'Rome',
+      startDate: '2027-05-04',
+      endDate: '2027-05-10',
+    }), env, api)
     expect(res.status).toBe(409)
     expect(created).toEqual([])
   })

@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Modal } from '../../components/Modal'
+import { NewTripModal } from './NewTripModal'
 import {
   buildMonth,
+  parsePublicHolidays,
   parseSchoolHolidays,
+  publicHolidayOnDay,
   ribbonEdges,
   schoolHolidayEdges,
   schoolHolidayOnDay,
   tripsOnDay,
+  type PublicHoliday,
   type SchoolHoliday,
   type TripSummary,
 } from './yearCalendar'
@@ -17,6 +20,7 @@ const MONTHS = Array.from({ length: 12 }, (_, month) =>
 )
 const COLORS = ['#3157d5', '#ef6a5b', '#258477', '#8b5bb5', '#d68b24']
 const SCHOOL_HOLIDAYS_API = 'https://openholidaysapi.org/SchoolHolidays'
+const PUBLIC_HOLIDAYS_API = 'https://openholidaysapi.org/PublicHolidays'
 
 function workerBase(): string {
   return (import.meta.env.VITE_WORKER_URL ?? '').replace(/\/+$/, '')
@@ -31,11 +35,15 @@ export function Month({
   month,
   trips,
   holidays,
+  publicHolidays,
+  onAddTrip,
 }: {
   year: number
   month: number
   trips: TripSummary[]
   holidays: SchoolHoliday[]
+  publicHolidays: PublicHoliday[]
+  onAddTrip?: (date: string) => void
 }) {
   const days = buildMonth(year, month)
   return (
@@ -46,13 +54,16 @@ export function Month({
         aria-hidden
       >
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
-          <span key={index}>{day}</span>
+          <span key={index} className={index >= 5 ? 'text-city-vermilion/70' : undefined}>{day}</span>
         ))}
       </div>
       <div className="mt-1 grid grid-cols-7 gap-y-1">
         {days.map((day, index) => {
           const matches = day.inMonth ? tripsOnDay(day.key, trips) : []
           const holiday = day.inMonth ? schoolHolidayOnDay(day.key, holidays) : undefined
+          const publicHoliday = day.inMonth ? publicHolidayOnDay(day.key, publicHolidays) : undefined
+          const isWeekend = day.inMonth && index % 7 >= 5
+          const isRedDay = Boolean(publicHoliday) || isWeekend
           const trip = matches[0]
           const color = trip ? COLORS[trips.indexOf(trip) % COLORS.length] : undefined
           const isTripStart = trip?.startDate === day.key
@@ -72,8 +83,12 @@ export function Month({
             : 'rounded-md'
           const className = `relative flex h-8 items-center justify-center ${corners} text-xs ${
             day.inMonth ? 'text-[#17233c]' : 'text-[#c7cfdd]'
-          } ${trip ? 'font-bold text-white' : holiday ? 'bg-[#edf1e1]' : ''}`
-          const holidayTitle = holiday ? `${holiday.name} · Bavaria school holidays` : undefined
+          } ${trip ? 'font-bold text-white' : `${publicHoliday ? 'bg-[#fff0ee]' : holiday ? 'bg-[#edf1e1]' : ''} ${isRedDay ? 'text-city-vermilion' : ''}`}`
+          const dayTitle = publicHoliday
+            ? `${publicHoliday.name} · Bavaria public holiday`
+            : holiday
+              ? `${holiday.name} · Bavaria school holidays`
+              : undefined
           const contents = trip ? (
             <>
               <time dateTime={day.key}>{day.day}</time>
@@ -96,14 +111,26 @@ export function Month({
               key={day.key}
               href={`/${encodeURIComponent(trip.id)}`}
               aria-label={`${tripLabel(trip)} on ${format(parseISO(day.key), 'd MMMM yyyy')}`}
-              title={holidayTitle}
+              title={dayTitle}
               className={className}
               style={{ backgroundColor: color }}
             >
               {contents}
             </a>
+          ) : day.inMonth && onAddTrip ? (
+            <div key={day.key} title={dayTitle} className={`${className} group`}>
+              <time dateTime={day.key}>{contents}</time>
+              <button
+                type="button"
+                aria-label={`Plan trip starting ${format(parseISO(day.key), 'd MMMM yyyy')}`}
+                onClick={() => onAddTrip?.(day.key)}
+                className="absolute inset-0 grid place-items-center bg-surface text-lg font-semibold text-city-vermilion opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-city-vermilion"
+              >
+                ＋
+              </button>
+            </div>
           ) : (
-            <time key={day.key} dateTime={day.key} title={holidayTitle} className={className}>
+            <time key={day.key} dateTime={day.key} title={dayTitle} className={className}>
               {contents}
             </time>
           )
@@ -113,77 +140,14 @@ export function Month({
   )
 }
 
-function NewTripModal({ onClose }: { onClose: () => void }) {
-  const [slug, setSlug] = useState('')
-  const [error, setError] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  async function createTrip(event: FormEvent) {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
-    try {
-      const response = await fetch(`${workerBase()}/api/rooms`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ room: slug }),
-      })
-      const body = (await response.json()) as { id?: string; error?: string }
-      if (!response.ok || !body.id) throw new Error(body.error || 'Could not create trip')
-      location.assign(`/${body.id}`)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not create trip')
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Modal label="Create a new trip" onClose={onClose} className="w-full max-w-md">
-      <form onSubmit={createTrip} className="space-y-5">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#3157d5]">
-            New journey
-          </p>
-          <h2 className="mt-1 font-serif text-3xl font-semibold text-[#17233c]">
-            Name the trip link
-          </h2>
-        </div>
-        <label className="block text-sm font-semibold text-[#17233c]">
-          Trip slug
-          <input
-            autoFocus
-            required
-            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-            placeholder="japan-spring-2027"
-            value={slug}
-            onChange={(event) => setSlug(event.target.value.toLowerCase())}
-            className="mt-2 w-full rounded-xl border border-[#b8c4da] px-4 py-3 font-sans text-base outline-none focus:border-[#3157d5] focus:ring-2 focus:ring-[#3157d5]/20"
-          />
-        </label>
-        <p className="text-xs text-[#67738b]">Lowercase letters, numbers, and hyphens.</p>
-        {error && (
-          <p role="alert" className="text-sm font-semibold text-[#b84235]">
-            {error}
-          </p>
-        )}
-        <button
-          disabled={saving}
-          className="w-full rounded-xl bg-[#3157d5] px-5 py-3 text-sm font-bold text-white hover:bg-[#2747b5] disabled:opacity-60"
-        >
-          {saving ? 'Creating…' : 'Create trip'}
-        </button>
-      </form>
-    </Modal>
-  )
-}
-
 export function YearCalendarHome() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [holidays, setHolidays] = useState<SchoolHoliday[]>([])
+  const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [creating, setCreating] = useState(false)
+  const [creatingDate, setCreatingDate] = useState<string | null>(null)
 
   async function loadTrips() {
     setLoading(true)
@@ -237,6 +201,17 @@ export function YearCalendarHome() {
       .catch(() => {
         if (active) setHolidays([])
       })
+    void fetch(`${PUBLIC_HOLIDAYS_API}?${params}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Could not load public holidays')
+        return parsePublicHolidays(await response.json())
+      })
+      .then((next) => {
+        if (active) setPublicHolidays(next)
+      })
+      .catch(() => {
+        if (active) setPublicHolidays([])
+      })
     return () => {
       active = false
     }
@@ -284,16 +259,22 @@ export function YearCalendarHome() {
             </button>
           </div>
           <button
-            onClick={() => setCreating(true)}
+            onClick={() => setCreatingDate('')}
             className="rounded-full bg-[#3157d5] px-5 py-3 text-sm font-extrabold text-white shadow-[0_8px_20px_rgba(49,87,213,0.25)] hover:bg-[#2747b5]"
           >
             ＋ New trip
           </button>
         </header>
 
-        <div className="mb-6 flex items-center gap-2 text-xs font-semibold text-[#65728b]">
-          <span className="h-4 w-4 rounded bg-[#e8efff]" aria-hidden />
-          Bavaria school holidays
+        <div className="mb-6 flex flex-wrap items-center gap-4 text-xs font-semibold text-[#65728b]">
+          <span className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded bg-[#edf1e1]" aria-hidden />
+            Bavaria school holidays
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded border border-[#f0c4bd] bg-[#fff0ee]" aria-hidden />
+            Weekends &amp; Bavaria public holidays
+          </span>
         </div>
 
         {error && (
@@ -310,7 +291,15 @@ export function YearCalendarHome() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {MONTHS.map((_, month) => (
-            <Month key={month} year={year} month={month} trips={yearTrips} holidays={holidays} />
+            <Month
+              key={month}
+              year={year}
+              month={month}
+              trips={yearTrips}
+              holidays={holidays}
+              publicHolidays={publicHolidays}
+              onAddTrip={setCreatingDate}
+            />
           ))}
         </div>
 
@@ -356,7 +345,9 @@ export function YearCalendarHome() {
           )}
         </section>
       </div>
-      {creating && <NewTripModal onClose={() => setCreating(false)} />}
+      {creatingDate !== null && (
+        <NewTripModal startDate={creatingDate || undefined} endDate="" onClose={() => setCreatingDate(null)} />
+      )}
     </main>
   )
 }
