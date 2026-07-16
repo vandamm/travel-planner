@@ -36,6 +36,7 @@ function Header({
     connecting: 'Connecting…',
     synced: 'Synced',
     error: 'Offline',
+    missing: 'Missing',
   }[status]
 
   return (
@@ -136,6 +137,7 @@ function MobileMenu({
 }
 
 function AppShell() {
+  const { status } = useRoom()
   const [tripOpen, setTripOpen] = useState(false)
   const [citiesOpen, setCitiesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -143,6 +145,8 @@ function AppShell() {
   // Board's create editor even without an intervening close.
   const [addStayNonce, setAddStayNonce] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
+
+  if (status === 'missing') return <MissingTrip />
 
   return (
     <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink sm:h-auto sm:min-h-screen sm:overflow-visible">
@@ -173,6 +177,14 @@ function AppShell() {
       {tripOpen && <TripModal onClose={() => setTripOpen(false)} />}
       {citiesOpen && <CityModal onClose={() => setCitiesOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
+    </main>
+  )
+}
+
+function MissingTrip() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-surface px-6 text-center text-ink">
+      <h1 className="font-serif text-2xl font-semibold text-ink">This trip doesn't exist.</h1>
     </main>
   )
 }

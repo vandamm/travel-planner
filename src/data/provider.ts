@@ -12,7 +12,7 @@ import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 
 /** Sync lifecycle as the UI cares about it. */
-export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error'
+export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error' | 'missing'
 
 export interface Presence {
   userId: string
@@ -138,6 +138,8 @@ async function setupLiveblocksSync(
     import('@liveblocks/yjs'),
   ])
 
+  let missing = false
+
   const client = createClient({
     // Cloudflare Access authenticates the browser before this reaches the Worker.
     // The Worker then mints a Liveblocks token scoped to this slug room.
@@ -147,6 +149,11 @@ async function setupLiveblocksSync(
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ room: opts.roomId }),
       })
+      if (res.status === 404) {
+        missing = true
+        setStatus('missing')
+        throw new Error('room not found')
+      }
       if (!res.ok) throw new Error(`auth failed: ${res.status}`)
       return (await res.json()) as { token: string }
     },
@@ -154,7 +161,9 @@ async function setupLiveblocksSync(
 
   const { room, leave } = client.enterRoom(opts.roomId)
   const provider = new LiveblocksYjsProvider(room, doc)
-  const onProviderStatus = (s: unknown) => setStatus(s === 'synchronized' ? 'synced' : 'connecting')
+  const onProviderStatus = (s: unknown) => {
+    if (!missing) setStatus(s === 'synchronized' ? 'synced' : 'connecting')
+  }
   provider.on('status', onProviderStatus)
   onProviderStatus(provider.getStatus())
 

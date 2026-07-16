@@ -32,7 +32,7 @@ export async function handleAuth(
   const room = typeof body.room === 'string' ? body.room.trim() : ''
   if (!isValidSlug(room)) return json({ error: 'invalid room' }, 400)
   if (!(await api.roomExists(room))) {
-    return json({ error: 'room not found' }, 403)
+    return json({ error: 'room not found' }, 404)
   }
 
   const token = await api.mintAccessToken(room, identity.email, {

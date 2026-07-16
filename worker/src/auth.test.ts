@@ -66,10 +66,10 @@ describe('handleAuth', () => {
     expect(mints).toHaveLength(0)
   })
 
-  it('denies a room that does not exist', async () => {
+  it('reports a room that does not exist', async () => {
     const { api, mints } = makeApi({ roomExists: async () => false })
     const res = await handleAuth(authRequest({ room: 'ghost' }), env, api, identity)
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(404)
     expect(mints).toHaveLength(0)
   })
 

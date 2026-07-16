@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as Y from 'yjs'
 import App from './App'
+import * as provider from './data/provider'
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
@@ -43,6 +45,23 @@ describe('App (with a room slug path)', () => {
   it('shows the current sync state', () => {
     render(<App />)
     expect(screen.getByTestId('sync-status')).toHaveTextContent('Local')
+  })
+
+  it('shows the exact missing-trip message', async () => {
+    const doc = new Y.Doc()
+    const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
+      doc,
+      whenLocalLoaded: Promise.resolve(),
+      getStatus: () => 'missing',
+      onStatus: () => () => undefined,
+      getPresences: () => [],
+      onPresences: () => () => undefined,
+      destroy: () => undefined,
+    } as unknown as provider.RoomConnection)
+
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: "This trip doesn't exist." })).toBeInTheDocument()
+    spy.mockRestore()
   })
 
   it('does not render the on-page import/export controls', () => {
