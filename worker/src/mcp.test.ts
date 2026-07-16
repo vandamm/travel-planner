@@ -52,10 +52,25 @@ async function rpc(api: LiveblocksApi, method: string, params?: unknown) {
 }
 
 const validTrip = {
-  trip: { title: 'Italy', startDate: '2027-05-01', endDate: '2027-05-03', dayStart: '06:00', dayEnd: '21:00' },
+  trip: {
+    title: 'Italy',
+    startDate: '2027-05-01',
+    endDate: '2027-05-03',
+    dayStart: '06:00',
+    dayEnd: '21:00',
+  },
   cities: [{ id: 'c2', name: 'Rome', color: '#ff0000' }],
   accommodations: [],
-  cards: [{ id: 'k2', dayKey: '2027-05-01', title: 'Colosseum', order: 0, duration: 'custom', durationHours: 1 }],
+  cards: [
+    {
+      id: 'k2',
+      dayKey: '2027-05-01',
+      title: 'Colosseum',
+      order: 0,
+      duration: 'custom',
+      durationHours: 1,
+    },
+  ],
   dayOverrides: {},
 }
 
@@ -68,7 +83,8 @@ describe('handleMcp', () => {
 
     const tools = await rpc(makeApi(), 'tools/list')
     expect(JSON.stringify(tools.result)).toContain('"slug"')
-    const definitions = (tools.result as { tools: Array<{ inputSchema: { properties: object } }> }).tools
+    const definitions = (tools.result as { tools: Array<{ inputSchema: { properties: object } }> })
+      .tools
     expect(definitions.some(({ inputSchema }) => 'link' in inputSchema.properties)).toBe(false)
     expect(JSON.stringify(tools.result)).toContain('list_trips')
     expect(JSON.stringify(tools.result)).toContain('readOnlyHint')
@@ -94,7 +110,11 @@ describe('handleMcp', () => {
 
   it('returns a tool error when trip discovery cannot reach Liveblocks', async () => {
     const body = await rpc(
-      makeApi(undefined, { listRooms: async () => { throw new Error('unavailable') } }),
+      makeApi(undefined, {
+        listRooms: async () => {
+          throw new Error('unavailable')
+        },
+      }),
       'tools/call',
       { name: 'list_trips', arguments: {} },
     )
@@ -111,10 +131,7 @@ describe('handleMcp', () => {
     expect(JSON.stringify(init.result)).toContain('2025-11-25')
 
     const unsupported = await handleMcp(
-      request(
-        { jsonrpc: '2.0', id: 1, method: 'ping' },
-        { 'mcp-protocol-version': '2099-01-01' },
-      ),
+      request({ jsonrpc: '2.0', id: 1, method: 'ping' }, { 'mcp-protocol-version': '2099-01-01' }),
       env,
       makeApi(),
     )
@@ -123,7 +140,7 @@ describe('handleMcp', () => {
 
   it('rejects malformed JSON-RPC envelopes', async () => {
     const res = await handleMcp(request({ id: 1, method: 'ping' }), env, makeApi())
-    const body = await res.json() as { error?: { code?: number } }
+    const body = (await res.json()) as { error?: { code?: number } }
 
     expect(body.error?.code).toBe(-32600)
   })

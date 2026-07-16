@@ -81,12 +81,7 @@ export async function handleCreateRoom(
     endDate: input.endDate,
     color: typeof input.color === 'string' && input.color ? input.color : randomTripColor(),
   })
-  if (
-    !title ||
-    !parsedTrip.success ||
-    !parsedTrip.data.startDate ||
-    !parsedTrip.data.endDate
-  ) {
+  if (!title || !parsedTrip.success || !parsedTrip.data.startDate || !parsedTrip.data.endDate) {
     return json({ error: 'invalid trip' }, 400)
   }
 

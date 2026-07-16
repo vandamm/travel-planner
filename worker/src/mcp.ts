@@ -123,8 +123,7 @@ const TOOLS = [
   {
     name: 'read_board',
     title: 'Read trip board',
-    description:
-      "Read a travel board's current trip as JSON. Pass the board slug from its URL.",
+    description: "Read a travel board's current trip as JSON. Pass the board slug from its URL.",
     inputSchema: SLUG_SCHEMA,
     outputSchema: TRIP_OUTPUT_SCHEMA,
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
@@ -167,7 +166,10 @@ function toolText(text: string): ToolResult {
 }
 
 function toolJson(data: Record<string, unknown>): ToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], structuredContent: data }
+  return {
+    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    structuredContent: data,
+  }
 }
 
 function toolError(text: string): ToolResult {
@@ -282,11 +284,7 @@ async function handleToolCall(
  * Handle one MCP JSON-RPC request. Requests (with an `id`) get a JSON-RPC
  * response; notifications (`notifications/*`) are acked with 202 and no body.
  */
-export async function handleMcp(
-  request: Request,
-  env: Env,
-  api: LiveblocksApi,
-): Promise<Response> {
+export async function handleMcp(request: Request, env: Env, api: LiveblocksApi): Promise<Response> {
   // Cloudflare Access gates this endpoint before the MCP request is dispatched.
   const headerVersion = request.headers.get('mcp-protocol-version')
   if (headerVersion && !SUPPORTED_PROTOCOL_VERSIONS.includes(headerVersion as never)) {
