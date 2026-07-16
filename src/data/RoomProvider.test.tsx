@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as Y from 'yjs'
 import * as provider from './provider'
 import { useRoom } from './RoomContext'
 import { RoomProvider } from './RoomProvider'
@@ -32,7 +33,10 @@ function RoomProbe() {
 }
 
 describe('RoomProvider', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
 
   it('provides a local-first doc and status to consumers', () => {
     render(
@@ -54,14 +58,24 @@ describe('RoomProvider', () => {
     expect(screen.getByTestId('room')).toHaveTextContent('rome-2027')
   })
 
-  it('does not start background sync without a Worker URL', () => {
-    const spy = vi.spyOn(provider, 'connectRoom')
+  it('starts background sync for a production same-origin room', () => {
+    vi.stubEnv('MODE', 'production')
+    const doc = new Y.Doc()
+    const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
+      doc,
+      whenLocalLoaded: Promise.resolve(),
+      getStatus: () => 'local',
+      onStatus: () => () => undefined,
+      getPresences: () => [],
+      onPresences: () => () => undefined,
+      destroy: () => undefined,
+    })
     render(
       <RoomProvider workerUrl="" roomId="rome-2027">
         <RoomProbe />
       </RoomProvider>,
     )
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ enableSync: false }))
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ enableSync: true }))
     spy.mockRestore()
   })
 

@@ -61,7 +61,8 @@ export function RoomProvider({
 }: RoomProviderProps) {
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ""
   const roomId = roomIdProp === undefined ? currentRoomId() : roomIdProp
-  const autoSync = import.meta.env.MODE !== "test" && Boolean(roomId && workerBase)
+  // An empty Worker base is the valid same-origin production setup (`/api/auth`).
+  const autoSync = import.meta.env.MODE !== "test" && Boolean(roomId)
   const hasIndexedDb = typeof globalThis.indexedDB !== "undefined" && globalThis.indexedDB !== null
 
   // The Y.Doc is cheap and owns no external resources, so it can live in useMemo
