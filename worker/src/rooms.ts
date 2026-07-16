@@ -6,6 +6,7 @@ import type { Env, LiveblocksApi } from './liveblocks'
 import { isValidSlug } from '../../src/data/slug'
 import { getTrip } from '../../src/data/doc'
 import { setTrip } from '../../src/data/doc'
+import { tripSettingsSchema } from '../../src/data/tripSchema'
 import { TRIP_COLORS } from '../../src/features/home/yearCalendar'
 
 function json(data: unknown, status = 200): Response {
@@ -17,7 +18,9 @@ function json(data: unknown, status = 200): Response {
 
 interface CreateRoomBody {
   room?: unknown
+  title?: unknown
   startDate?: unknown
+  endDate?: unknown
   color?: unknown
 }
 
@@ -52,17 +55,36 @@ export async function handleCreateRoom(
   _env: Env,
   api: LiveblocksApi,
 ): Promise<Response> {
-  let body: CreateRoomBody = {}
+  let body: unknown = {}
   try {
     const text = await request.text()
-    if (text) body = JSON.parse(text) as CreateRoomBody
+    if (text) body = JSON.parse(text) as unknown
   } catch {
     return json({ error: 'invalid JSON body' }, 400)
   }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return json({ error: 'invalid JSON body' }, 400)
+  }
+  const input = body as CreateRoomBody
 
-  const requested = typeof body.room === 'string' ? body.room.trim() : ''
+  const requested = typeof input.room === 'string' ? input.room.trim() : ''
   if (!isValidSlug(requested)) return json({ error: 'invalid room' }, 400)
   const roomId = requested
+  const title = typeof input.title === 'string' ? input.title.trim() : ''
+  const parsedTrip = tripSettingsSchema.safeParse({
+    title,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    color: typeof input.color === 'string' && input.color ? input.color : randomTripColor(),
+  })
+  if (
+    !title ||
+    !parsedTrip.success ||
+    !parsedTrip.data.startDate ||
+    !parsedTrip.data.endDate
+  ) {
+    return json({ error: 'invalid trip' }, 400)
+  }
 
   if (await api.roomExists(roomId)) {
     return json({ error: 'room already exists' }, 409)
@@ -71,10 +93,10 @@ export async function handleCreateRoom(
   const created = await api.createRoom(roomId)
   const doc = new Y.Doc()
   setTrip(doc, {
-    color: typeof body.color === 'string' && body.color ? body.color : randomTripColor(),
-    ...(typeof body.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.startDate)
-      ? { startDate: body.startDate, endDate: body.startDate }
-      : {}),
+    title: parsedTrip.data.title,
+    startDate: parsedTrip.data.startDate,
+    endDate: parsedTrip.data.endDate,
+    color: parsedTrip.data.color,
   })
   await api.sendYUpdate(created.id, Y.encodeStateAsUpdate(doc))
   return json({ id: created.id }, 201)

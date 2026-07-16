@@ -96,7 +96,12 @@ describe('handleRequest (router + Access gate)', () => {
       new Request('https://worker.test/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ room: 'new-room' }),
+        body: JSON.stringify({
+          room: 'new-room',
+          title: 'New room',
+          startDate: '2027-05-04',
+          endDate: '2027-05-10',
+        }),
       }),
       env,
       makeApi({ roomExists: async () => false }),

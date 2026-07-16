@@ -21,7 +21,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal label="Share trip" onClose={onClose} className="w-full lg:max-w-md">
+    <Modal label="Share trip" onClose={onClose} className="w-full sm:max-w-md">
       <h2 className="font-serif text-xl font-semibold text-ink">Share trip</h2>
 
       <div className="mt-6 space-y-4">

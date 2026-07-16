@@ -20,17 +20,27 @@ export interface TripSummary {
 }
 
 export const TRIP_COLORS = ['#c0392b', '#5f6f44', '#3a4a5c', '#8a5a78'] as const
+export const TIMELINE_LABEL_HEIGHT = 52
 
 export function tripDurationDays({ startDate, endDate }: Pick<TripSummary, 'startDate' | 'endDate'>): number {
   return inclusiveDayCount(startDate, endDate)
 }
 
-export function tripHeight(durationDays: number): number {
-  return Math.max(44, durationDays * 12)
+export function timelineHeight(days: number): number {
+  return Math.max(0, days) * 9
 }
 
-export function gapHeight(emptyDays: number): number {
-  return Math.max(48, Math.min(emptyDays * 4, 180))
+export function timelineDaysForHeight(height: number): number {
+  return Math.ceil(Math.max(0, height) / 9)
+}
+
+export function timelineLabelTops(tops: number[], labelHeight: number = TIMELINE_LABEL_HEIGHT): number[] {
+  let nextTop = 0
+  return tops.map((top) => {
+    const labelTop = Math.max(top, nextTop)
+    nextTop = labelTop + labelHeight
+    return labelTop
+  })
 }
 
 export function formatCountdown(daysUntil: number): string {
@@ -54,13 +64,13 @@ export function futureDatedTrips(trips: TripSummary[], referenceDate: Date = new
 export function timelineMonthMarkers(
   startDate: string,
   endDate: string,
-  trips: TripSummary[],
+  _trips: TripSummary[],
   holidays: SchoolHoliday[],
 ): Array<{ date: string; embedded: boolean }> {
   const markers: Array<{ date: string; embedded: boolean }> = []
   for (let date = startOfMonth(new Date(`${startDate}T00:00:00`)); format(date, 'yyyy-MM-dd') <= endDate; date = addDays(endOfMonth(date), 1)) {
     const key = format(date, 'yyyy-MM-dd')
-    if (key >= startDate && !tripsOnDay(key, trips).length) {
+    if (key > startDate) {
       markers.push({ date: key, embedded: Boolean(schoolHolidayOnDay(key, holidays)) })
     }
   }
@@ -74,6 +84,12 @@ export interface CalendarDay {
 }
 
 export interface SchoolHoliday {
+  startDate: string
+  endDate: string
+  name: string
+}
+
+export interface PublicHoliday {
   startDate: string
   endDate: string
   name: string
@@ -154,10 +170,44 @@ export function parseSchoolHolidays(value: unknown): SchoolHoliday[] {
   })
 }
 
+export function parsePublicHolidays(value: unknown): PublicHoliday[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const { startDate, endDate, name, regionalScope } = item as Record<string, unknown>
+    if (
+      regionalScope === 'Local' ||
+      typeof startDate !== 'string' ||
+      typeof endDate !== 'string' ||
+      !isDayKey(startDate) ||
+      !isDayKey(endDate) ||
+      endDate < startDate
+    ) {
+      return []
+    }
+    const names = Array.isArray(name) ? name : []
+    const english = names.find(
+      (entry) =>
+        entry &&
+        typeof entry === 'object' &&
+        (entry as Record<string, unknown>).language === 'EN' &&
+        typeof (entry as Record<string, unknown>).text === 'string',
+    ) as Record<string, unknown> | undefined
+    return [{ startDate, endDate, name: (english?.text as string) || 'Public holiday' }]
+  })
+}
+
 export function schoolHolidayOnDay(
   dayKey: string,
   holidays: SchoolHoliday[],
 ): SchoolHoliday | undefined {
+  return holidays.find(({ startDate, endDate }) => dayKey >= startDate && dayKey <= endDate)
+}
+
+export function publicHolidayOnDay(
+  dayKey: string,
+  holidays: PublicHoliday[],
+): PublicHoliday | undefined {
   return holidays.find(({ startDate, endDate }) => dayKey >= startDate && dayKey <= endDate)
 }
 

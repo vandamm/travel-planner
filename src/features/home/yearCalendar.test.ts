@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildMonth,
+  parsePublicHolidays,
   parseSchoolHolidays,
+  publicHolidayOnDay,
   ribbonEdges,
   schoolHolidayEdges,
   schoolHolidayOnDay,
   timelineMonthMarkers,
   formatCountdown,
   futureDatedTrips,
-  gapHeight,
-  tripHeight,
-  tripDurationDays,
+  timelineDaysForHeight,
+  timelineHeight,
+  timelineLabelTops,
   tripsOnDay,
   type TripSummary,
 } from './yearCalendar'
@@ -87,13 +89,36 @@ describe('year calendar', () => {
     })
   })
 
-  it('scales trip and empty time without losing either', () => {
-    expect(tripDurationDays(trip)).toBe(3)
-    expect(tripHeight(1)).toBe(44)
-    expect(tripHeight(10)).toBe(120)
-    expect(gapHeight(1)).toBe(48)
-    expect(gapHeight(20)).toBe(80)
-    expect(gapHeight(999)).toBe(180)
+  it('parses Bavarian public holidays while excluding municipal-only dates', () => {
+    const holidays = parsePublicHolidays([
+      {
+        startDate: '2026-01-06',
+        endDate: '2026-01-06',
+        regionalScope: 'Regional',
+        name: [{ language: 'EN', text: 'Epiphany' }],
+      },
+      {
+        startDate: '2026-08-08',
+        endDate: '2026-08-08',
+        regionalScope: 'Local',
+        name: [{ language: 'EN', text: 'High Festival of Peace' }],
+      },
+    ])
+
+    expect(holidays).toEqual([
+      { startDate: '2026-01-06', endDate: '2026-01-06', name: 'Epiphany' },
+    ])
+    expect(publicHolidayOnDay('2026-01-06', holidays)?.name).toBe('Epiphany')
+    expect(publicHolidayOnDay('2026-08-08', holidays)).toBeUndefined()
+  })
+
+  it('uses one fixed scale for timeline dates', () => {
+    expect(timelineHeight(30)).toBe(270)
+    expect(timelineDaysForHeight(270)).toBe(30)
+  })
+
+  it('stacks nearby timeline labels without changing their date positions', () => {
+    expect(timelineLabelTops([0, timelineHeight(1), timelineHeight(2)])).toEqual([0, 52, 104])
   })
 
   it('uses days, weeks, and months for countdowns', () => {
@@ -115,7 +140,7 @@ describe('year calendar', () => {
     ).toEqual(['ongoing', 'later'])
   })
 
-  it('suppresses month ticks inside trips but embeds them in holidays', () => {
+  it('keeps month ticks when trips or holidays cross a month boundary', () => {
     expect(
       timelineMonthMarkers(
         '2026-07-12',
@@ -123,6 +148,15 @@ describe('year calendar', () => {
         [{ ...trip, startDate: '2026-07-30', endDate: '2026-08-03' }],
         [{ startDate: '2026-09-01', endDate: '2026-09-10', name: 'Summer Holidays' }],
       ),
-    ).toEqual([{ date: '2026-09-01', embedded: true }])
+    ).toEqual([
+      { date: '2026-08-01', embedded: false },
+      { date: '2026-09-01', embedded: true },
+    ])
+  })
+
+  it('omits the starting month marker because Today already names it', () => {
+    expect(timelineMonthMarkers('2026-08-01', '2026-09-30', [], [])).toEqual([
+      { date: '2026-09-01', embedded: false },
+    ])
   })
 })

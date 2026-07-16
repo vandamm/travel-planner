@@ -17,6 +17,23 @@ describe('Modal', () => {
     expect(screen.getByText('Body')).toBeInTheDocument()
   })
 
+  it('switches directly from a titled full-screen mobile view to a floating card at 640px', () => {
+    render(
+      <Modal label="Test dialog" onClose={() => {}}>
+        <h2>Body title</h2>
+      </Modal>,
+    )
+
+    const dialog = screen.getByRole('dialog')
+    expect(screen.getByText('Test dialog')).toBeInTheDocument()
+    expect(dialog.parentElement).toHaveClass('sm:items-center', 'sm:justify-center', 'sm:p-4')
+    expect(dialog).toHaveClass('h-full', 'pt-0', 'sm:h-auto', 'sm:p-6', 'sm:rounded-frame')
+    expect(dialog).toHaveClass('[&_h2]:hidden', 'sm:[&_h2]:block')
+    const ribbon = screen.getByRole('button', { name: 'Close' }).parentElement
+    expect(ribbon).toHaveClass('sm:hidden')
+    expect(ribbon).not.toHaveClass('-mt-6')
+  })
+
   it('closes on backdrop click but not on a click inside', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

@@ -41,7 +41,7 @@ export function CityModal({ onClose }: CityModalProps) {
   }
 
   return (
-    <Modal label="Cities & colours" onClose={onClose} className="flex w-full flex-col lg:max-w-md">
+    <Modal label="Cities & colours" onClose={onClose} className="flex w-full flex-col sm:max-w-md">
       <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Cities &amp; colours</h2>
 
       {cities.length > 0 && (
