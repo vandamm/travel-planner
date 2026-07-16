@@ -4,6 +4,7 @@ import {
   cardHeightPx,
   noonFraction,
   PX_PER_HOUR,
+  resolvedDurationHours,
 } from './cardHeight'
 
 const card = (over: Partial<Card>): Card => ({
@@ -34,6 +35,11 @@ describe('cardHeightPx — duration', () => {
     expect(cardHeightPx(card({ duration: 'custom', durationHours: 2 }), START, END)).toBe(
       2 * PX_PER_HOUR,
     )
+  })
+
+  it('keeps rendering when a persisted card has an invalid duration', () => {
+    const corrupted = { ...card({}), duration: undefined } as unknown as Card
+    expect(resolvedDurationHours(corrupted, START, END)).toBe(1)
   })
 })
 

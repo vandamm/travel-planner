@@ -54,6 +54,8 @@ export function resolvedDurationHours(card: Card, dayStart: string, dayEnd: stri
       return windowHours(dayStart, dayEnd) / 2
     case 'custom':
       return card.durationHours && card.durationHours > 0 ? card.durationHours : DEFAULT_CARD_HOURS
+    default:
+      return DEFAULT_CARD_HOURS
   }
 }
 
