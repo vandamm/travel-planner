@@ -1,5 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { setupTrip, E2E_LINK } from './helpers'
+import { pickTime, setupTrip, E2E_LINK } from './helpers'
+
+async function openLocalBoard(page: Page) {
+  await page.route('**/api/auth', (route) => route.fulfill({ status: 503 }))
+  await page.goto(E2E_LINK)
+}
 
 /** Same stepped-pointer drag the dnd spec uses (the high-level dragTo is unreliable). */
 async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
@@ -24,22 +29,28 @@ async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
 }
 
 test('dragging an untimed card toward the evening gives it an evening time', async ({ page }) => {
-  await page.goto(E2E_LINK)
+  await openLocalBoard(page)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-01' })
 
-  // Seed a morning + evening timed card and one untimed card via the dev bridge.
-  await page.evaluate(() => {
-    const p = window.__planner!
-    p.addCard(p.doc, { dayKey: '2027-05-01', title: 'Breakfast', startTime: '08:00' })
-    p.addCard(p.doc, { dayKey: '2027-05-01', title: 'Dinner', startTime: '19:00' })
-    p.addCard(p.doc, { dayKey: '2027-05-01', title: 'Stroll' })
-  })
-
   const column = page.locator('[data-testid="day-column"]').first()
+  for (const [title, time] of [
+    ['Breakfast', '08:00'],
+    ['Dinner', '19:00'],
+    ['Stroll', undefined],
+  ] as const) {
+    await column.getByRole('button', { name: /Add card/ }).click()
+    const editor = page.getByRole('dialog', { name: 'Card editor' })
+    await editor.getByLabel('Card title').fill(title)
+    if (time) {
+      await editor.getByLabel('Set a time').check()
+      await pickTime(editor, 'Start time', time)
+    }
+    await editor.getByRole('button', { name: 'Save card' }).click()
+  }
+
   const stroll = column.locator('[data-testid="card"]', { hasText: 'Stroll' })
-  // Untimed to start with: no time chip.
-  await expect(stroll.getByTestId('card-time')).toHaveCount(0)
+  await expect(stroll.getByTestId('card-time')).toHaveText('1h')
 
   // Drag the untimed card onto the evening (Dinner) card → lands beside it and
   // gains a time between 08:00 and 19:00 (or after it), i.e. it becomes timed.
@@ -47,5 +58,6 @@ test('dragging an untimed card toward the evening gives it an evening time', asy
   const dinner = column.locator('[data-testid="card"]', { hasText: 'Dinner' })
   await dragHandleOnto(page, handle, dinner)
 
-  await expect(stroll.getByTestId('card-time')).toHaveCount(1)
+  await expect(stroll.getByTestId('card-time')).toHaveText(/19:(00|30) · 1h/)
+  await expect(dinner.getByTestId('card-time')).toHaveText(/20:(00|30) · 1h/)
 })

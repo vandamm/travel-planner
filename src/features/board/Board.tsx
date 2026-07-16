@@ -53,6 +53,9 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   const columns = useColumnsThatFit()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [accEditor, setAccEditor] = useState<AccEditorState | null>(null)
+  // Render the completed atomic drag transaction immediately; the normal doc
+  // subscription still handles edits made through every other path.
+  const [, rerenderAfterDrop] = useState(0)
   // Desktop multi-week affordances (§9): a right-edge fade + a visible date-range
   // label, both derived from the scroll container's metrics by the pure helpers.
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -228,7 +231,13 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
         // Below 640px: one day at a time, paged by swipe or the
         // prev/next controls. Same cards/accommodation/direction logic as desktop.
         <div className="min-h-0 flex-1">
-          <BoardDnd doc={doc} direction={direction}>
+          <BoardDnd
+            doc={doc}
+            direction={direction}
+            dayStart={trip.dayStart}
+            dayEnd={trip.dayEnd}
+            onDrop={() => rerenderAfterDrop((version) => version + 1)}
+          >
             <MobileDayView
               days={days}
               cardsByDay={cardsByDay}
@@ -266,7 +275,13 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
               onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
               onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
             />
-            <BoardDnd doc={doc} direction={direction}>
+            <BoardDnd
+              doc={doc}
+              direction={direction}
+              dayStart={trip.dayStart}
+              dayEnd={trip.dayEnd}
+              onDrop={() => rerenderAfterDrop((version) => version + 1)}
+            >
               <div data-testid="board" className="flex" style={{ gap: COLUMN_GAP_REM }}>
                 {days.map((day) => {
                   const cityId = resolveDayCity(day.key, accommodations, overrides)

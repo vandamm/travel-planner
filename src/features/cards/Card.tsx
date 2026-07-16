@@ -4,7 +4,7 @@
 // it trivial to reuse (the mobile view in Task 11). When `dragHandleProps` is
 // passed (by `SortableCard`), it also renders a drag handle wired to dnd-kit.
 
-import { useSortable } from '@dnd-kit/sortable'
+import { useDraggable } from '@dnd-kit/core'
 import type { CSSProperties, HTMLAttributes } from 'react'
 import type { Card as CardType, CardCategory } from '../../data/schema'
 import { cardCategory } from './cardCategory'
@@ -174,9 +174,8 @@ export interface SortableCardProps {
 }
 
 /**
- * An untimed `Card` made draggable/sortable via dnd-kit. Timed cards stay fixed
- * to their chosen start time. Must be rendered inside a `SortableContext` (its
- * day column) and the board's `DndContext`.
+ * A card made draggable via dnd-kit. Its final timeline position determines its
+ * start time; the day body is the drop target.
  */
 export function SortableCard({
   card,
@@ -186,16 +185,11 @@ export function SortableCard({
   dayEnd,
   layoutStyle,
 }: SortableCardProps) {
-  const timed = Boolean(card.startTime)
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: card.id,
-    disabled: timed,
-  })
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: card.id })
 
   const style: CSSProperties = {
     ...layoutStyle,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition,
     opacity: isDragging ? 0.4 : undefined,
   }
 
@@ -207,7 +201,7 @@ export function SortableCard({
         onEdit={onEdit}
         dayStart={dayStart}
         dayEnd={dayEnd}
-        dragHandleProps={timed ? undefined : { ...attributes, ...listeners }}
+        dragHandleProps={{ ...attributes, ...listeners }}
       />
     </li>
   )

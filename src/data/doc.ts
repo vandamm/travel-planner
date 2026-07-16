@@ -262,6 +262,25 @@ export function updateCard(doc: Y.Doc, id: string, patch: Partial<Omit<Card, 'id
   })
 }
 
+export interface CardScheduleUpdate {
+  id: string
+  dayKey?: string
+  startTime: string
+}
+
+/** Apply a drag's card-time changes as one collaborative/undoable update. */
+export function updateCardSchedules(doc: Y.Doc, updates: CardScheduleUpdate[]): void {
+  const cards = entityMap(doc, CARDS)
+  doc.transact(() => {
+    for (const { id, dayKey, startTime } of updates) {
+      const card = cards.get(id)
+      if (!card) continue
+      if (dayKey !== undefined && card.get('dayKey') !== dayKey) card.set('dayKey', dayKey)
+      if (card.get('startTime') !== startTime) card.set('startTime', startTime)
+    }
+  })
+}
+
 /**
  * Move a card to another day. With no explicit `order` it is appended to the
  * end of the target day.

@@ -46,13 +46,13 @@ describe('Card', () => {
     expect(screen.getByTestId('card-title')).toHaveClass('min-w-0')
   })
 
-  it('does not offer a drag handle for a timed card', () => {
+  it('offers a drag handle for a timed card', () => {
     render(
       <DndContext>
         <SortableCard card={{ ...base, startTime: '10:00' }} />
       </DndContext>,
     )
-    expect(screen.queryByRole('button', { name: 'Drag Colosseum' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Drag Colosseum' })).toBeInTheDocument()
   })
 
   it('shows the duration for an untimed card', () => {

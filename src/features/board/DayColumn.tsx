@@ -5,7 +5,6 @@
 // mobile single-day view in Task 11 reuses the same card/scale logic).
 
 import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format, isWeekend, parseISO } from 'date-fns'
 import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day } from '../../data/schema'
@@ -217,24 +216,22 @@ export function DayColumn({
           ))}
         </ol>
 
-        <SortableContext items={ordered.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          <ol data-testid="card-list" className="relative flex flex-col pl-0">
-            {ordered.map((c) => {
-              const gap = cardGapPx(c, direction, dayStart, dayEnd, cardCursor)
-              return (
-                <SortableCard
-                  key={c.id}
-                  card={c}
-                  conflict={conflicts.has(c.id)}
-                  onEdit={onEditCard}
-                  dayStart={dayStart}
-                  dayEnd={dayEnd}
-                  layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
-                />
-              )
-            })}
-          </ol>
-        </SortableContext>
+        <ol data-testid="card-list" className="relative flex flex-col pl-0">
+          {ordered.map((c) => {
+            const gap = cardGapPx(c, direction, dayStart, dayEnd, cardCursor)
+            return (
+              <SortableCard
+                key={c.id}
+                card={c}
+                conflict={conflicts.has(c.id)}
+                onEdit={onEditCard}
+                dayStart={dayStart}
+                dayEnd={dayEnd}
+                layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
+              />
+            )
+          })}
+        </ol>
       </div>
 
       <footer className="px-3 pb-3 pt-1">

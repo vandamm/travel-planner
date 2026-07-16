@@ -1,6 +1,11 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { setupTrip, E2E_LINK } from './helpers'
 
+async function openLocalBoard(page: Page) {
+  await page.route('**/api/auth', (route) => route.fulfill({ status: 503 }))
+  await page.goto(E2E_LINK)
+}
+
 /**
  * Drag dnd-kit's grab handle onto a target with explicit, stepped pointer moves
  * and short pauses. dnd-kit's PointerSensor needs real intermediate pointer
@@ -37,7 +42,7 @@ async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
 }
 
 test('drag a card to another day column', async ({ page }) => {
-  await page.goto(E2E_LINK)
+  await openLocalBoard(page)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
@@ -63,7 +68,7 @@ test('drag a card to another day column', async ({ page }) => {
 })
 
 test('dragged card follows the cursor and highlights the target day', async ({ page }) => {
-  await page.goto(E2E_LINK)
+  await openLocalBoard(page)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
@@ -107,8 +112,8 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
   await expect(secondColumn).not.toHaveAttribute('data-drag-over', '')
 })
 
-test('reorder untimed cards within a day', async ({ page }) => {
-  await page.goto(E2E_LINK)
+test('dropping an untimed card within a day assigns its timeline time', async ({ page }) => {
+  await openLocalBoard(page)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
@@ -124,10 +129,11 @@ test('reorder untimed cards within a day', async ({ page }) => {
   const titles = firstColumn.getByTestId('card-title')
   await expect(titles).toHaveText(['First', 'Second', 'Third'])
 
-  // Drag the first card down onto the third; it lands in the third card's slot.
+  // Drag the first card down onto the third; its dropped top lands at 08:00.
   const handle = firstColumn.getByRole('button', { name: 'Drag First' })
   const thirdCard = firstColumn.getByTestId('card').nth(2)
   await dragHandleOnto(page, handle, thirdCard)
 
-  await expect(titles).toHaveText(['Second', 'First', 'Third'])
+  const firstCard = firstColumn.locator('[data-testid="card"]', { hasText: 'First' })
+  await expect(firstCard.getByTestId('card-time')).toHaveText(/08:(00|30) · 1h/)
 })
