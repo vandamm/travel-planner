@@ -101,7 +101,7 @@ describe('RoomProvider', () => {
         <span>Loaded board</span>
       </RoomProvider>,
     )
-    expect(screen.getByRole('status')).toHaveTextContent('Loading trip')
+    expect(screen.getByRole('status')).toHaveTextContent('Loading')
     expect(screen.queryByText('Loaded board')).not.toBeInTheDocument()
 
     resolveLoaded()

@@ -78,7 +78,9 @@ export function RoomProvider({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const doc = useMemo(() => new Y.Doc(), [roomId, workerBase, enableSync])
   const [loadedDoc, setLoadedDoc] = useState<Y.Doc | null>(hasIndexedDb ? null : doc)
-  const [status, setStatus] = useState<SyncStatus>("local")
+  const [status, setStatus] = useState<SyncStatus>(
+    (enableSync ?? autoSync) ? "connecting" : "local",
+  )
   const [presences, setPresences] = useState<ContextPresence[]>([])
   const [myself, setMyself] = useState<ContextPresence | null>(null)
 
@@ -145,7 +147,7 @@ export function RoomProvider({
           role="status"
           className="flex min-h-screen items-center justify-center bg-surface text-ink-500"
         >
-          Loading trip…
+          Loading
         </main>
       )}
     </RoomContext.Provider>

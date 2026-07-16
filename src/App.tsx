@@ -146,6 +146,16 @@ function AppShell() {
   const [addStayNonce, setAddStayNonce] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
 
+  if (status === 'connecting') {
+    return (
+      <main
+        role="status"
+        className="flex min-h-screen items-center justify-center bg-surface text-ink-500"
+      >
+        Loading
+      </main>
+    )
+  }
   if (status === 'missing') return <MissingTrip />
 
   return (

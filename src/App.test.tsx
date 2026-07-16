@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
@@ -8,6 +8,7 @@ import * as provider from './data/provider'
 afterEach(() => {
   window.history.replaceState(null, '', '/')
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 describe('App (with a room slug path)', () => {
@@ -47,19 +48,28 @@ describe('App (with a room slug path)', () => {
     expect(screen.getByTestId('sync-status')).toHaveTextContent('Local')
   })
 
-  it('shows the exact missing-trip message', async () => {
+  it('shows loading instead of flashing the trip shell before a missing response', async () => {
+    vi.stubEnv('MODE', 'production')
     const doc = new Y.Doc()
+    let emitStatus!: (status: provider.SyncStatus) => void
     const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
       doc,
       whenLocalLoaded: Promise.resolve(),
-      getStatus: () => 'missing',
-      onStatus: () => () => undefined,
+      getStatus: () => 'connecting',
+      onStatus: (callback: (status: provider.SyncStatus) => void) => {
+        emitStatus = callback
+        return () => undefined
+      },
       getPresences: () => [],
       onPresences: () => () => undefined,
       destroy: () => undefined,
     } as unknown as provider.RoomConnection)
 
     render(<App />)
+    expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(screen.queryByTestId('app-seal')).not.toBeInTheDocument()
+
+    act(() => emitStatus('missing'))
     expect(await screen.findByRole('heading', { name: "This trip doesn't exist." })).toBeInTheDocument()
     spy.mockRestore()
   })
