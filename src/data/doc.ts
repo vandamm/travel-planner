@@ -220,7 +220,7 @@ function nextOrder(doc: Y.Doc, dayKey: string): number {
 }
 
 function validCustomDurationHours(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1
     ? value
     : DEFAULT_CUSTOM_DURATION_HOURS
 }

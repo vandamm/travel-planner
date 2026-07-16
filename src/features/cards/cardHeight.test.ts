@@ -21,6 +21,10 @@ const START = '06:00'
 const END = '21:00'
 
 describe('cardHeightPx — duration', () => {
+  it('uses a one-pixel-per-minute scale', () => {
+    expect(PX_PER_HOUR).toBe(60)
+  })
+
   it('uses the configured day window for a day duration', () => {
     expect(cardHeightPx(card({ duration: 'day' }), START, END)).toBe(15 * PX_PER_HOUR)
   })

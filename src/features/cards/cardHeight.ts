@@ -7,7 +7,7 @@
 import type { Card } from '../../data/schema'
 
 /** Pixels per hour of the time window — the timeline's vertical scale. */
-export const PX_PER_HOUR = 44
+export const PX_PER_HOUR = 60
 /** Default span for a new custom card. */
 export const DEFAULT_CARD_HOURS = 1
 

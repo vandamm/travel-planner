@@ -96,7 +96,7 @@ const cardBaseSchema = z.object({
 export const cardSchema = z.discriminatedUnion('duration', [
   cardBaseSchema.extend({ duration: z.literal('day') }).strict(),
   cardBaseSchema.extend({ duration: z.literal('half') }).strict(),
-  cardBaseSchema.extend({ duration: z.literal('custom'), durationHours: z.number().positive() }).strict(),
+  cardBaseSchema.extend({ duration: z.literal('custom'), durationHours: z.number().min(1) }).strict(),
 ])
 
 // Entities are keyed by `id` on apply (into `Y.Map`s), so a duplicate id would
