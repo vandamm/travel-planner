@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
-import { handleCreateRoom, handleListRooms } from './rooms'
+import { handleCreateRoom, handleListRooms, listRoomSummaries } from './rooms'
 import type { Env, LiveblocksApi } from './liveblocks'
 import { getTrip, setTrip } from '../../src/data/doc'
 
@@ -144,6 +144,23 @@ describe('handleCreateRoom', () => {
 })
 
 describe('handleListRooms', () => {
+  it('loads one summary page through the shared loader', async () => {
+    const doc = new Y.Doc()
+    setTrip(doc, { title: 'Japan', startDate: '2028-02-28', endDate: '2028-03-01' })
+    const { api } = makeApi({
+      listRooms: async () => ({
+        rooms: [{ id: 'japan-2028', createdAt: '2027-01-01T00:00:00Z' }],
+        nextCursor: 'next-page',
+      }),
+      getYUpdate: async () => Y.encodeStateAsUpdate(doc),
+    })
+
+    await expect(listRoomSummaries(api)).resolves.toEqual({
+      trips: [expect.objectContaining({ id: 'japan-2028', title: 'Japan' })],
+      nextCursor: 'next-page',
+    })
+  })
+
   it('returns a page of valid calendar summaries and skips one bad room', async () => {
     const doc = new Y.Doc()
     setTrip(doc, { title: 'Japan', startDate: '2028-02-28', endDate: '2028-03-01' })
