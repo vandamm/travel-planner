@@ -38,10 +38,10 @@ function seededDoc(): Y.Doc {
   return doc
 }
 
-function request(payload: unknown): Request {
+function request(payload: unknown, headers: HeadersInit = {}): Request {
   return new Request('https://worker.test/mcp', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(payload),
   })
 }
@@ -52,10 +52,25 @@ async function rpc(api: LiveblocksApi, method: string, params?: unknown) {
 }
 
 const validTrip = {
-  trip: { title: 'Italy', startDate: '2027-05-01', endDate: '2027-05-03', dayStart: '06:00', dayEnd: '21:00' },
+  trip: {
+    title: 'Italy',
+    startDate: '2027-05-01',
+    endDate: '2027-05-03',
+    dayStart: '06:00',
+    dayEnd: '21:00',
+  },
   cities: [{ id: 'c2', name: 'Rome', color: '#ff0000' }],
   accommodations: [],
-  cards: [{ id: 'k2', dayKey: '2027-05-01', title: 'Colosseum', order: 0, duration: 'custom', durationHours: 1 }],
+  cards: [
+    {
+      id: 'k2',
+      dayKey: '2027-05-01',
+      title: 'Colosseum',
+      order: 0,
+      duration: 'custom',
+      durationHours: 1,
+    },
+  ],
   dayOverrides: {},
 }
 
@@ -63,10 +78,82 @@ describe('handleMcp', () => {
   it('handles initialize and advertises slug-based tools', async () => {
     const init = await rpc(makeApi(), 'initialize')
     expect(init.result).toMatchObject({ capabilities: { tools: {} } })
+    expect(JSON.stringify(init.result)).toContain('list_trips')
+    expect(JSON.stringify(init.result)).not.toContain('listChanged')
 
     const tools = await rpc(makeApi(), 'tools/list')
     expect(JSON.stringify(tools.result)).toContain('"slug"')
-    expect(JSON.stringify(tools.result)).not.toContain('"link"')
+    const definitions = (tools.result as { tools: Array<{ inputSchema: { properties: object } }> })
+      .tools
+    expect(definitions.some(({ inputSchema }) => 'link' in inputSchema.properties)).toBe(false)
+    expect(JSON.stringify(tools.result)).toContain('list_trips')
+    expect(JSON.stringify(tools.result)).toContain('readOnlyHint')
+    expect(JSON.stringify(tools.result)).toContain('destructiveHint')
+  })
+
+  it('lists one page of shared trips by slug', async () => {
+    const body = await rpc(
+      makeApi(seededDoc(), {
+        listRooms: async () => ({
+          rooms: [{ id: 'rome-2027', createdAt: '2027-01-01T00:00:00Z' }],
+          nextCursor: 'next-page',
+        }),
+      }),
+      'tools/call',
+      { name: 'list_trips', arguments: {} },
+    )
+
+    expect(JSON.stringify(body.result)).toContain('rome-2027')
+    expect(JSON.stringify(body.result)).toContain('structuredContent')
+    expect(JSON.stringify(body.result)).toContain('next-page')
+  })
+
+  it('returns a tool error when trip discovery cannot reach Liveblocks', async () => {
+    const body = await rpc(
+      makeApi(undefined, {
+        listRooms: async () => {
+          throw new Error('unavailable')
+        },
+      }),
+      'tools/call',
+      { name: 'list_trips', arguments: {} },
+    )
+
+    expect(JSON.stringify(body.result)).toContain('isError')
+  })
+
+  it('negotiates supported protocol versions and rejects unsupported headers', async () => {
+    const init = await rpc(makeApi(), 'initialize', {
+      protocolVersion: '2025-11-25',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1.0.0' },
+    })
+    expect(JSON.stringify(init.result)).toContain('2025-11-25')
+
+    const unsupported = await handleMcp(
+      request({ jsonrpc: '2.0', id: 1, method: 'ping' }, { 'mcp-protocol-version': '2099-01-01' }),
+      env,
+      makeApi(),
+    )
+    expect(unsupported.status).toBe(400)
+  })
+
+  it('rejects malformed JSON-RPC envelopes', async () => {
+    const res = await handleMcp(request({ id: 1, method: 'ping' }), env, makeApi())
+    const body = (await res.json()) as { error?: { code?: number } }
+
+    expect(body.error?.code).toBe(-32600)
+  })
+
+  it('acknowledges initialized notifications without a response body', async () => {
+    const res = await handleMcp(
+      request({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+      env,
+      makeApi(),
+    )
+
+    expect(res.status).toBe(202)
+    expect(await res.text()).toBe('')
   })
 
   it('returns the schema', async () => {

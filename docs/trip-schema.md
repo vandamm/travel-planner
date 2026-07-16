@@ -59,24 +59,24 @@ write can survive it.)
 
 ## Field rules
 
-| Field                                      | Type                                           | Notes                                                                                                                                                                                             |
-| ------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `trip.title`                               | string                                         | May be empty.                                                                                                                                                                                     |
-| `trip.startDate`                           | `"YYYY-MM-DD"` or `""`                         | Empty only before the trip is set up.                                                                                                                                                             |
-| `trip.endDate`                             | `"YYYY-MM-DD"` or `""`                         | Inclusive last day. A populated end date must not precede `startDate`; rendering clamps the board to 730 days.                                                                                       |
-| `trip.dayStart` / `dayEnd`                 | `"HH:mm"`, optional                            | The day's timeline window — cards are scaled and placed within it. Default `"06:00"` / `"21:00"` when omitted.                                                                                    |
-| `cities[].id`                              | non-empty string                               | Referenced by `accommodations[].cityId` and `dayOverrides`.                                                                                                                                       |
-| `cities[].color`                           | non-empty string                               | Any CSS color, e.g. `#ef4444`.                                                                                                                                                                    |
-| `accommodations[].cityId`                  | string, optional                               | The covered days inherit this city's color.                                                                                                                                                       |
-| `accommodations[].startNight` / `endNight` | `"YYYY-MM-DD"`                                 | Inclusive night span; `endNight ≥ startNight`.                                                                                                                                                    |
-| `cards[].dayKey`                           | `"YYYY-MM-DD"`                                 | The day column the card belongs to.                                                                                                                                                               |
-| `cards[].link`                             | `"http(s)://…"` or `""`, optional              | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected.                                                                                            |
-| `cards[].startTime`                        | `"HH:mm"`, optional                            | 24-hour; presence makes the card time-bound (auto-sorted by time).                                                                                                                                |
-| `cards[].duration`                         | `"day"`/`"half"`/`"custom"`                 | Required. `day` and `half` resolve from the configured `dayStart`–`dayEnd` window.                                                                                                                |
-| `cards[].durationHours`                    | positive number                                 | Required only for `duration: "custom"`; the explicit card span in hours.                                                                                                                         |
-| `cards[].order`                            | integer                                        | Manual position among untimed cards in a day.                                                                                                                                                     |
-| `cards[].transport`                        | boolean, optional                              | Legacy transportation-leg flag. Kept valid for back-compat; `category` supersedes it and `true` is read as the `"transit"` category.                                                              |
-| `cards[].category`                         | `"indoor"`/`"outdoor"`/`"transit"`, optional   | Activity category, shown as a colour chip. Absent = uncategorised. Takes precedence over `transport`.                                                                                             |
+| Field                                      | Type                                         | Notes                                                                                                                                |
+| ------------------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `trip.title`                               | string                                       | May be empty.                                                                                                                        |
+| `trip.startDate`                           | `"YYYY-MM-DD"` or `""`                       | Empty only before the trip is set up.                                                                                                |
+| `trip.endDate`                             | `"YYYY-MM-DD"` or `""`                       | Inclusive last day. A populated end date must not precede `startDate`; rendering clamps the board to 730 days.                       |
+| `trip.dayStart` / `dayEnd`                 | `"HH:mm"`, optional                          | The day's timeline window — cards are scaled and placed within it. Default `"06:00"` / `"21:00"` when omitted.                       |
+| `cities[].id`                              | non-empty string                             | Referenced by `accommodations[].cityId` and `dayOverrides`.                                                                          |
+| `cities[].color`                           | non-empty string                             | Any CSS color, e.g. `#ef4444`.                                                                                                       |
+| `accommodations[].cityId`                  | string, optional                             | The covered days inherit this city's color.                                                                                          |
+| `accommodations[].startNight` / `endNight` | `"YYYY-MM-DD"`                               | Inclusive night span; `endNight ≥ startNight`.                                                                                       |
+| `cards[].dayKey`                           | `"YYYY-MM-DD"`                               | The day column the card belongs to.                                                                                                  |
+| `cards[].link`                             | `"http(s)://…"` or `""`, optional            | Web link. Must be an http(s) URL (or empty); other schemes (e.g. `javascript:`, `data:`) are rejected.                               |
+| `cards[].startTime`                        | `"HH:mm"`, optional                          | 24-hour; presence makes the card time-bound (auto-sorted by time).                                                                   |
+| `cards[].duration`                         | `"day"`/`"half"`/`"custom"`                  | Required. `day` and `half` resolve from the configured `dayStart`–`dayEnd` window.                                                   |
+| `cards[].durationHours`                    | positive number                              | Required only for `duration: "custom"`; the explicit card span in hours.                                                             |
+| `cards[].order`                            | integer                                      | Manual position among untimed cards in a day.                                                                                        |
+| `cards[].transport`                        | boolean, optional                            | Legacy transportation-leg flag. Kept valid for back-compat; `category` supersedes it and `true` is read as the `"transit"` category. |
+| `cards[].category`                         | `"indoor"`/`"outdoor"`/`"transit"`, optional | Activity category, shown as a colour chip. Absent = uncategorised. Takes precedence over `transport`.                                |
 
 ## Defaults
 
@@ -111,22 +111,22 @@ An agent reads and writes the same room over JSON via the Cloudflare Worker. The
 Access. The `:room` is the slug from the board URL. `GET /api/schema` is public —
 the schema is the API's shape, not a secret.
 
-| Method | Path                      | Body                    | Auth                        | Returns                                                             |
-| ------ | ------------------------- | ----------------------- | --------------------------- | ------------------------------------------------------------------- |
-| `GET`  | `/api/schema`             | —                       | none (public)               | the JSON Schema for the trip document (derived from the zod schema) |
-| `GET`  | `/api/trip/:room`         | —                       | Cloudflare Access           | the room's current trip as the JSON document above                  |
-| `POST` | `/api/trip/:room`         | a trip document (above) | Cloudflare Access           | the validated, default-filled document                              |
-| `GET`  | `/api/versions/:room`     | —                       | Cloudflare Access           | the room's saved version list                                       |
-| `GET`  | `/api/versions/:room/:id` | —                       | Cloudflare Access           | one saved version as a trip document                                |
+| Method | Path                      | Body                    | Auth              | Returns                                                             |
+| ------ | ------------------------- | ----------------------- | ----------------- | ------------------------------------------------------------------- |
+| `GET`  | `/api/schema`             | —                       | none (public)     | the JSON Schema for the trip document (derived from the zod schema) |
+| `GET`  | `/api/trip/:room`         | —                       | Cloudflare Access | the room's current trip as the JSON document above                  |
+| `POST` | `/api/trip/:room`         | a trip document (above) | Cloudflare Access | the validated, default-filled document                              |
+| `GET`  | `/api/versions/:room`     | —                       | Cloudflare Access | the room's saved version list                                       |
+| `GET`  | `/api/versions/:room/:id` | —                       | Cloudflare Access | one saved version as a trip document                                |
 
 The same read/write surface is also reachable via the **MCP endpoint**
-(`POST /mcp`) as the `get_schema` / `read_board` / `write_board` tools, for MCP
-clients like Perplexity Pro. There is no separate endpoint key: each acting tool
-is authorized by Cloudflare Access Managed OAuth. The tools take a `slug`
-argument: `read_board(slug)` and `write_board(slug, trip)`. Every write here and
-via `POST` above snapshots the prior trip to KV first; the version endpoints
-(`GET /api/versions/:room` and `…/:room/:id`) list and read those snapshots for
-restore.
+(`POST /mcp`) as `list_trips`, `get_schema`, `read_board`, and `write_board`, for
+MCP clients like Perplexity Pro. There is no separate endpoint key: Cloudflare
+Access Managed OAuth authorizes every tool. Call `list_trips` to select a shared
+slug, then `read_board(slug)`, `get_schema`, and `write_board(slug, trip)`. Every
+write here and via `POST` above snapshots the prior trip to KV first; the version
+endpoints (`GET /api/versions/:room` and `…/:room/:id`) list and read those
+snapshots for restore.
 See the [README](../README.md#agent-api) for the connector setup and
 version-history overview.
 

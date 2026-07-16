@@ -28,8 +28,7 @@ function randomTripColor(): string {
   return TRIP_COLORS[Math.floor(Math.random() * TRIP_COLORS.length)]
 }
 
-export async function handleListRooms(request: Request, api: LiveblocksApi): Promise<Response> {
-  const cursor = new URL(request.url).searchParams.get('cursor') || undefined
+export async function listRoomSummaries(api: LiveblocksApi, cursor?: string) {
   const { rooms, nextCursor } = await api.listRooms(cursor)
   const settled = await Promise.allSettled(
     rooms
@@ -47,7 +46,12 @@ export async function handleListRooms(request: Request, api: LiveblocksApi): Pro
       }),
   )
   const trips = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
-  return json({ trips, nextCursor })
+  return { trips, nextCursor }
+}
+
+export async function handleListRooms(request: Request, api: LiveblocksApi): Promise<Response> {
+  const cursor = new URL(request.url).searchParams.get('cursor') || undefined
+  return json(await listRoomSummaries(api, cursor))
 }
 
 export async function handleCreateRoom(
@@ -77,12 +81,7 @@ export async function handleCreateRoom(
     endDate: input.endDate,
     color: typeof input.color === 'string' && input.color ? input.color : randomTripColor(),
   })
-  if (
-    !title ||
-    !parsedTrip.success ||
-    !parsedTrip.data.startDate ||
-    !parsedTrip.data.endDate
-  ) {
+  if (!title || !parsedTrip.success || !parsedTrip.data.startDate || !parsedTrip.data.endDate) {
     return json({ error: 'invalid trip' }, 400)
   }
 

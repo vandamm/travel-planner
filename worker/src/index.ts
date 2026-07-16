@@ -39,6 +39,11 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   }
 }
 
+function mcpOriginAllowed(request: Request, env: Env): boolean {
+  const origin = request.headers.get('origin')
+  return !origin || !env.ALLOWED_ORIGIN || origin === env.ALLOWED_ORIGIN
+}
+
 /** Return a copy of `res` with the CORS headers merged in. */
 function withCors(res: Response, headers: Record<string, string>): Response {
   const merged = new Headers(res.headers)
@@ -68,13 +73,16 @@ export async function handleRequest(
   env: Env,
   api: LiveblocksApi,
 ): Promise<Response> {
+  const { pathname } = new URL(request.url)
+  if (pathname === '/mcp' && !mcpOriginAllowed(request, env)) {
+    return new Response(null, { status: 403, headers: { vary: 'Origin' } })
+  }
+
   const cors = corsHeaders(request, env)
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: cors })
   }
-
-  const { pathname } = new URL(request.url)
 
   try {
     let identity: AccessIdentity | null = null

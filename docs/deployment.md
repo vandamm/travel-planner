@@ -64,12 +64,12 @@ npm run deploy:worker:prod
 
 Cloudflare Pages settings:
 
-| Setting | Value |
-| --- | --- |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| Root directory | repo root |
-| Environment variable | leave `VITE_WORKER_URL` unset for same-origin `/api/*` |
+| Setting                | Value                                                  |
+| ---------------------- | ------------------------------------------------------ |
+| Build command          | `npm run build`                                        |
+| Build output directory | `dist`                                                 |
+| Root directory         | repo root                                              |
+| Environment variable   | leave `VITE_WORKER_URL` unset for same-origin `/api/*` |
 
 The committed `public/_redirects` file makes direct slug visits serve
 `index.html`.
@@ -113,7 +113,9 @@ For MCP, connect the client to:
 https://travel.vansach.me/mcp
 ```
 
-Then call `read_board` / `write_board` with the slug, e.g. `italy-2027`.
+Use Cloudflare Access Managed OAuth, then call `list_trips` to choose a slug.
+Call `read_board`, `get_schema`, and `write_board` with that slug and the full
+replacement document.
 
 ## Verify Without Deploying
 
