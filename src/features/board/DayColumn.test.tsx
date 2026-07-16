@@ -126,13 +126,15 @@ describe('DayColumn', () => {
     expect(within(card('Tour')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Museum')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Lunch')).queryByText('Overlap')).not.toBeInTheDocument()
+    expect(screen.getByText('Tour').closest('li')).toHaveStyle({ marginTop: '180px' })
+    expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: '0px' })
   })
 
   it('sizes the body to the day window even when empty', () => {
-    // 06:00–21:00 = 15h × 44px/h = 660px, so columns stay aligned regardless of
+    // 06:00–21:00 = 15h × 60px/h = 900px, so columns stay aligned regardless of
     // how many cards each holds.
     render(<DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />)
-    expect(screen.getByTestId('day-body')).toHaveStyle({ minHeight: '660px' })
+    expect(screen.getByTestId('day-body')).toHaveStyle({ height: '900px' })
   })
 
   it('anchors the time scale above and below the full-width card list', () => {
@@ -145,6 +147,7 @@ describe('DayColumn', () => {
       expect(hasSlateClass(label)).toBe(false)
     }
     expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
+    expect(screen.getByTestId('card-list')).not.toHaveClass('gap-2')
     const addCard = screen.getByRole('button', { name: /Add card/ })
     expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
     expect(addCard.className).not.toMatch(/slate-/)
@@ -153,9 +156,10 @@ describe('DayColumn', () => {
   it('scales each card by its duration', () => {
     render(<DayColumn day={day} cards={cards} direction="down" />)
     const li = (title: string) => screen.getByText(title).closest('li') as HTMLElement
-    expect(li('Dinner')).toHaveStyle({ minHeight: '88px' })
-    expect(li('Breakfast')).toHaveStyle({ minHeight: '44px' })
-    expect(li('Stroll')).toHaveStyle({ minHeight: '44px' })
+    expect(li('Dinner')).toHaveStyle({ height: '120px' })
+    expect(li('Breakfast')).toHaveStyle({ height: '60px' })
+    expect(li('Stroll')).toHaveStyle({ height: '60px' })
+    expect(screen.getByText('Dinner').closest('[data-testid="card"]')).toHaveClass('h-full', 'overflow-hidden')
   })
 
   it('offsets timed cards from the configured day start', () => {
@@ -178,7 +182,7 @@ describe('DayColumn', () => {
         dayEnd="21:00"
       />,
     )
-    expect(screen.getByText('Late start').closest('li')).toHaveStyle({ paddingTop: '132px' })
+    expect(screen.getByText('Late start').closest('li')).toHaveStyle({ marginTop: '180px' })
   })
 
   it('offers an Auto + per-city override control, defaulting to Auto', () => {
@@ -272,18 +276,18 @@ describe('DayColumn', () => {
   })
 
   it('anchors the NOON divider at noon’s fraction — top when down, bottom when up', () => {
-    // 06:00–21:00 → noon at 6/15 of the 660px window = 264px, plus the py-2 (0.5rem) offset.
+    // 06:00–21:00 → noon at 6/15 of the 900px window = 360px.
     // Asserting the value (not just non-empty) catches an inverted fraction or wrong window.
     const { rerender } = render(
       <DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />,
     )
     const down = screen.getByTestId('noon-divider')
-    expect(down.style.top).toBe('calc(264px + 0.5rem)')
+    expect(down.style.top).toBe('360px')
     expect(down.style.bottom).toBe('')
 
     rerender(<DayColumn day={day} cards={[]} direction="up" dayStart="06:00" dayEnd="21:00" />)
     const up = screen.getByTestId('noon-divider')
-    expect(up.style.bottom).toBe('calc(264px + 0.5rem)')
+    expect(up.style.bottom).toBe('360px')
     expect(up.style.top).toBe('')
   })
 })

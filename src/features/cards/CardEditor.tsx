@@ -62,7 +62,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
 
     const start = timed ? clean(startTime) : undefined
     const customHours = duration === 'custom' ? durationHours : undefined
-    if (customHours !== undefined && customHours <= 0) return
+    if (customHours !== undefined && customHours < 1) return
 
     if (isEdit) {
       // `undefined` clears the field, so toggling time off or emptying a field removes it.
@@ -198,7 +198,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                 <input
                   aria-label="Duration hours"
                   type="number"
-                  min="0.25"
+                  min="1"
                   step="0.25"
                   required
                   value={durationHours}

@@ -75,7 +75,7 @@ export function Card({
     <article
       data-testid="card"
       data-category={category}
-      className="flex flex-col gap-1.5 rounded-card border border-edge-100 bg-surface px-2.5 py-2 text-sm text-ink shadow-sm"
+      className="flex h-full flex-col gap-1.5 overflow-hidden rounded-card border border-edge-100 bg-surface px-2.5 py-2 text-sm text-ink shadow-sm"
     >
       <div className="flex items-baseline gap-1">
         {dragHandleProps && (

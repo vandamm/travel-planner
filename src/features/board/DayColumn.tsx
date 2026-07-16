@@ -109,14 +109,13 @@ export function DayColumn({
   const dateLabel = formatDay(day.key) // day-first dd.MM for the EU audience
   const weekend = isWeekend(parseISO(day.key))
 
-  // NOON hairline: a positional hint at noon's fraction of the day window,
-  // offset by the body's py-2 padding so it lands in the same coordinate space
-  // as the time scale. 'up' anchors it from the bottom (morning at the bottom).
+  // NOON hairline: a positional hint at noon's fraction of the day window.
+  // 'up' anchors it from the bottom (morning at the bottom).
   const noonPx = noonFraction(dayStart, dayEnd) * windowHeightPx(dayStart, dayEnd)
   const noonStyle =
     direction === 'up'
-      ? { bottom: `calc(0.5rem + ${noonPx}px)` }
-      : { top: `calc(0.5rem + ${noonPx}px)` }
+      ? { bottom: `${noonPx}px` }
+      : { top: `${noonPx}px` }
 
   // The column body is a drop target so cards can be dropped onto an empty day
   // (or its blank space), not only onto another card.
@@ -183,8 +182,8 @@ export function DayColumn({
       <div
         ref={setNodeRef}
         data-testid="day-body"
-        style={{ minHeight: windowHeightPx(dayStart, dayEnd) }}
-        className="relative flex-1 px-3 py-2"
+        style={{ height: windowHeightPx(dayStart, dayEnd) }}
+        className="relative overflow-y-auto px-3"
       >
         {/* NOON hairline — a positional divider at noon's fraction of the day
             window, respecting time-direction. Purely a visual hint. */}
@@ -205,7 +204,7 @@ export function DayColumn({
         <ol
           data-testid="scale"
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 inset-y-2 flex flex-col justify-between"
+          className="pointer-events-none absolute inset-x-0 inset-y-0 flex flex-col justify-between"
         >
           {scale.map((label) => (
             <li
@@ -219,7 +218,7 @@ export function DayColumn({
         </ol>
 
         <SortableContext items={ordered.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          <ol data-testid="card-list" className="relative flex flex-col gap-2 pl-0">
+          <ol data-testid="card-list" className="relative flex flex-col pl-0">
             {ordered.map((c) => {
               const gap = cardGapPx(c, direction, dayStart, dayEnd, cardCursor)
               return (
@@ -230,7 +229,7 @@ export function DayColumn({
                   onEdit={onEditCard}
                   dayStart={dayStart}
                   dayEnd={dayEnd}
-                  layoutStyle={{ minHeight: cardHeightPx(c, dayStart, dayEnd), paddingTop: gap }}
+                  layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
                 />
               )
             })}
