@@ -209,6 +209,7 @@ describe('CardEditor — create', () => {
     renderInRoom(<CreateHarness />)
     const duration = screen.getByRole('group', { name: 'Duration' })
     expect(within(duration).getByLabelText('Duration hours')).toHaveAttribute('min', '1')
+    expect(within(duration).getByLabelText('Duration hours')).toHaveAttribute('step', '1')
     expect(within(duration).getByText('h')).toBeInTheDocument()
     expect(duration).toHaveClass('items-center')
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Plain' } })

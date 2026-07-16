@@ -199,7 +199,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                   aria-label="Duration hours"
                   type="number"
                   min="1"
-                  step="0.25"
+                  step="1"
                   required
                   value={durationHours}
                   onChange={(e) => setDurationHours(e.target.valueAsNumber)}
