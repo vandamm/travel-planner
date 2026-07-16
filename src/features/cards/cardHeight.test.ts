@@ -4,6 +4,7 @@ import {
   cardHeightPx,
   noonFraction,
   PX_PER_HOUR,
+  resolvedDurationHours,
 } from './cardHeight'
 
 const card = (over: Partial<Card>): Card => ({
@@ -38,6 +39,12 @@ describe('cardHeightPx — duration', () => {
     expect(cardHeightPx(card({ duration: 'custom', durationHours: 2 }), START, END)).toBe(
       2 * PX_PER_HOUR,
     )
+  })
+
+  it('floors legacy custom durations below one hour', () => {
+    const legacy = card({ duration: 'custom', durationHours: 0.5 })
+    expect(resolvedDurationHours(legacy, START, END)).toBe(1)
+    expect(cardHeightPx(legacy, START, END)).toBe(PX_PER_HOUR)
   })
 })
 
