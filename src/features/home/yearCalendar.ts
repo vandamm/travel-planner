@@ -64,13 +64,13 @@ export function futureDatedTrips(trips: TripSummary[], referenceDate: Date = new
 export function timelineMonthMarkers(
   startDate: string,
   endDate: string,
-  trips: TripSummary[],
+  _trips: TripSummary[],
   holidays: SchoolHoliday[],
 ): Array<{ date: string; embedded: boolean }> {
   const markers: Array<{ date: string; embedded: boolean }> = []
   for (let date = startOfMonth(new Date(`${startDate}T00:00:00`)); format(date, 'yyyy-MM-dd') <= endDate; date = addDays(endOfMonth(date), 1)) {
     const key = format(date, 'yyyy-MM-dd')
-    if (key > startDate && !tripsOnDay(key, trips).length) {
+    if (key > startDate) {
       markers.push({ date: key, embedded: Boolean(schoolHolidayOnDay(key, holidays)) })
     }
   }

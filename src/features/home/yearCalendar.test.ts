@@ -115,7 +115,7 @@ describe('year calendar', () => {
     ).toEqual(['ongoing', 'later'])
   })
 
-  it('suppresses month ticks inside trips but embeds them in holidays', () => {
+  it('keeps month ticks when trips or holidays cross a month boundary', () => {
     expect(
       timelineMonthMarkers(
         '2026-07-12',
@@ -123,7 +123,10 @@ describe('year calendar', () => {
         [{ ...trip, startDate: '2026-07-30', endDate: '2026-08-03' }],
         [{ startDate: '2026-09-01', endDate: '2026-09-10', name: 'Summer Holidays' }],
       ),
-    ).toEqual([{ date: '2026-09-01', embedded: true }])
+    ).toEqual([
+      { date: '2026-08-01', embedded: false },
+      { date: '2026-09-01', embedded: true },
+    ])
   })
 
   it('omits the starting month marker because Today already names it', () => {

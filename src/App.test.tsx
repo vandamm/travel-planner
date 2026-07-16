@@ -90,7 +90,7 @@ describe('App without a room slug', () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Your travel timeline' })).toBeInTheDocument()
     expect(screen.queryByText('Plan your first journey')).not.toBeInTheDocument()
-    expect(screen.getByText('Continue planning')).toBeInTheDocument()
+    expect(screen.queryByText('Continue planning')).not.toBeInTheDocument()
     expect(document.querySelector('[data-timeline-canvas]')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /new trip/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Trip' })).not.toBeInTheDocument()

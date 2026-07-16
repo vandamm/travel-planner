@@ -242,13 +242,7 @@ export function HomeShell() {
         </p>
       )}
 
-      {loading ? (
-        <p role="status" className="mx-auto max-w-[900px] px-4 py-12 text-sm text-ink-500">
-          Loading trips…
-        </p>
-      ) : (
-        <TimelineHome trips={trips} holidays={holidays} onAddTrip={setCreatingDate} />
-      )}
+      <TimelineHome trips={trips} holidays={holidays} onAddTrip={setCreatingDate} />
 
       {creatingDate !== null && <NewTripModal startDate={creatingDate || undefined} onClose={() => setCreatingDate(null)} />}
     </main>

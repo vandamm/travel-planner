@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent } from 'react'
-import { addDays, differenceInDays, format, isFirstDayOfMonth, parseISO } from 'date-fns'
+import { addDays, differenceInDays, format, parseISO } from 'date-fns'
 import { Modal } from '../../components/Modal'
 import {
   TRIP_COLORS,
@@ -7,8 +7,6 @@ import {
   futureDatedTrips,
   timelineDaysForHeight,
   timelineHeight,
-  TIMELINE_LABEL_HEIGHT,
-  timelineLabelTops,
   timelineMonthMarkers,
   tripDurationDays,
   type SchoolHoliday,
@@ -18,6 +16,14 @@ import {
 const workerBase = () => (import.meta.env.VITE_WORKER_URL ?? '').replace(/\/+$/, '')
 const tripLabel = (trip: TripSummary) => trip.title.trim() || trip.id
 const tripColor = (trip: TripSummary) => trip.color || TRIP_COLORS[0]
+
+function dateRange(startDate: string, endDate: string): string {
+  const start = parseISO(startDate)
+  const end = parseISO(endDate)
+  if (startDate === endDate) return format(start, 'd MMM')
+  if (format(start, 'MMM yyyy') === format(end, 'MMM yyyy')) return `${format(start, 'd')}–${format(end, 'd MMM')}`
+  return `${format(start, 'd MMM')} – ${format(end, 'd MMM')}`
+}
 
 export function NewTripModal({ onClose, startDate }: { onClose: () => void; startDate?: string }) {
   const [slug, setSlug] = useState('')
@@ -121,10 +127,7 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
     const height = timelineHeight(differenceInDays(addDays(parseISO(trip.endDate), 1), start))
     return { trip, top, height }
   })
-  const labelTops = timelineLabelTops(tripPositions.map(({ top, height }) => Math.max(0, top + height / 2 - TIMELINE_LABEL_HEIGHT / 2)))
-  const tripViews = tripPositions.map((position, index) => ({ ...position, labelTop: labelTops[index] }))
-  const labelBottom = tripViews.length ? tripViews[tripViews.length - 1].labelTop + 98 : 0
-  const canvasDays = Math.max(baseDays, timelineDaysForHeight(labelBottom))
+  const canvasDays = baseDays
   const end = format(addDays(todayDate, canvasDays - 1), 'yyyy-MM-dd')
   const markers = useMemo(() => timelineMonthMarkers(today, end, upcoming, holidays), [today, end, upcoming, holidays])
 
@@ -144,7 +147,7 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
   const holidayViews = holidays.flatMap((holiday) => {
     const start = Math.max(0, differenceInDays(parseISO(holiday.startDate), todayDate))
     const endDay = Math.min(canvasDays, differenceInDays(addDays(parseISO(holiday.endDate), 1), todayDate))
-    return endDay > start ? [{ holiday, active: start === 0 || isFirstDayOfMonth(parseISO(holiday.startDate)), top: timelineHeight(start), height: timelineHeight(endDay - start) }] : []
+    return endDay > start ? [{ holiday, top: timelineHeight(start), height: timelineHeight(endDay - start) }] : []
   })
 
   return (
@@ -156,38 +159,64 @@ export function TimelineHome({ trips, holidays, onAddTrip }: TimelineHomeProps) 
     >
       <div ref={canvas} data-timeline-canvas className="relative" style={{ height: timelineHeight(canvasDays) }}>
         <span className="absolute bottom-0 left-1/2 top-0 w-[2px] -translate-x-1/2 bg-edge-300" />
-        <span className="absolute left-1/2 top-0 z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[3px] border-surface bg-city-vermilion shadow-[0_0_0_1px_#c0392b]" />
-        <time className="absolute right-[calc(50%+18px)] top-0 z-10 whitespace-nowrap text-right text-[9px] font-bold uppercase tracking-[.12em] text-ink-600">
-          Today · {format(todayDate, 'd MMMM yyyy')}
+        <time dateTime={today} className="absolute right-[calc(50%+18px)] top-0 z-10 whitespace-nowrap text-right text-[9px] font-bold uppercase tracking-[.12em] text-ink-600">
+          {format(todayDate, 'd MMMM yyyy')}
         </time>
-        {holidayViews.map(({ holiday, active, top, height }) => (
-          <span key={holiday.startDate}>
-            <span aria-hidden="true" className="absolute right-1/2 w-1/2 border-y border-[#d2dcbb] bg-[#edf1e1]/70" style={{ top, height }} />
-            <time className="absolute right-[calc(50%+16px)] whitespace-nowrap text-right text-[9px] font-bold uppercase tracking-[.1em] text-city-pine" style={{ top: top + (active ? 28 : 8) }}>
-              {format(parseISO(holiday.startDate), 'd MMM.')} – {format(parseISO(holiday.endDate), 'd MMM.')}
+        <span className="absolute left-1/2 top-0 z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[3px] border-surface bg-city-vermilion shadow-[0_0_0_1px_#c0392b]" />
+        <time dateTime={today} className="absolute left-[calc(50%+18px)] top-0 z-10 whitespace-nowrap text-[9px] font-bold uppercase tracking-[.12em] text-ink-600">
+          Today
+        </time>
+        {holidayViews.map(({ holiday, top, height }) => (
+          <span
+            key={`${holiday.startDate}-${holiday.endDate}`}
+            data-timeline-holiday
+            className="absolute right-[calc(50%+15px)] z-[3] w-[78px] border-y border-r-2 border-[#9aa77c]/70 bg-[#d2dcbb]/55 sm:right-[calc(50%+18px)] sm:w-[124px]"
+            style={{ top, height }}
+          >
+            <time dateTime={`${holiday.startDate}/${holiday.endDate}`} className="absolute inset-0 grid place-items-center px-1 text-right text-[8px] font-bold uppercase leading-[1.25] tracking-[.07em] text-city-pine sm:px-2 sm:text-[11px] sm:tracking-[.08em]">
+              {dateRange(holiday.startDate, holiday.endDate)}
             </time>
           </span>
         ))}
-        {markers.map((marker) => (
-          <time key={marker.date} dateTime={marker.date} className={`absolute right-[calc(50%+16px)] z-10 text-right text-[9px] font-bold uppercase tracking-[.1em] ${marker.embedded ? 'text-city-pine' : 'text-ink-500'}`} style={{ top: timelineHeight(differenceInDays(parseISO(marker.date), todayDate)) }}>
-            {format(parseISO(marker.date), 'MMMM yyyy')}
-          </time>
-        ))}
-        {tripViews.map(({ trip, top, height, labelTop }) => (
+        {markers.map((marker) => {
+          const markerDate = parseISO(marker.date)
+          const isJanuary = format(markerDate, 'M') === '1'
+          const top = timelineHeight(differenceInDays(markerDate, todayDate))
+          return (
+            <div key={marker.date} className="absolute right-[calc(50%+15px)] z-[4] flex items-end gap-1.5 sm:right-[calc(50%+18px)] sm:gap-2" style={{ top }}>
+              {isJanuary ? (
+                <time data-timeline-year dateTime={marker.date} className="-translate-y-2 font-serif text-[30px] font-semibold leading-none tracking-[-.04em] text-ink sm:text-[38px]">
+                  {format(markerDate, 'yyyy')}
+                </time>
+              ) : (
+                <time data-timeline-month dateTime={marker.date} className="-translate-y-2 text-[9px] font-semibold uppercase tracking-[.1em] text-ink-500 sm:text-[12px]">
+                  {format(markerDate, 'MMMM')}
+                </time>
+              )}
+              <span aria-hidden className={`mb-[3px] ${isJanuary ? 'h-[2px] w-5 bg-edge-300 sm:w-8' : 'h-px w-3 bg-edge-300 sm:w-16'}`} />
+            </div>
+          )
+        })}
+        {tripPositions.map(({ trip, top, height }) => {
+          const duration = tripDurationDays(trip)
+          const copyTop = duration >= 3 ? top + height / 2 : top
+          return (
           <section key={trip.id} data-timeline-trip>
-            <span className="absolute left-1/2 z-10 block w-5 -translate-x-1/2 rounded-[10px] ring-4 ring-surface shadow-[0_0_0_1px_currentColor]" style={{ top, height, color: tripColor(trip), backgroundColor: tripColor(trip) }} />
-            <span className="absolute right-[calc(50%+30px)] z-10 h-[52px] -translate-y-1/2 whitespace-nowrap text-right text-[9px] font-bold uppercase text-ink-600" style={{ top: labelTop + TIMELINE_LABEL_HEIGHT / 2 }}>
+            <span className="absolute left-1/2 z-10 block min-h-4 w-[14px] -translate-x-1/2 rounded-[2px]" style={{ top, height, backgroundColor: tripColor(trip) }}>
+              <span data-trip-start-tick aria-hidden className="absolute left-0 top-0 h-[2px] w-6" style={{ backgroundColor: tripColor(trip) }} />
+              <span data-trip-end-tick aria-hidden className="absolute bottom-0 left-0 h-px w-6" style={{ backgroundColor: tripColor(trip) }} />
+            </span>
+            <span className="absolute left-[calc(50%+44px)] z-10 hidden -translate-y-full whitespace-nowrap text-[9px] font-bold uppercase tracking-[.1em] text-ink-600 sm:block" style={{ top }}>
               {formatCountdown(Math.max(0, differenceInDays(parseISO(trip.startDate), todayDate)))}
             </span>
-            <a href={`/${encodeURIComponent(trip.id)}`} className="absolute left-[calc(50%+30px)] z-10 flex h-[52px] w-[calc(50%-42px)] flex-col justify-center gap-1 no-underline" style={{ top: labelTop }}>
+            <a href={`/${encodeURIComponent(trip.id)}`} className={`absolute left-[calc(50%+30px)] z-10 grid w-[calc(50%-42px)] gap-1 no-underline sm:left-[calc(50%+44px)] sm:w-[calc(50%-56px)] ${duration >= 3 ? '-translate-y-1/2' : ''}`} style={{ top: copyTop }}>
               <strong className="font-serif text-lg font-semibold sm:text-[22px]">{tripLabel(trip)}</strong>
-              <span className="text-[10px] font-bold text-ink-600">
-                {format(parseISO(trip.startDate), 'd MMM')} – {format(parseISO(trip.endDate), 'd MMM')} · {tripDurationDays(trip)} days
-              </span>
+              <span className="text-[10px] font-bold uppercase tracking-[.03em] text-ink-600">{dateRange(trip.startDate, trip.endDate)}</span>
+              {duration >= 3 && <span className="text-[10px] font-bold uppercase tracking-[.08em] text-ink-500">{duration} days</span>}
             </a>
           </section>
-        ))}
-        <p className="absolute bottom-6 left-1/2 z-10 w-max -translate-x-1/2 bg-surface px-3 py-2 text-[9px] font-bold uppercase tracking-[.1em] text-ink-500">Continue planning</p>
+          )
+        })}
         <span className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-edge-300" />
       </div>
       {hover && (
