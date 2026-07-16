@@ -32,6 +32,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: env -u VITE_WORKER_URL npm run build
+      - run: rm dist/_redirects
       - name: Write preview secrets
         run: printf 'LIVEBLOCKS_SECRET_KEY=%s\n' "$LIVEBLOCKS_STAGING_SECRET_KEY" > "$RUNNER_TEMP/preview.env"
       - name: Deploy preview
