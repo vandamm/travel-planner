@@ -16,13 +16,23 @@ import { applyTripToRoom, loadRoomDoc } from './trip'
 import { exportTrip } from '../../src/data/exportTrip'
 import { formatTripErrors, tripDocumentSchema } from '../../src/data/tripSchema'
 import { isValidSlug } from '../../src/data/slug'
+import { listRoomSummaries } from './rooms'
 
 const PROTOCOL_VERSION = '2025-06-18'
 const SERVER_INFO = { name: 'travel-planner', version: '1.0.0' }
+const SERVER_INSTRUCTIONS =
+  'This server reads and writes the shared travel.vansach.me trip library. ' +
+  'Call tools/list to discover the available tools. When the user has not supplied a trip, ' +
+  'call list_trips, then read_board with its slug. Before writing, call get_schema and then ' +
+  'write_board with the same slug and the complete replacement trip document. Available tools ' +
+  'are get_schema, list_trips, read_board, and write_board; there are no booking, routing, ' +
+  'weather, flight, hotel, or place-search tools.'
+const TRIP_OUTPUT_SCHEMA = zodToJsonSchema(tripDocumentSchema)
 
 /** MCP tool result content (the shape `tools/call` returns). */
 interface ToolResult {
   content: Array<{ type: 'text'; text: string }>
+  structuredContent?: Record<string, unknown>
   isError?: boolean
 }
 
@@ -55,24 +65,76 @@ const WRITE_SCHEMA = {
   additionalProperties: false,
 } as const
 
+const LIST_TRIPS_SCHEMA = {
+  type: 'object',
+  properties: {
+    cursor: {
+      type: 'string',
+      description: 'Opaque cursor from a previous list_trips result.',
+    },
+  },
+  additionalProperties: false,
+} as const
+
+const LIST_TRIPS_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    trips: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          slug: { type: 'string' },
+          title: { type: 'string' },
+          startDate: { type: 'string' },
+          endDate: { type: 'string' },
+          color: { type: 'string' },
+          createdAt: { type: 'string' },
+        },
+        required: ['slug', 'title', 'startDate', 'endDate', 'color', 'createdAt'],
+        additionalProperties: false,
+      },
+    },
+    nextCursor: { type: ['string', 'null'] },
+  },
+  required: ['trips', 'nextCursor'],
+  additionalProperties: false,
+} as const
+
 const TOOLS = [
   {
     name: 'get_schema',
+    title: 'Get trip schema',
     description:
       'Return the JSON Schema for a trip document. Read this before writing so the trip JSON is valid.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'list_trips',
+    title: 'List shared trips',
+    description:
+      'List one page of trip summaries available to every Cloudflare Access-approved user. Use nextCursor to fetch another page.',
+    inputSchema: LIST_TRIPS_SCHEMA,
+    outputSchema: LIST_TRIPS_OUTPUT_SCHEMA,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: 'read_board',
+    title: 'Read trip board',
     description:
       "Read a travel board's current trip as JSON. Pass the board slug from its URL.",
     inputSchema: SLUG_SCHEMA,
+    outputSchema: TRIP_OUTPUT_SCHEMA,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: 'write_board',
+    title: 'Replace trip board',
     description:
       "Replace a travel board's trip with an updated document. Pass the board slug and the full trip JSON (call get_schema first). The previous version is snapshotted, so the change can be reverted.",
     inputSchema: WRITE_SCHEMA,
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
   },
 ] as const
 
@@ -101,6 +163,10 @@ function rpcError(id: JsonRpcId, code: number, message: string): Response {
 
 function toolText(text: string): ToolResult {
   return { content: [{ type: 'text', text }] }
+}
+
+function toolJson(data: Record<string, unknown>): ToolResult {
+  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], structuredContent: data }
 }
 
 function toolError(text: string): ToolResult {
@@ -132,13 +198,21 @@ async function readBoard(env: Env, api: LiveblocksApi, slug: string): Promise<To
   // state `applyTripToRoom` and the client panel already handle.
   // Surface it as a tool error, not an uncaught throw that becomes a bare 502.
   try {
-    return toolText(JSON.stringify(exportTrip(doc), null, 2))
+    return toolJson(exportTrip(doc))
   } catch {
     return toolError(
       'The board could not be read as a valid trip — it is in an inconsistent state. ' +
         'Use write_board to replace it with a valid trip document.',
     )
   }
+}
+
+async function listTrips(api: LiveblocksApi, cursor?: string): Promise<ToolResult> {
+  const { trips, nextCursor } = await listRoomSummaries(api, cursor)
+  return toolJson({
+    trips: trips.map(({ id, ...trip }) => ({ slug: id, ...trip })),
+    nextCursor,
+  })
 }
 
 async function writeBoard(
@@ -175,16 +249,24 @@ async function handleToolCall(
   const p = (params ?? {}) as { name?: unknown; arguments?: unknown }
   const args = (p.arguments ?? {}) as Record<string, unknown>
 
-  if (p.name === 'get_schema') {
-    return rpcResult(id, toolText(JSON.stringify(zodToJsonSchema(tripDocumentSchema), null, 2)))
-  }
-  if (p.name === 'read_board') {
-    const slug = typeof args.slug === 'string' ? args.slug : ''
-    return rpcResult(id, await readBoard(env, api, slug))
-  }
-  if (p.name === 'write_board') {
-    const slug = typeof args.slug === 'string' ? args.slug : ''
-    return rpcResult(id, await writeBoard(env, api, slug, args.trip))
+  try {
+    if (p.name === 'get_schema') {
+      return rpcResult(id, toolJson(TRIP_OUTPUT_SCHEMA))
+    }
+    if (p.name === 'list_trips') {
+      const cursor = typeof args.cursor === 'string' ? args.cursor : undefined
+      return rpcResult(id, await listTrips(api, cursor))
+    }
+    if (p.name === 'read_board') {
+      const slug = typeof args.slug === 'string' ? args.slug : ''
+      return rpcResult(id, await readBoard(env, api, slug))
+    }
+    if (p.name === 'write_board') {
+      const slug = typeof args.slug === 'string' ? args.slug : ''
+      return rpcResult(id, await writeBoard(env, api, slug, args.trip))
+    }
+  } catch {
+    return rpcResult(id, toolError('The trip service is temporarily unavailable. Try again.'))
   }
   return rpcError(id, -32602, `Unknown tool: ${String(p.name)}`)
 }
@@ -222,6 +304,7 @@ export async function handleMcp(
         protocolVersion: PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
+        instructions: SERVER_INSTRUCTIONS,
       })
     case 'ping':
       return rpcResult(id, {})

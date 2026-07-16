@@ -63,10 +63,43 @@ describe('handleMcp', () => {
   it('handles initialize and advertises slug-based tools', async () => {
     const init = await rpc(makeApi(), 'initialize')
     expect(init.result).toMatchObject({ capabilities: { tools: {} } })
+    expect(JSON.stringify(init.result)).toContain('list_trips')
+    expect(JSON.stringify(init.result)).not.toContain('listChanged')
 
     const tools = await rpc(makeApi(), 'tools/list')
     expect(JSON.stringify(tools.result)).toContain('"slug"')
-    expect(JSON.stringify(tools.result)).not.toContain('"link"')
+    const definitions = (tools.result as { tools: Array<{ inputSchema: { properties: object } }> }).tools
+    expect(definitions.some(({ inputSchema }) => 'link' in inputSchema.properties)).toBe(false)
+    expect(JSON.stringify(tools.result)).toContain('list_trips')
+    expect(JSON.stringify(tools.result)).toContain('readOnlyHint')
+    expect(JSON.stringify(tools.result)).toContain('destructiveHint')
+  })
+
+  it('lists one page of shared trips by slug', async () => {
+    const body = await rpc(
+      makeApi(seededDoc(), {
+        listRooms: async () => ({
+          rooms: [{ id: 'rome-2027', createdAt: '2027-01-01T00:00:00Z' }],
+          nextCursor: 'next-page',
+        }),
+      }),
+      'tools/call',
+      { name: 'list_trips', arguments: {} },
+    )
+
+    expect(JSON.stringify(body.result)).toContain('rome-2027')
+    expect(JSON.stringify(body.result)).toContain('structuredContent')
+    expect(JSON.stringify(body.result)).toContain('next-page')
+  })
+
+  it('returns a tool error when trip discovery cannot reach Liveblocks', async () => {
+    const body = await rpc(
+      makeApi(undefined, { listRooms: async () => { throw new Error('unavailable') } }),
+      'tools/call',
+      { name: 'list_trips', arguments: {} },
+    )
+
+    expect(JSON.stringify(body.result)).toContain('isError')
   })
 
   it('returns the schema', async () => {
