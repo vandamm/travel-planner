@@ -18,7 +18,8 @@ import { formatTripErrors, tripDocumentSchema } from '../../src/data/tripSchema'
 import { isValidSlug } from '../../src/data/slug'
 import { listRoomSummaries } from './rooms'
 
-const PROTOCOL_VERSION = '2025-06-18'
+const SUPPORTED_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18'] as const
+const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0]
 const SERVER_INFO = { name: 'travel-planner', version: '1.0.0' }
 const SERVER_INSTRUCTIONS =
   'This server reads and writes the shared travel.vansach.me trip library. ' +
@@ -157,8 +158,8 @@ function rpcResult(id: JsonRpcId, result: unknown): Response {
   return json({ jsonrpc: '2.0', id, result })
 }
 
-function rpcError(id: JsonRpcId, code: number, message: string): Response {
-  return json({ jsonrpc: '2.0', id, error: { code, message } })
+function rpcError(id: JsonRpcId, code: number, message: string, status = 200): Response {
+  return json({ jsonrpc: '2.0', id, error: { code, message } }, status)
 }
 
 function toolText(text: string): ToolResult {
@@ -171,6 +172,12 @@ function toolJson(data: Record<string, unknown>): ToolResult {
 
 function toolError(text: string): ToolResult {
   return { content: [{ type: 'text', text }], isError: true }
+}
+
+function supportedProtocolVersion(value: unknown): string {
+  return typeof value === 'string' && SUPPORTED_PROTOCOL_VERSIONS.includes(value as never)
+    ? value
+    : LATEST_PROTOCOL_VERSION
 }
 
 /**
@@ -281,27 +288,47 @@ export async function handleMcp(
   api: LiveblocksApi,
 ): Promise<Response> {
   // Cloudflare Access gates this endpoint before the MCP request is dispatched.
+  const headerVersion = request.headers.get('mcp-protocol-version')
+  if (headerVersion && !SUPPORTED_PROTOCOL_VERSIONS.includes(headerVersion as never)) {
+    return rpcError(null, -32600, 'Unsupported protocol version', 400)
+  }
+
   let body: JsonRpcRequest
   try {
-    body = (await request.json()) as JsonRpcRequest
+    const parsed = await request.json()
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return rpcError(null, -32600, 'Invalid request')
+    }
+    body = parsed as JsonRpcRequest
   } catch {
     return rpcError(null, -32700, 'Parse error')
   }
 
   const method = body.method
-  const id = body.id ?? null
-  if (typeof method !== 'string') return rpcError(id, -32600, 'Invalid request')
+  if (body.jsonrpc !== '2.0' || typeof method !== 'string') {
+    return rpcError(null, -32600, 'Invalid request')
+  }
 
   // Notifications (e.g. `notifications/initialized`) carry no id and expect no
   // JSON-RPC response — just acknowledge receipt.
-  if (method.startsWith('notifications/')) return new Response(null, { status: 202 })
+  if (body.id === undefined) {
+    return method.startsWith('notifications/')
+      ? new Response(null, { status: 202 })
+      : rpcError(null, -32600, 'Invalid request')
+  }
+  if (body.id === null || (typeof body.id !== 'string' && typeof body.id !== 'number')) {
+    return rpcError(null, -32600, 'Invalid request')
+  }
+  const id = body.id
 
   switch (method) {
     case 'initialize':
-      // Per the MCP spec the server states a protocol version *it* supports, not
-      // whatever the client requested — we implement exactly one.
+      // Prefer the requested revision when supported; otherwise negotiate the
+      // newest revision this stateless server supports.
       return rpcResult(id, {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: supportedProtocolVersion(
+          (body.params as { protocolVersion?: unknown } | undefined)?.protocolVersion,
+        ),
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
         instructions: SERVER_INSTRUCTIONS,

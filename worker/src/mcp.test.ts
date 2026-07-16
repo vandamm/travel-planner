@@ -38,10 +38,10 @@ function seededDoc(): Y.Doc {
   return doc
 }
 
-function request(payload: unknown): Request {
+function request(payload: unknown, headers: HeadersInit = {}): Request {
   return new Request('https://worker.test/mcp', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(payload),
   })
 }
@@ -100,6 +100,43 @@ describe('handleMcp', () => {
     )
 
     expect(JSON.stringify(body.result)).toContain('isError')
+  })
+
+  it('negotiates supported protocol versions and rejects unsupported headers', async () => {
+    const init = await rpc(makeApi(), 'initialize', {
+      protocolVersion: '2025-11-25',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1.0.0' },
+    })
+    expect(JSON.stringify(init.result)).toContain('2025-11-25')
+
+    const unsupported = await handleMcp(
+      request(
+        { jsonrpc: '2.0', id: 1, method: 'ping' },
+        { 'mcp-protocol-version': '2099-01-01' },
+      ),
+      env,
+      makeApi(),
+    )
+    expect(unsupported.status).toBe(400)
+  })
+
+  it('rejects malformed JSON-RPC envelopes', async () => {
+    const res = await handleMcp(request({ id: 1, method: 'ping' }), env, makeApi())
+    const body = await res.json() as { error?: { code?: number } }
+
+    expect(body.error?.code).toBe(-32600)
+  })
+
+  it('acknowledges initialized notifications without a response body', async () => {
+    const res = await handleMcp(
+      request({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+      env,
+      makeApi(),
+    )
+
+    expect(res.status).toBe(202)
+    expect(await res.text()).toBe('')
   })
 
   it('returns the schema', async () => {

@@ -127,6 +127,20 @@ describe('handleRequest (router + Access gate)', () => {
     expect(mcpRes.status).toBe(200)
   })
 
+  it('rejects an unexpected Origin on MCP requests', async () => {
+    const res = await handleRequest(
+      new Request('https://worker.test/mcp', {
+        method: 'POST',
+        headers: { origin: 'https://evil.example', 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+      }),
+      { ...env, ALLOWED_ORIGIN: 'https://travel.example' },
+      makeApi(),
+    )
+
+    expect(res.status).toBe(403)
+  })
+
   it('returns 404 for unknown routes and 405 for wrong methods', async () => {
     expect(
       await handleRequest(new Request('https://worker.test/api/nope'), env, makeApi()),
