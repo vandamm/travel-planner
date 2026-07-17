@@ -58,7 +58,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   const [swapSourceDayKey, setSwapSourceDayKey] = useState<string | null>(null)
   // Render the completed atomic drag transaction immediately; the normal doc
   // subscription still handles edits made through every other path.
-  const [, rerenderAfterDrop] = useState(0)
+  const [, rerenderAfterTimelineChange] = useState(0)
   // Desktop multi-week affordances (§9): a right-edge fade + a visible date-range
   // label, both derived from the scroll container's metrics by the pure helpers.
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -246,7 +246,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
             direction={direction}
             dayStart={trip.dayStart}
             dayEnd={trip.dayEnd}
-            onDrop={() => rerenderAfterDrop((version) => version + 1)}
+            onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
           >
             <MobileDayView
               days={days}
@@ -291,7 +291,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
               direction={direction}
               dayStart={trip.dayStart}
               dayEnd={trip.dayEnd}
-              onDrop={() => rerenderAfterDrop((version) => version + 1)}
+              onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
             >
               <div data-testid="board" className="flex" style={{ gap: COLUMN_GAP_REM }}>
                 {days.map((day) => {

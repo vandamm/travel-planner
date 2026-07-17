@@ -248,6 +248,7 @@ export function DayColumn({
                 onEdit={onEditCard}
                 dayStart={dayStart}
                 dayEnd={dayEnd}
+                direction={direction}
                 layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
               />
             )

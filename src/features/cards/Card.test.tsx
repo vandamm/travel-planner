@@ -1,7 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen } from '@testing-library/react'
 import { DndContext } from '@dnd-kit/core'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card as CardType } from '../../data/schema'
+import {
+  CardResizeContext,
+  type CardResizeController,
+  type CardResizePlan,
+} from '../board/cardResize'
 import { Card, SortableCard } from './Card'
 
 const base: CardType = {
@@ -25,7 +30,7 @@ describe('Card', () => {
     expect(screen.getByTestId('card-time')).not.toHaveTextContent('–')
   })
 
-  it('lets title and time share the remaining row beside the drag handle', () => {
+  it('lets title and time use the full card width', () => {
     render(
       <Card
         card={{
@@ -35,7 +40,6 @@ describe('Card', () => {
           duration: 'custom',
           durationHours: 1,
         }}
-        dragHandleProps={{}}
       />,
     )
     expect(screen.getByRole('button', { name: 'Edit Brunch reservation' })).toHaveClass(
@@ -46,13 +50,97 @@ describe('Card', () => {
     expect(screen.getByTestId('card-title')).toHaveClass('min-w-0')
   })
 
-  it('offers a drag handle for a timed card', () => {
+  it('uses the card surface as the drag activator without a separate handle', () => {
     render(
       <DndContext>
         <SortableCard card={{ ...base, startTime: '10:00' }} />
       </DndContext>,
     )
-    expect(screen.getByRole('button', { name: 'Drag Colosseum' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Drag Colosseum' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('card')).toHaveAttribute('role', 'button')
+    expect(screen.getByTestId('card')).toHaveAttribute('tabindex', '0')
+  })
+
+  it('attaches pointer listeners to the card surface', () => {
+    const onPointerDown = vi.fn()
+    render(<Card card={base} dragSurfaceProps={{ onPointerDown }} />)
+    fireEvent.pointerDown(screen.getByTestId('card'))
+    expect(onPointerDown).toHaveBeenCalledOnce()
+  })
+
+  it('shows start and end resize handles only for timed cards', () => {
+    const resizeHandleProps = { start: {}, end: {} }
+    const { rerender } = render(
+      <Card card={{ ...base, startTime: '10:00' }} resizeHandleProps={resizeHandleProps} />,
+    )
+    expect(screen.getByRole('button', { name: 'Resize Colosseum start' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Resize Colosseum end' })).toBeInTheDocument()
+
+    rerender(<Card card={base} resizeHandleProps={resizeHandleProps} />)
+    expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps links and resize handles from activating a card move', () => {
+    const onPointerDown = vi.fn()
+    render(
+      <Card
+        card={{ ...base, startTime: '10:00', link: 'https://example.com' }}
+        dragSurfaceProps={{ onPointerDown }}
+        resizeHandleProps={{ start: {}, end: {} }}
+      />,
+    )
+
+    fireEvent.pointerDown(screen.getByTestId('card-link'))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Resize Colosseum start' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Resize Colosseum end' }))
+    expect(onPointerDown).not.toHaveBeenCalled()
+  })
+
+  it('previews pointer resizing and uses the same controller for keyboard resizing', () => {
+    const plan = vi.fn(
+      (_cardId: string, _edge: string, deltaPx: number): CardResizePlan => ({
+        startTime: deltaPx < 0 ? '09:45' : '10:00',
+        duration: 'custom',
+        durationHours: deltaPx === 0 ? 1 : 1.25,
+        heightPx: deltaPx === 0 ? 60 : 75,
+        topOffsetPx: deltaPx < 0 ? -15 : 0,
+        pushed: [],
+      }),
+    )
+    const commit = vi.fn()
+    const controller: CardResizeController = { plan, commit }
+    render(
+      <CardResizeContext.Provider value={controller}>
+        <DndContext>
+          <SortableCard
+            card={{ ...base, startTime: '10:00' }}
+            direction="down"
+            layoutStyle={{ height: 60, marginTop: 240 }}
+          />
+        </DndContext>
+      </CardResizeContext.Provider>,
+    )
+    const start = screen.getByRole('button', { name: 'Resize Colosseum start' })
+    const pointer = (type: 'pointerDown' | 'pointerMove' | 'pointerUp', clientY: number) => {
+      const event = createEvent[type](start)
+      Object.defineProperties(event, {
+        pointerId: { value: 1 },
+        clientY: { value: clientY },
+      })
+      fireEvent(start, event)
+    }
+    pointer('pointerDown', 100)
+    pointer('pointerMove', 85)
+    const sortable = screen.getByTestId('sortable-card')
+    expect(sortable).toHaveStyle({ height: '75px' })
+    expect(sortable.style.marginTop).toBe('225px')
+    pointer('pointerUp', 85)
+    expect(commit).toHaveBeenCalledWith('x', 'start', -15)
+
+    fireEvent.keyDown(start, { key: 'ArrowUp' })
+    expect(commit).toHaveBeenCalledWith('x', 'start', -15)
+    fireEvent.keyDown(start, { key: 'ArrowDown', shiftKey: true })
+    expect(commit).toHaveBeenCalledWith('x', 'start', 60)
   })
 
   it('shows the duration for an untimed card', () => {
@@ -117,7 +205,7 @@ describe('Card', () => {
   it('calls onEdit with the card when clicked', () => {
     const onEdit = vi.fn()
     render(<Card card={base} onEdit={onEdit} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Colosseum' }))
+    fireEvent.click(screen.getByTestId('card'))
     expect(onEdit).toHaveBeenCalledWith(base)
   })
 })

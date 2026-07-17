@@ -9,11 +9,17 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type * as Y from 'yjs'
-import { getCard } from '../../data/doc'
+import { getCard, listCards } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
 import { Card } from '../cards/Card'
+import {
+  applyCardResize,
+  CardResizeContext,
+  planCardResize,
+  type CardResizeController,
+} from './cardResize'
 import { boardCollisionDetection } from './dndCollision'
 import { DragOverDayContext } from './dragOverDayContext'
 import {
@@ -29,7 +35,7 @@ export interface BoardDndProps {
   direction: TimeDirection
   dayStart?: string
   dayEnd?: string
-  onDrop?: () => void
+  onTimelineChange?: () => void
   children: ReactNode
 }
 
@@ -38,7 +44,7 @@ export function BoardDnd({
   direction,
   dayStart = '06:00',
   dayEnd = '21:00',
-  onDrop,
+  onTimelineChange,
   children,
 }: BoardDndProps) {
   const sensors = useSensors(
@@ -47,6 +53,27 @@ export function BoardDnd({
   )
   const [activeCard, setActiveCard] = useState<CardType | null>(null)
   const [overDayKey, setOverDayKey] = useState<string | null>(null)
+  const resizeController = useMemo<CardResizeController>(
+    () => ({
+      plan(cardId, edge, deltaPx) {
+        const card = getCard(doc, cardId)
+        if (!card) return null
+        return planCardResize({
+          card,
+          cards: listCards(doc),
+          edge,
+          deltaPx,
+          direction,
+          dayStart,
+          dayEnd,
+        })
+      },
+      commit(cardId, edge, deltaPx) {
+        if (applyCardResize(doc, cardId, edge, deltaPx, direction)) onTimelineChange?.()
+      },
+    }),
+    [dayEnd, dayStart, direction, doc, onTimelineChange],
+  )
 
   function handleDragStart(event: DragStartEvent) {
     setActiveCard(getCard(doc, String(event.active.id)) ?? null)
@@ -84,7 +111,7 @@ export function BoardDnd({
         },
         direction,
       )
-      onDrop?.()
+      onTimelineChange?.()
     }
     setActiveCard(null)
     setOverDayKey(null)
@@ -96,18 +123,20 @@ export function BoardDnd({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={boardCollisionDetection}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <DragOverDayContext.Provider value={overDayKey}>{children}</DragOverDayContext.Provider>
-      <DragOverlay>
-        {activeCard ? <Card card={activeCard} dayStart={dayStart} dayEnd={dayEnd} /> : null}
-      </DragOverlay>
-    </DndContext>
+    <CardResizeContext.Provider value={resizeController}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={boardCollisionDetection}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <DragOverDayContext.Provider value={overDayKey}>{children}</DragOverDayContext.Provider>
+        <DragOverlay>
+          {activeCard ? <Card card={activeCard} dayStart={dayStart} dayEnd={dayEnd} /> : null}
+        </DragOverlay>
+      </DndContext>
+    </CardResizeContext.Provider>
   )
 }
