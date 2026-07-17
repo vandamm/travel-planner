@@ -113,7 +113,7 @@ describe('trip HTTP handlers', () => {
     const schema = JSON.stringify(await res.json())
     expect(schema).toContain('"trip"')
     expect(schema).toContain('"minimum":0.25')
-    expect(schema).toContain('"multipleOf":0.25')
+    expect(schema).not.toContain('"multipleOf":0.25')
   })
 
   it('validates and applies a trip, snapshotting previous state when KV is bound', async () => {

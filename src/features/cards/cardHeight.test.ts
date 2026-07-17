@@ -51,6 +51,11 @@ describe('cardHeightPx — duration', () => {
     expect(cardHeightPx(quarterHour, START, END)).toBe(15)
   })
 
+  it('keeps a legacy non-quarter custom duration for rendering', () => {
+    const legacy = card({ duration: 'custom', durationHours: 1.1 })
+    expect(resolvedDurationHours(legacy, START, END)).toBe(1.1)
+  })
+
   it('uses shared quarter-hour minute conversions', () => {
     expect(SNAP_MINUTES).toBe(15)
     expect(MIN_CARD_MINUTES).toBe(15)

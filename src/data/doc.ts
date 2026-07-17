@@ -253,11 +253,12 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
 export function updateCard(doc: Y.Doc, id: string, patch: Partial<Omit<Card, 'id'>>): void {
   const m = entityMap(doc, CARDS).get(id)
   if (!m) return
+  const updatesDuration = 'duration' in patch || 'durationHours' in patch
   doc.transact(() => {
     patchYMap(m, patch)
-    if (m.get('duration') === 'custom') {
+    if (updatesDuration && m.get('duration') === 'custom') {
       m.set('durationHours', validCustomDurationHours(m.get('durationHours')))
-    } else {
+    } else if (updatesDuration) {
       m.delete('durationHours')
     }
   })

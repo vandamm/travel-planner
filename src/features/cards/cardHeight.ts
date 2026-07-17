@@ -32,6 +32,11 @@ export function isValidCustomDurationHours(value: unknown): value is number {
   return Number.isInteger(minutes) && minutes >= MIN_CARD_MINUTES && minutes % SNAP_MINUTES === 0
 }
 
+/** Whether a stored custom duration can be rendered without data loss. */
+function isReadableCustomDurationHours(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= minutesToHours(MIN_CARD_MINUTES)
+}
+
 /** Minutes since midnight for an 'HH:mm' clock string; 0 when unparseable. */
 export function clockMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number)
@@ -74,7 +79,7 @@ export function resolvedDurationHours(card: Card, dayStart: string, dayEnd: stri
     case 'half':
       return windowHours(dayStart, dayEnd) / 2
     case 'custom':
-      return isValidCustomDurationHours(card.durationHours)
+      return isReadableCustomDurationHours(card.durationHours)
         ? card.durationHours
         : DEFAULT_CARD_HOURS
   }

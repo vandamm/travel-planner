@@ -176,6 +176,20 @@ describe('cards', () => {
     expect(getCard(doc, day.id)).toMatchObject({ duration: 'custom', durationHours: 1 })
   })
 
+  it('does not normalize a legacy custom duration during an unrelated update', () => {
+    const doc = freshDoc()
+    const legacy = addCard(doc, { dayKey: '2027-05-01', title: 'Legacy', duration: 'custom' })
+    doc.getMap('cards').get(legacy.id)?.set('durationHours', 1.1)
+
+    updateCard(doc, legacy.id, { title: 'Renamed legacy card' })
+
+    expect(getCard(doc, legacy.id)).toMatchObject({
+      title: 'Renamed legacy card',
+      duration: 'custom',
+      durationHours: 1.1,
+    })
+  })
+
   it('keeps cards on different days independent', () => {
     const doc = freshDoc()
     addCard(doc, { dayKey: '2027-05-01', title: 'Day1-A' })

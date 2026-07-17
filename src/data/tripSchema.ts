@@ -99,7 +99,10 @@ export const cardSchema = z.discriminatedUnion('duration', [
   cardBaseSchema.extend({ duration: z.literal('half') }).strict(),
   cardBaseSchema.extend({
     duration: z.literal('custom'),
-    durationHours: z.number().min(minutesToHours(MIN_CARD_MINUTES)).multipleOf(minutesToHours(MIN_CARD_MINUTES)),
+    // Existing synced documents may predate quarter-hour snapping. Accept their
+    // positive values for read/export compatibility; all new doc/editor writes
+    // still pass through the stricter cardHeight predicate.
+    durationHours: z.number().min(minutesToHours(MIN_CARD_MINUTES)),
   }).strict(),
 ])
 

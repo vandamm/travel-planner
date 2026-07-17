@@ -77,8 +77,8 @@ describe('tripDocumentSchema', () => {
     expect(bad.success).toBe(false)
   })
 
-  it('accepts quarter-hour custom cards and rejects invalid increments', () => {
-    for (const durationHours of [0.2, 0.3, 0, -1]) {
+  it('accepts quarter-hour custom cards and rejects sub-minimum values', () => {
+    for (const durationHours of [0.2, 0, -1]) {
       const result = tripDocumentSchema.safeParse({
         ...VALID,
         cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours }],
@@ -90,6 +90,15 @@ describe('tripDocumentSchema', () => {
       tripDocumentSchema.safeParse({
         ...VALID,
         cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 0.25 }],
+      }).success,
+    ).toBe(true)
+  })
+
+  it('accepts legacy non-quarter custom durations for document round-trips', () => {
+    expect(
+      tripDocumentSchema.safeParse({
+        ...VALID,
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Legacy', order: 0, duration: 'custom', durationHours: 1.1 }],
       }).success,
     ).toBe(true)
   })

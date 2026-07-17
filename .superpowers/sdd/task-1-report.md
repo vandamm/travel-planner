@@ -33,3 +33,22 @@ One full `npm test` run was executed. Task 1's focused files passed, but the sui
 - `src/features/board/timelineSchedule.test.ts`: imports a missing `./timelineSchedule` module.
 
 Result: 51 files passed; 3 tests failed and 1 suite failed to load. These files are outside Task 1 and were left unchanged.
+
+## Legacy-duration compatibility follow-up
+
+Review found that strict schema/layout validation would rewrite or reject existing
+non-quarter custom durations such as `1.1`. Added TDD coverage confirmed the
+failure before the fix: legacy values rendered as `1`, unrelated `updateCard`
+calls rewrote them, and export rejected them.
+
+- Stored finite custom durations at least 15 minutes now remain readable and
+  exportable, including legacy non-quarter values.
+- `updateCard` normalizes only patches that change `duration` or
+  `durationHours`; unrelated updates retain the stored duration.
+- New `addCard`, duration-changing `updateCard`, and Card Editor writes retain
+  the stricter 15-minute predicate.
+- The published JSON schema preserves legacy round-trips with `minimum: 0.25`
+  but no `multipleOf`; document mutators remain the write-time enforcement
+  boundary.
+
+Focused follow-up verification passed: 5 files, 84 tests passed.
