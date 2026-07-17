@@ -15,3 +15,9 @@
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-vermilion focus-visible:ring-offset-2;
   }
 }
+
+@layer components {
+  .button-label {
+    @apply text-[13px] font-semibold tracking-[0.02em];
+  }
+}

@@ -27,14 +27,13 @@ describe('App (with a room slug path)', () => {
     expect(seal).toHaveTextContent('I')
   })
 
-  it('uses the desktop board inset for the full-width trip header at 640px', () => {
+  it('puts trip controls inside the framed board at the 400px boundary', () => {
     render(<App />)
 
-    const header = screen.getByTestId('app-seal').closest('header')
-    expect(header).toHaveClass('w-full', 'px-6')
-    expect(header).not.toHaveClass('max-w-2xl')
-    expect(screen.getByRole('button', { name: 'Trip' }).parentElement).toHaveClass('sm:flex')
-    expect(screen.getByRole('button', { name: 'Menu' })).toHaveClass('sm:hidden')
+    expect(screen.getByTestId('board-frame')).toContainElement(screen.getByTestId('board-toolbar'))
+    expect(screen.getByRole('button', { name: 'Edit trip' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cities & colours' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument()
   })
 
   it('renders the meta line with day and city counts', () => {
@@ -86,7 +85,7 @@ describe('App (with a room slug path)', () => {
     // Trip setup lives behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Trip details' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Trip' }))
+    await user.click(screen.getByRole('button', { name: 'Edit trip' }))
     expect(screen.getByRole('dialog', { name: 'Trip details' })).toBeInTheDocument()
 
     // Escape flips AppShell's open flag back off, unmounting the modal.
@@ -100,7 +99,7 @@ describe('App (with a room slug path)', () => {
     // Cities live behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Cities' }))
+    await user.click(screen.getByRole('button', { name: 'Cities & colours' }))
     expect(screen.getByRole('dialog', { name: 'Cities & colours' })).toBeInTheDocument()
 
     // Escape flips AppShell's open flag back off, unmounting the modal.

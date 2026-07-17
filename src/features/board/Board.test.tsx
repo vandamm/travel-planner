@@ -110,7 +110,7 @@ describe('Board', () => {
   it('opens the accommodation editor from the Add stay button', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-02' }))
-    act(() => screen.getByRole('button', { name: 'Add stay' }).click())
+    act(() => within(screen.getByTestId('board-toolbar')).getByRole('button', { name: 'Add stay' }).click())
     expect(screen.getByRole('dialog', { name: 'Accommodation editor' })).toBeInTheDocument()
   })
 
@@ -138,15 +138,16 @@ describe('Board', () => {
     expect(dialog()).toBeInTheDocument()
   })
 
-  it('tints the toolbar buttons with ink/edge tokens, not slate', () => {
+  it('puts controls inside the board toolbar instead of a separate Board heading', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' }))
-    expect(screen.getByRole('button', { name: 'Undo' }).querySelector('svg')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Redo' }).querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByTestId('board-frame')).toContainElement(screen.getByTestId('board-toolbar'))
+    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeInTheDocument()
     const toggle = screen.getByRole('button', { name: 'Toggle time direction' })
-    expect(toggle).toHaveClass('border-edge-300', 'text-ink-600', 'hover:bg-surface-chip')
+    expect(toggle).toHaveClass('border-edge-350', 'text-ink-600')
     expect(toggle.className).not.toMatch(/slate-/)
-    expect(screen.getByRole('heading', { name: 'Board' }).className).not.toMatch(/slate-/)
   })
 
   it('reverses every card in every day when the direction is toggled', () => {

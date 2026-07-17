@@ -25,6 +25,7 @@ import { CardEditor } from '../cards/CardEditor'
 import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
 import { MobileDayView } from './MobileDayView'
+import { BoardToolbar } from './BoardToolbar'
 import { useTimeDirection } from './useTimeDirection'
 import { useUndoManager } from './undoManager'
 import { COLUMN_GAP_REM, useColumnsThatFit, useViewport } from './useViewport'
@@ -42,10 +43,20 @@ export interface BoardProps {
   /** Bumped by the mobile ≡ menu's "Add stay"; each change opens the create
    *  editor (a nonce, not a boolean, so repeated taps re-open it). */
   addStayNonce?: number
+  onOpenTrip?: () => void
+  onOpenCities?: () => void
+  onOpenShare?: () => void
+  onOpenMenu?: () => void
 }
 
-export function Board({ addStayNonce = 0 }: BoardProps) {
-  const { doc } = useRoom()
+export function Board({
+  addStayNonce = 0,
+  onOpenTrip = () => {},
+  onOpenCities = () => {},
+  onOpenShare = () => {},
+  onOpenMenu = () => {},
+}: BoardProps) {
+  const { doc, status, presences } = useRoom()
   useDocVersion(doc)
   const { direction, toggle } = useTimeDirection()
   const { undo, redo, canUndo, canRedo } = useUndoManager(doc)
@@ -74,6 +85,8 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   const overrides = listDayOverrides(doc)
   const cities = listCities(doc)
   const cityById = new Map(cities.map((c) => [c.id, c]))
+  const wordmark = trip.title.trim() || 'Travel Planner'
+  const meta = `${days.length} ${days.length === 1 ? 'day' : 'days'} · ${cities.length} ${cities.length === 1 ? 'city' : 'cities'}`
 
   const cardsByDay = new Map<string, Card[]>()
   for (const card of listCards(doc)) {
@@ -118,110 +131,42 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
       : undefined
 
   return (
-    <section aria-labelledby="board-heading" className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6">
-        <h2 id="board-heading" className="text-lg font-semibold text-ink">
-          Board
-        </h2>
-        <div className="flex items-center gap-2">
-          {/* Multi-week navigation is desktop-only: the scrolling columns row lives
-              in the desktop branch; mobile pages one day at a time (pager dots). */}
-          {viewport === 'desktop' && days.length > 0 && (
-            <>
-              {todayIdx >= 0 && (
-                <button
-                  type="button"
-                  aria-label="Jump to today"
-                  onClick={jumpToToday}
-                  className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
-                >
-                  Today
-                </button>
-              )}
-              <div data-testid="range-stepper" className="flex items-center gap-1">
-                <button
-                  type="button"
-                  aria-label="Previous days"
-                  onClick={() => pageBy(-1)}
-                  className="rounded border border-edge-300 bg-white px-2 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
-                >
-                  ‹
-                </button>
-                <span
-                  data-testid="visible-range"
-                  className="min-w-[7rem] text-center text-sm font-medium text-ink-600"
-                >
-                  {rangeText}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Next days"
-                  onClick={() => pageBy(1)}
-                  className="rounded border border-edge-300 bg-white px-2 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
-                >
-                  ›
-                </button>
-              </div>
-            </>
+    <section
+      data-testid="board-frame"
+      aria-label="Board"
+      className="mx-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-frame border border-ink-frame bg-white min-[400px]:mx-6"
+    >
+      <BoardToolbar
+        title={wordmark}
+        meta={meta}
+        status={status}
+        presences={presences}
+        onOpenTrip={onOpenTrip}
+        onOpenCities={onOpenCities}
+        onOpenShare={onOpenShare}
+        onOpenMenu={onOpenMenu}
+        onAddStay={() => setAccEditor({ mode: 'create' })}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        direction={direction}
+        onToggleDirection={toggle}
+      />
+      {viewport === 'desktop' && days.length > 0 && (
+        <div className="flex items-center justify-end gap-2 px-4 py-2">
+          {todayIdx >= 0 && (
+            <button type="button" aria-label="Jump to today" onClick={jumpToToday} className="button-label rounded-card border border-edge-350 px-3 py-2 text-ink-600">
+              Today
+            </button>
           )}
-          {/* Live undo/redo for hand edits (Cmd/Ctrl+Z / Shift+Cmd/Ctrl+Z), also
-              tappable on mobile. Disabled when the stack is empty; agent writes /
-              restores run under APPLY_TRIP_ORIGIN and stay off this stack. */}
-          <button
-            type="button"
-            aria-label="Undo"
-            disabled={!canUndo}
-            onClick={undo}
-            className="flex h-8 w-10 items-center justify-center rounded border border-edge-300 bg-white text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 7 5 11l4 4" />
-              <path d="M5 11h8a6 6 0 1 1-4.2 10.2" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label="Redo"
-            disabled={!canRedo}
-            onClick={redo}
-            className="flex h-8 w-10 items-center justify-center rounded border border-edge-300 bg-white text-ink-600 hover:bg-surface-chip disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 7 4 4-4 4" />
-              <path d="M19 11h-8a6 6 0 1 0 4.2 10.2" />
-            </svg>
-          </button>
-          {/* Desktop's "Add stay" lives at the right end of the stays lane; mobile
-              reaches it through the header ≡ menu (lifted to AppShell via nonce). */}
-          <button
-            type="button"
-            aria-label="Toggle time direction"
-            aria-pressed={direction === 'up'}
-            onClick={toggle}
-            className="rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
-          >
-            {direction === 'down' ? 'Morning → Evening' : 'Evening → Morning'}
-          </button>
+          <div data-testid="range-stepper" className="flex items-center gap-1">
+            <button type="button" aria-label="Previous days" onClick={() => pageBy(-1)} className="h-7 w-7 rounded-card border border-edge-350 text-ink-600">‹</button>
+            <span data-testid="visible-range" className="min-w-[7rem] text-center text-sm font-medium text-ink-600">{rangeText}</span>
+            <button type="button" aria-label="Next days" onClick={() => pageBy(1)} className="h-7 w-7 rounded-card border border-edge-350 text-ink-600">›</button>
+          </div>
         </div>
-      </div>
+      )}
 
       {days.length === 0 ? (
         <p data-testid="board-empty" className="px-6 text-ink-500">
