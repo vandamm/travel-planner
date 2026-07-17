@@ -58,11 +58,11 @@ export async function pickTime(scope: Page | Locator, triggerName: string, hhmm:
   await wheel.getByRole('button', { name: `Set ${hhmm}` }).click()
 }
 
-/** Below the 1024px `lg` breakpoint the inline Trip/Cities buttons collapse into
+/** Below the 400px breakpoint the inline Trip/Cities buttons collapse into
  *  the header ≡ menu, so the path to those editors differs by viewport. */
 function isMobile(page: Page): boolean {
   const size = page.viewportSize()
-  return size !== null && size.width < 1024
+  return size !== null && size.width < 400
 }
 
 /** Open Trip / Cities, handling the mobile ≡ menu vs. the desktop inline button. */
