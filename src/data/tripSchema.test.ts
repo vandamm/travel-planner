@@ -77,8 +77,8 @@ describe('tripDocumentSchema', () => {
     expect(bad.success).toBe(false)
   })
 
-  it('requires at least one hour for custom cards', () => {
-    for (const durationHours of [0.5, 0, -1]) {
+  it('accepts quarter-hour custom cards and rejects invalid increments', () => {
+    for (const durationHours of [0.2, 0.3, 0, -1]) {
       const result = tripDocumentSchema.safeParse({
         ...VALID,
         cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours }],
@@ -89,7 +89,7 @@ describe('tripDocumentSchema', () => {
     expect(
       tripDocumentSchema.safeParse({
         ...VALID,
-        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1.5 }],
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 0.25 }],
       }).success,
     ).toBe(true)
   })

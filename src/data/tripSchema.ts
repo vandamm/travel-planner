@@ -10,6 +10,7 @@
 
 import { isValid, parseISO } from 'date-fns'
 import { z } from 'zod'
+import { MIN_CARD_MINUTES, minutesToHours } from '../features/cards/cardHeight'
 
 /**
  * ISO-8601 date-only, 'YYYY-MM-DD'. The regex only checks shape, so a real
@@ -96,7 +97,10 @@ const cardBaseSchema = z.object({
 export const cardSchema = z.discriminatedUnion('duration', [
   cardBaseSchema.extend({ duration: z.literal('day') }).strict(),
   cardBaseSchema.extend({ duration: z.literal('half') }).strict(),
-  cardBaseSchema.extend({ duration: z.literal('custom'), durationHours: z.number().min(1) }).strict(),
+  cardBaseSchema.extend({
+    duration: z.literal('custom'),
+    durationHours: z.number().min(minutesToHours(MIN_CARD_MINUTES)).multipleOf(minutesToHours(MIN_CARD_MINUTES)),
+  }).strict(),
 ])
 
 // Entities are keyed by `id` on apply (into `Y.Map`s), so a duplicate id would

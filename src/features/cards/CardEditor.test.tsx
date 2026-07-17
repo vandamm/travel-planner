@@ -205,19 +205,21 @@ describe('CardEditor — create', () => {
     expect(row).toContain('"duration":"day"')
   })
 
-  it('defaults new cards to a one-hour custom duration', () => {
+  it('defaults new cards to a one-hour custom duration and accepts quarter-hour increments', () => {
     renderInRoom(<CreateHarness />)
     const duration = screen.getByRole('group', { name: 'Duration' })
-    expect(within(duration).getByLabelText('Duration hours')).toHaveAttribute('min', '1')
-    expect(within(duration).getByLabelText('Duration hours')).toHaveAttribute('step', '1')
+    const durationHours = within(duration).getByLabelText('Duration hours')
+    expect(durationHours).toHaveAttribute('min', '0.25')
+    expect(durationHours).toHaveAttribute('step', '0.25')
     expect(within(duration).getByText('h')).toBeInTheDocument()
     expect(duration).toHaveClass('items-center')
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Plain' } })
+    fireEvent.change(durationHours, { target: { value: '0.25' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Plain')) ?? ''
     expect(row).toContain('"duration":"custom"')
-    expect(row).toContain('"durationHours":1')
+    expect(row).toContain('"durationHours":0.25')
   })
 
   it('omits the time fields when the time toggle is off', () => {

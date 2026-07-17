@@ -151,10 +151,25 @@ describe('cards', () => {
     ])
   })
 
-  it('normalizes invalid custom durations to one hour on add and update', () => {
+  it('preserves valid quarter-hour custom durations and normalizes invalid values', () => {
     const doc = freshDoc()
-    const added = addCard(doc, { dayKey: '2027-05-01', title: 'A', duration: 'custom', durationHours: 0.5 })
-    expect(added).toMatchObject({ duration: 'custom', durationHours: 1 })
+    const added = addCard(doc, { dayKey: '2027-05-01', title: 'A', duration: 'custom', durationHours: 0.25 })
+    expect(added).toMatchObject({ duration: 'custom', durationHours: 0.25 })
+
+    const invalid = addCard(doc, { dayKey: '2027-05-01', title: 'Invalid', duration: 'custom', durationHours: 0.3 })
+    expect(invalid).toMatchObject({ duration: 'custom', durationHours: 1 })
+
+    const tooShort = addCard(doc, { dayKey: '2027-05-01', title: 'Too short', duration: 'custom', durationHours: 0.2 })
+    expect(tooShort).toMatchObject({ duration: 'custom', durationHours: 1 })
+
+    updateCard(doc, added.id, { duration: 'custom', durationHours: 0.75 })
+    expect(getCard(doc, added.id)).toMatchObject({ duration: 'custom', durationHours: 0.75 })
+
+    updateCard(doc, added.id, { duration: 'custom', durationHours: 0.3 })
+    expect(getCard(doc, added.id)).toMatchObject({ duration: 'custom', durationHours: 1 })
+
+    const defaulted = addCard(doc, { dayKey: '2027-05-01', title: 'Default', duration: 'custom', durationHours: undefined })
+    expect(defaulted).toMatchObject({ duration: 'custom', durationHours: 1 })
 
     const day = addCard(doc, { dayKey: '2027-05-01', title: 'B', duration: 'day' })
     updateCard(doc, day.id, { duration: 'custom', durationHours: undefined })

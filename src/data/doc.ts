@@ -17,6 +17,7 @@
 
 import * as Y from 'yjs'
 import type { Accommodation, Card, CardCategory, CardDuration, City, Trip } from './schema'
+import { isValidCustomDurationHours } from '../features/cards/cardHeight'
 
 const TRIP = 'trip'
 const CITIES = 'cities'
@@ -220,7 +221,7 @@ function nextOrder(doc: Y.Doc, dayKey: string): number {
 }
 
 function validCustomDurationHours(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 1
+  return isValidCustomDurationHours(value)
     ? value
     : DEFAULT_CUSTOM_DURATION_HOURS
 }

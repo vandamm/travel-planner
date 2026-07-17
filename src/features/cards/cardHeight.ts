@@ -8,8 +8,29 @@ import type { Card } from '../../data/schema'
 
 /** Pixels per hour of the time window — the timeline's vertical scale. */
 export const PX_PER_HOUR = 60
+/** Timeline and custom-duration granularity. */
+export const SNAP_MINUTES = 15
+/** Smallest permitted custom-card duration. */
+export const MIN_CARD_MINUTES = SNAP_MINUTES
 /** Default span for a new custom card. */
 export const DEFAULT_CARD_HOURS = 1
+
+/** Convert a duration between the document's hours and timeline minutes. */
+export function hoursToMinutes(hours: number): number {
+  return hours * 60
+}
+
+/** Convert a duration between the timeline's minutes and document hours. */
+export function minutesToHours(minutes: number): number {
+  return minutes / 60
+}
+
+/** Whether a custom duration is at least one snapped 15-minute interval. */
+export function isValidCustomDurationHours(value: unknown): value is number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return false
+  const minutes = hoursToMinutes(value)
+  return Number.isInteger(minutes) && minutes >= MIN_CARD_MINUTES && minutes % SNAP_MINUTES === 0
+}
 
 /** Minutes since midnight for an 'HH:mm' clock string; 0 when unparseable. */
 export function clockMinutes(hhmm: string): number {
@@ -53,7 +74,7 @@ export function resolvedDurationHours(card: Card, dayStart: string, dayEnd: stri
     case 'half':
       return windowHours(dayStart, dayEnd) / 2
     case 'custom':
-      return card.durationHours && card.durationHours >= DEFAULT_CARD_HOURS
+      return isValidCustomDurationHours(card.durationHours)
         ? card.durationHours
         : DEFAULT_CARD_HOURS
   }

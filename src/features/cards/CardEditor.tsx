@@ -11,6 +11,7 @@ import { addCard, removeCard, updateCard } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import type { Card, CardCategory, CardDuration } from '../../data/schema'
 import { cardCategory } from './cardCategory'
+import { isValidCustomDurationHours } from './cardHeight'
 
 /** Type segments: category value + the triad classes shown when selected. */
 const CATEGORIES: { value: CardCategory; label: string; selected: string }[] = [
@@ -62,7 +63,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
 
     const start = timed ? clean(startTime) : undefined
     const customHours = duration === 'custom' ? durationHours : undefined
-    if (customHours !== undefined && customHours < 1) return
+    if (customHours !== undefined && !isValidCustomDurationHours(customHours)) return
 
     if (isEdit) {
       // `undefined` clears the field, so toggling time off or emptying a field removes it.
@@ -198,8 +199,8 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
                 <input
                   aria-label="Duration hours"
                   type="number"
-                  min="1"
-                  step="1"
+                  min="0.25"
+                  step="0.25"
                   required
                   value={durationHours}
                   onChange={(e) => setDurationHours(e.target.valueAsNumber)}
