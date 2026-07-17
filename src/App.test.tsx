@@ -74,6 +74,35 @@ describe('App (with a room slug path)', () => {
     spy.mockRestore()
   })
 
+  it('keeps the app shell mounted after the initial connection resolves', async () => {
+    vi.stubEnv('MODE', 'production')
+    const doc = new Y.Doc()
+    let emitStatus!: (status: provider.SyncStatus) => void
+    const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
+      doc,
+      whenLocalLoaded: Promise.resolve(),
+      getStatus: () => 'connecting',
+      onStatus: (callback: (status: provider.SyncStatus) => void) => {
+        emitStatus = callback
+        return () => undefined
+      },
+      getPresences: () => [],
+      onPresences: () => () => undefined,
+      destroy: () => undefined,
+    } as unknown as provider.RoomConnection)
+
+    render(<App />)
+    expect(screen.getByText('Loading')).toBeInTheDocument()
+
+    act(() => emitStatus('synced'))
+    const appShell = await screen.findByTestId('app-seal').then((seal) => seal.closest('main'))
+
+    act(() => emitStatus('connecting'))
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument()
+    expect(screen.getByTestId('app-seal').closest('main')).toBe(appShell)
+    spy.mockRestore()
+  })
+
   it('does not render the on-page import/export controls', () => {
     render(<App />)
     expect(screen.queryByRole('button', { name: 'Export trip' })).not.toBeInTheDocument()
