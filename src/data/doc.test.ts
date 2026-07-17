@@ -181,7 +181,7 @@ describe('cards', () => {
   it('does not normalize a legacy custom duration during an unrelated update', () => {
     const doc = freshDoc()
     const legacy = addCard(doc, { dayKey: '2027-05-01', title: 'Legacy', duration: 'custom' })
-    doc.getMap('cards').get(legacy.id)?.set('durationHours', 1.1)
+    doc.getMap<Y.Map<unknown>>('cards').get(legacy.id)?.set('durationHours', 1.1)
 
     updateCard(doc, legacy.id, { title: 'Renamed legacy card' })
 
@@ -357,8 +357,10 @@ describe('activity day swaps', () => {
       expect(card.dayKey).toBe(
         before.dayKey === '2027-05-01' ? '2027-05-02' : '2027-05-01',
       )
-      const { dayKey: _beforeDay, ...beforeDetails } = before
-      const { dayKey: _afterDay, ...afterDetails } = card
+      const { dayKey: beforeDayKey, ...beforeDetails } = before
+      const { dayKey: afterDayKey, ...afterDetails } = card
+      void beforeDayKey
+      void afterDayKey
       expect(afterDetails).toEqual(beforeDetails)
     }
     const afterOverrides = listDayOverrides(doc)

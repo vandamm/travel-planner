@@ -82,7 +82,7 @@ describe('exportTrip', () => {
   it('exports a legacy non-quarter custom duration unchanged', () => {
     const doc = new Y.Doc()
     addCard(doc, { id: 'legacy', dayKey: '2027-05-01', title: 'Legacy', order: 0 })
-    doc.getMap('cards').get('legacy')?.set('durationHours', 1.1)
+    doc.getMap<Y.Map<unknown>>('cards').get('legacy')?.set('durationHours', 1.1)
 
     expect(exportTrip(doc).cards[0]).toMatchObject({ duration: 'custom', durationHours: 1.1 })
   })
