@@ -9,7 +9,9 @@
 
   button,
   a,
-  input {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3157d5] focus-visible:ring-offset-2;
+  input,
+  textarea,
+  select {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-vermilion focus-visible:ring-offset-2;
   }
 }
