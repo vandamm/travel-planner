@@ -43,6 +43,15 @@ describe('applyTrip', () => {
     expect(card2).toMatchObject({ order: 1, startTime: '18:30' })
   })
 
+  it('applies an explicit no-city override', () => {
+    const doc = new Y.Doc()
+    applyTrip(doc, {
+      ...TRIP,
+      dayOverrides: { '2027-05-02': null },
+    })
+    expect(listDayOverrides(doc)).toEqual({ '2027-05-02': null })
+  })
+
   it('fully replaces any pre-existing data (not a merge)', () => {
     const doc = new Y.Doc()
     addCity(doc, { id: 'stale', name: 'Stale', color: '#000000' })

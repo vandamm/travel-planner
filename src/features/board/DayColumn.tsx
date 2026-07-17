@@ -7,7 +7,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { format, isWeekend, parseISO } from 'date-fns'
 import { formatDay } from '../../data/dateFormat'
-import type { Card as CardType, City, Day } from '../../data/schema'
+import type { Card as CardType, City, Day, DayCityOverride } from '../../data/schema'
 import { NO_CITY_COLOR } from '../cities/colors'
 import { SortableCard } from '../cards/Card'
 import {
@@ -36,14 +36,18 @@ export interface DayColumnProps {
   /** All cities, to populate the per-day override picker (omit/empty → no picker). */
   cities?: City[]
   /** The day's *manual* override city id, if any (drives the picker value + flag). */
-  overrideCityId?: string
-  /** Set or clear this day's manual city override (`null` = Auto / no override). */
-  onSetCity?: (dayKey: string, cityId: string | null) => void
+  overrideCityId?: DayCityOverride
+  /** Set a city, choose explicit No city (`null`), or clear to Auto (`undefined`). */
+  onSetCity?: (dayKey: string, cityId: DayCityOverride | undefined) => void
+  /** Open the two-day activity swap workflow from this day. */
+  onSwapDay?: (dayKey: string) => void
   /** Open the editor to add a card to this day. */
   onAddCard?: (dayKey: string) => void
   /** Open the editor on an existing card. */
   onEditCard?: (card: CardType) => void
 }
+
+const NO_CITY_OPTION = '__no-city__'
 
 function cardGapPx(
   card: CardType,
@@ -97,6 +101,7 @@ export function DayColumn({
   cities = [],
   overrideCityId,
   onSetCity,
+  onSwapDay,
   onAddCard,
   onEditCard,
 }: DayColumnProps) {
@@ -133,12 +138,23 @@ export function DayColumn({
     >
       <header className="rounded-t-frame">
         <div className="flex flex-col gap-0.5 px-3 pb-2 pt-2.5">
-          <span
-            data-testid="day-label"
-            className={`text-[9.5px] font-extrabold uppercase tracking-[0.18em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
-          >
-            {weekday} · {dateLabel}
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              data-testid="day-label"
+              className={`text-[9.5px] font-extrabold uppercase tracking-[0.18em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
+            >
+              {weekday} · {dateLabel}
+            </span>
+            {onSwapDay && (
+              <button
+                type="button"
+                onClick={() => onSwapDay(day.key)}
+                className="text-[10px] font-semibold text-ink-400 underline decoration-edge-300 underline-offset-2 hover:text-ink-600"
+              >
+                Swap day
+              </button>
+            )}
+          </div>
           <div className="flex items-center justify-between gap-1.5">
             <span
               data-testid="city-name"
@@ -150,10 +166,14 @@ export function DayColumn({
               <select
                 data-testid="city-override"
                 aria-label={`City for ${weekday} ${dateLabel}`}
-                value={overrideCityId ?? ''}
-                onChange={(e) =>
-                  onSetCity?.(day.key, e.target.value === '' ? null : e.target.value)
-                }
+                value={overrideCityId === null ? NO_CITY_OPTION : (overrideCityId ?? '')}
+                onChange={(e) => {
+                  const value = e.target.value
+                  onSetCity?.(
+                    day.key,
+                    value === '' ? undefined : value === NO_CITY_OPTION ? null : value,
+                  )
+                }}
                 className="max-w-[6rem] rounded-chip border border-edge bg-white px-1 py-0.5 text-xs text-ink-600"
                 style={
                   overrideCityId && city
@@ -162,6 +182,7 @@ export function DayColumn({
                 }
               >
                 <option value="">Auto</option>
+                <option value={NO_CITY_OPTION}>No city</option>
                 {cities.map((c) => (
                   <option key={c.id} value={c.id} style={{ color: c.color }}>
                     {c.name}

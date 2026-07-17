@@ -2,7 +2,13 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { ReactNode } from 'react'
 import * as Y from 'yjs'
-import { addAccommodation, addCard, addCity, setTrip } from '../../data/doc'
+import {
+  addAccommodation,
+  addCard,
+  addCity,
+  listAccommodations,
+  setTrip,
+} from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import { RoomProvider } from '../../data/RoomProvider'
 import { Board } from './Board'
@@ -105,6 +111,57 @@ describe('Board', () => {
       fireEvent.change(within(column).getByTestId('city-override'), { target: { value: '' } })
     })
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
+  })
+
+  it('opens a day-swap dialog and confirms one atomic desktop swap', () => {
+    renderBoard(<Board />)
+    act(() => {
+      setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-02' })
+      addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+      addCity(doc, { id: 'florence', name: 'Florence', color: '#3b82f6' })
+      addAccommodation(doc, {
+        id: 'rome-stay',
+        label: 'Hotel Roma',
+        cityId: 'rome',
+        startNight: '2027-05-01',
+        endNight: '2027-05-01',
+      })
+      addAccommodation(doc, {
+        id: 'florence-stay',
+        label: 'Hotel Firenze',
+        cityId: 'florence',
+        startNight: '2027-05-02',
+        endNight: '2027-05-02',
+      })
+      addCard(doc, { id: 'rome-card', dayKey: '2027-05-01', title: 'Rome tour' })
+      addCard(doc, { id: 'florence-card', dayKey: '2027-05-02', title: 'Florence walk' })
+    })
+    const accommodationsBefore = JSON.stringify(listAccommodations(doc))
+    const firstColumn = screen.getAllByTestId('day-column')[0]
+
+    act(() => {
+      within(firstColumn).getByRole('button', { name: 'Swap day' }).click()
+    })
+    const dialog = screen.getByRole('dialog', { name: 'Swap activity day' })
+    expect(within(dialog).getByTestId('swap-source')).toHaveTextContent('Rome')
+    expect(within(dialog).getByTestId('swap-target')).toHaveTextContent('Florence')
+
+    let updates = 0
+    doc.on('update', () => {
+      updates += 1
+    })
+    act(() => {
+      within(dialog).getByRole('button', { name: 'Swap days' }).click()
+    })
+
+    expect(updates).toBe(1)
+    expect(screen.queryByRole('dialog', { name: 'Swap activity day' })).not.toBeInTheDocument()
+    const [firstAfter, secondAfter] = screen.getAllByTestId('day-column')
+    expect(within(firstAfter).getByTestId('city-name')).toHaveTextContent('Florence')
+    expect(within(firstAfter).getByTestId('card-title')).toHaveTextContent('Florence walk')
+    expect(within(secondAfter).getByTestId('city-name')).toHaveTextContent('Rome')
+    expect(within(secondAfter).getByTestId('card-title')).toHaveTextContent('Rome tour')
+    expect(JSON.stringify(listAccommodations(doc))).toBe(accommodationsBefore)
   })
 
   it('opens the accommodation editor from the Add stay button', () => {

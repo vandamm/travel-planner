@@ -119,8 +119,8 @@ export const tripDocumentSchema = z
     cities: z.array(citySchema).refine(uniqueIds, DUPLICATE_ID).default([]),
     accommodations: z.array(accommodationSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
     cards: z.array(cardSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
-    // dayKey → cityId.
-    dayOverrides: z.record(z.string(), z.string()).default({}),
+    // dayKey → cityId | null. Missing key = Auto; null = explicit No city.
+    dayOverrides: z.record(z.string(), z.string().nullable()).default({}),
   })
   // Referential integrity: every accommodation/override cityId must name a city
   // in `cities`. `removeCity` cascades to prevent dangling references (see
@@ -138,7 +138,7 @@ export const tripDocumentSchema = z
       }
     })
     for (const [dayKey, cityId] of Object.entries(document.dayOverrides)) {
-      if (!cityIds.has(cityId)) {
+      if (cityId !== null && !cityIds.has(cityId)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['dayOverrides', dayKey],

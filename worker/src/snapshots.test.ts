@@ -32,6 +32,13 @@ describe('snapshot store', () => {
     expect(await getSnapshot(kv, 'room1', id)).toBe(json)
   })
 
+  it('preserves an explicit no-city override in snapshot JSON', async () => {
+    const kv = makeKv()
+    const json = JSON.stringify({ dayOverrides: { '2027-05-02': null } })
+    const { id } = await recordSnapshot(kv, 'room1', json, 1000)
+    expect(await getSnapshot(kv, 'room1', id)).toBe(json)
+  })
+
   it('lists a room’s snapshots newest first with ids and timestamps', async () => {
     const kv = makeKv()
     const v1 = await recordSnapshot(kv, 'room1', 'v1', 1000)

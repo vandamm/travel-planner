@@ -185,16 +185,21 @@ describe('DayColumn', () => {
     expect(screen.getByText('Late start').closest('li')).toHaveStyle({ marginTop: '180px' })
   })
 
-  it('offers an Auto + per-city override control, defaulting to Auto', () => {
+  it('offers Auto, No city, and per-city overrides, defaulting to Auto', () => {
     render(
       <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
     )
     const select = screen.getByTestId('city-override') as HTMLSelectElement
-    expect([...select.options].map((o) => o.textContent)).toEqual(['Auto', 'Rome', 'Florence'])
+    expect([...select.options].map((o) => o.textContent)).toEqual([
+      'Auto',
+      'No city',
+      'Rome',
+      'Florence',
+    ])
     expect(select.value).toBe('') // no override → Auto
     expect(select).not.toHaveAttribute('style')
-    expect(select.options[1]).toHaveStyle({ color: '#ef4444' })
-    expect(select.options[2]).toHaveStyle({ color: '#3b82f6' })
+    expect(select.options[2]).toHaveStyle({ color: '#ef4444' })
+    expect(select.options[3]).toHaveStyle({ color: '#3b82f6' })
   })
 
   it('reflects an existing manual override without an extra marker', () => {
@@ -214,7 +219,7 @@ describe('DayColumn', () => {
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
-  it('calls onSetCity with a city id when one is chosen, and null for Auto', () => {
+  it('calls onSetCity with a city id, null for No city, and undefined for Auto', () => {
     const onSetCity = vi.fn()
     render(
       <DayColumn
@@ -229,8 +234,39 @@ describe('DayColumn', () => {
     const select = screen.getByTestId('city-override')
     fireEvent.change(select, { target: { value: 'florence' } })
     expect(onSetCity).toHaveBeenCalledWith('2027-05-01', 'florence')
-    fireEvent.change(select, { target: { value: '' } })
+    fireEvent.change(select, { target: { value: '__no-city__' } })
     expect(onSetCity).toHaveBeenCalledWith('2027-05-01', null)
+    fireEvent.change(select, { target: { value: '' } })
+    expect(onSetCity).toHaveBeenCalledWith('2027-05-01', undefined)
+  })
+
+  it('reflects an explicit no-city override', () => {
+    render(
+      <DayColumn
+        day={day}
+        cards={[]}
+        direction="down"
+        cities={[rome]}
+        overrideCityId={null}
+      />,
+    )
+    expect(screen.getByTestId('city-override')).toHaveValue('__no-city__')
+  })
+
+  it('opens the day swap workflow from the header action', () => {
+    const onSwapDay = vi.fn()
+    render(
+      <DayColumn
+        day={day}
+        city={rome}
+        cards={[]}
+        direction="down"
+        onSwapDay={onSwapDay}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Swap day' }))
+    expect(onSwapDay).toHaveBeenCalledOnce()
+    expect(onSwapDay).toHaveBeenCalledWith(day.key)
   })
 
   it('omits the override control when there are no cities to choose from', () => {

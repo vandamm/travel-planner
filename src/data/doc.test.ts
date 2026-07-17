@@ -20,10 +20,12 @@ import {
   reorderCards,
   setDayCityOverride,
   setTrip,
+  swapActivityDays,
   updateAccommodation,
   updateCard,
   updateCity,
 } from './doc'
+import { resolveDayCity } from './cityResolution'
 
 function freshDoc() {
   return new Y.Doc()
@@ -269,15 +271,126 @@ describe('cards', () => {
 })
 
 describe('day city overrides', () => {
-  it('sets, reads, and clears a per-day override', () => {
+  it('distinguishes a pinned city, explicit no-city, and Auto', () => {
     const doc = freshDoc()
     setDayCityOverride(doc, '2027-05-03', 'venice')
     expect(getDayOverride(doc, '2027-05-03')).toBe('venice')
     expect(listDayOverrides(doc)).toEqual({ '2027-05-03': 'venice' })
 
     setDayCityOverride(doc, '2027-05-03', null)
+    expect(getDayOverride(doc, '2027-05-03')).toBeNull()
+    expect(listDayOverrides(doc)).toEqual({ '2027-05-03': null })
+
+    setDayCityOverride(doc, '2027-05-03', undefined)
     expect(getDayOverride(doc, '2027-05-03')).toBeUndefined()
     expect(listDayOverrides(doc)).toEqual({})
+  })
+})
+
+describe('activity day swaps', () => {
+  it('atomically exchanges cards and displayed cities without changing card details or stays', () => {
+    const doc = freshDoc()
+    addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+    addCity(doc, { id: 'florence', name: 'Florence', color: '#3b82f6' })
+    addAccommodation(doc, {
+      id: 'rome-stay',
+      label: 'Hotel Roma',
+      cityId: 'rome',
+      startNight: '2027-05-01',
+      endNight: '2027-05-01',
+    })
+    addAccommodation(doc, {
+      id: 'florence-stay',
+      label: 'Hotel Firenze',
+      cityId: 'florence',
+      startNight: '2027-05-02',
+      endNight: '2027-05-02',
+    })
+    addCard(doc, {
+      id: 'museum',
+      dayKey: '2027-05-01',
+      title: 'Museum',
+      startTime: '09:15',
+      duration: 'custom',
+      durationHours: 1.5,
+      order: 7,
+    })
+    addCard(doc, {
+      id: 'dinner',
+      dayKey: '2027-05-01',
+      title: 'Dinner',
+      startTime: '19:00',
+      duration: 'half',
+      order: 2,
+    })
+    addCard(doc, {
+      id: 'garden',
+      dayKey: '2027-05-02',
+      title: 'Garden',
+      duration: 'day',
+      order: 4,
+    })
+
+    const beforeCards = new Map(listCards(doc).map((card) => [card.id, card]))
+    const accommodationsBefore = JSON.stringify(listAccommodations(doc))
+    const beforeOverrides = listDayOverrides(doc)
+    const beforeFirstCity = resolveDayCity(
+      '2027-05-01',
+      listAccommodations(doc),
+      beforeOverrides,
+    )
+    const beforeSecondCity = resolveDayCity(
+      '2027-05-02',
+      listAccommodations(doc),
+      beforeOverrides,
+    )
+    let updates = 0
+    doc.on('update', () => {
+      updates += 1
+    })
+
+    swapActivityDays(doc, '2027-05-01', '2027-05-02')
+
+    expect(updates).toBe(1)
+    for (const card of listCards(doc)) {
+      const before = beforeCards.get(card.id)!
+      expect(card.dayKey).toBe(
+        before.dayKey === '2027-05-01' ? '2027-05-02' : '2027-05-01',
+      )
+      const { dayKey: _beforeDay, ...beforeDetails } = before
+      const { dayKey: _afterDay, ...afterDetails } = card
+      expect(afterDetails).toEqual(beforeDetails)
+    }
+    const afterOverrides = listDayOverrides(doc)
+    expect(resolveDayCity('2027-05-01', listAccommodations(doc), afterOverrides)).toBe(
+      beforeSecondCity,
+    )
+    expect(resolveDayCity('2027-05-02', listAccommodations(doc), afterOverrides)).toBe(
+      beforeFirstCity,
+    )
+    expect(JSON.stringify(listAccommodations(doc))).toBe(accommodationsBefore)
+  })
+
+  it('keeps a cityless day cityless after it moves onto a covered date', () => {
+    const doc = freshDoc()
+    addCity(doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
+    addAccommodation(doc, {
+      id: 'rome-stay',
+      label: 'Hotel Roma',
+      cityId: 'rome',
+      startNight: '2027-05-02',
+      endNight: '2027-05-02',
+    })
+
+    swapActivityDays(doc, '2027-05-01', '2027-05-02')
+
+    expect(listDayOverrides(doc)).toEqual({
+      '2027-05-01': 'rome',
+      '2027-05-02': null,
+    })
+    expect(
+      resolveDayCity('2027-05-02', listAccommodations(doc), listDayOverrides(doc)),
+    ).toBeUndefined()
   })
 })
 

@@ -140,6 +140,14 @@ describe('exportTrip', () => {
     })
   })
 
+  it('preserves an explicit no-city override without a city reference', () => {
+    const doc = new Y.Doc()
+    setTrip(doc, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
+    setDayCityOverride(doc, '2027-05-02', null)
+
+    expect(exportTrip(doc).dayOverrides).toEqual({ '2027-05-02': null })
+  })
+
   it('prunes only dangling city references when valid refs are mixed in the same export', () => {
     const removeDoc = new Y.Doc()
     const addRefDoc = new Y.Doc()
@@ -237,6 +245,19 @@ describe('export → import round-trip', () => {
     const target = new Y.Doc()
     applyTrip(target, exported)
     expect(exportTrip(target)).toEqual(exported)
+  })
+
+  it('round-trips an explicit no-city override', () => {
+    const source = new Y.Doc()
+    setTrip(source, { title: 'T', startDate: '2027-05-01', endDate: '2027-05-02' })
+    setDayCityOverride(source, '2027-05-01', null)
+
+    const exported = exportTrip(source)
+    const target = new Y.Doc()
+    applyTrip(target, exported)
+
+    expect(exportTrip(target)).toEqual(exported)
+    expect(exported.dayOverrides).toEqual({ '2027-05-01': null })
   })
 
   it('round-trips a pruned export', () => {

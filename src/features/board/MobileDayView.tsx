@@ -8,7 +8,14 @@
 
 import { useLayoutEffect, useRef, useState } from 'react'
 import { resolveDayCity } from '../../data/cityResolution'
-import type { Accommodation, Card, City, Day } from '../../data/schema'
+import type {
+  Accommodation,
+  Card,
+  City,
+  Day,
+  DayCityOverride,
+  DayCityOverrides,
+} from '../../data/schema'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
 import { DayColumn } from './DayColumn'
 import { clampDayIndex } from './mobileDayViewMath'
@@ -24,7 +31,7 @@ export interface MobileDayViewProps {
   cardsByDay: Map<string, Card[]>
   accommodations: Accommodation[]
   /** Per-day city overrides (day key → city id). */
-  overrides: Record<string, string>
+  overrides: DayCityOverrides
   /** City lookup for coloring the day header. */
   cityById: Map<string, City>
   /** All cities, forwarded to each day's override picker. */
@@ -39,8 +46,9 @@ export interface MobileDayViewProps {
   onEditCard?: (card: Card) => void
   onEditAccommodation?: (accommodation: Accommodation) => void
   onAddStay?: (startNight?: string) => void
-  /** Set or clear a day's manual city override (`null` = Auto). */
-  onSetCity?: (dayKey: string, cityId: string | null) => void
+  /** Set, explicitly clear, or return a day's city to Auto. */
+  onSetCity?: (dayKey: string, cityId: DayCityOverride | undefined) => void
+  onSwapDay?: (dayKey: string) => void
 }
 
 export function MobileDayView({
@@ -59,6 +67,7 @@ export function MobileDayView({
   onEditAccommodation,
   onAddStay,
   onSetCity,
+  onSwapDay,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -201,6 +210,7 @@ export function MobileDayView({
                 cities={cities}
                 overrideCityId={overrides[day.key]}
                 onSetCity={onSetCity}
+                onSwapDay={onSwapDay}
                 onAddCard={onAddCard}
                 onEditCard={onEditCard}
               />

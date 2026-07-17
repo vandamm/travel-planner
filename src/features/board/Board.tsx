@@ -12,18 +12,20 @@ import {
   listCities,
   listDayOverrides,
   setDayCityOverride,
+  swapActivityDays,
 } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
 import { generateDays, toDayKey } from '../../data/days'
 import { COLUMN_STRIDE_PX, rangeLabel, showRightFade, todayIndex } from './multiWeekNav'
-import type { Accommodation, Card } from '../../data/schema'
+import type { Accommodation, Card, City } from '../../data/schema'
 import { AccommodationEditor } from '../accommodation/AccommodationEditor'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
 import { CardEditor } from '../cards/CardEditor'
 import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
+import { DaySwapModal } from './DaySwapModal'
 import { MobileDayView } from './MobileDayView'
 import { useTimeDirection } from './useTimeDirection'
 import { useUndoManager } from './undoManager'
@@ -53,6 +55,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   const columns = useColumnsThatFit()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [accEditor, setAccEditor] = useState<AccEditorState | null>(null)
+  const [swapSourceDayKey, setSwapSourceDayKey] = useState<string | null>(null)
   // Render the completed atomic drag transaction immediately; the normal doc
   // subscription still handles edits made through every other path.
   const [, rerenderAfterDrop] = useState(0)
@@ -74,6 +77,13 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
   const overrides = listDayOverrides(doc)
   const cities = listCities(doc)
   const cityById = new Map(cities.map((c) => [c.id, c]))
+  const cityByDay = new Map<string, City | undefined>(
+    days.map((day) => {
+      const cityId = resolveDayCity(day.key, accommodations, overrides)
+      return [day.key, cityId ? cityById.get(cityId) : undefined]
+    }),
+  )
+  const swapSourceDay = days.find((day) => day.key === swapSourceDayKey)
 
   const cardsByDay = new Map<string, Card[]>()
   for (const card of listCards(doc)) {
@@ -252,6 +262,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
               onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
               onEditCard={(card) => setEditor({ mode: 'edit', card })}
               onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
+              onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
               onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
               onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
             />
@@ -297,6 +308,7 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
                       cities={cities}
                       overrideCityId={overrides[day.key]}
                       onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
+                      onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
                       onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
                       onEditCard={(card) => setEditor({ mode: 'edit', card })}
                     />
@@ -331,6 +343,19 @@ export function Board({ addStayNonce = 0 }: BoardProps) {
           defaultStartNight={createStartNight}
           defaultEndNight={createStartNight}
           onClose={() => setAccEditor(null)}
+        />
+      )}
+
+      {swapSourceDay && (
+        <DaySwapModal
+          sourceDay={swapSourceDay}
+          days={days}
+          cityByDay={cityByDay}
+          onClose={() => setSwapSourceDayKey(null)}
+          onConfirm={(targetDayKey) => {
+            swapActivityDays(doc, swapSourceDay.key, targetDayKey)
+            setSwapSourceDayKey(null)
+          }}
         />
       )}
     </section>

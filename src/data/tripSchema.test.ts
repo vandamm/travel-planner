@@ -204,6 +204,17 @@ describe('tripDocumentSchema', () => {
     if (!result.success) expect(result.error.issues[0].path).toEqual(['dayOverrides', '2027-05-02'])
   })
 
+  it('accepts a null dayOverride without looking up a city', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cities: [],
+      accommodations: [],
+      dayOverrides: { '2027-05-02': null },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.dayOverrides).toEqual({ '2027-05-02': null })
+  })
+
   it('rejects a card link with a non-http(s) scheme', () => {
     const result = tripDocumentSchema.safeParse({
       ...VALID,

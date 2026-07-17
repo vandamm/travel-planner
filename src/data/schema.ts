@@ -44,6 +44,11 @@ export interface Day {
   cityId?: string
 }
 
+/** A per-day city choice: `null` explicitly keeps the day cityless. */
+export type DayCityOverride = string | null
+/** Missing key = Auto; `null` = No city; string = pinned city id. */
+export type DayCityOverrides = Record<string, DayCityOverride>
+
 /** How long an activity occupies on a day timeline. */
 export type CardDuration = 'day' | 'half' | 'custom'
 

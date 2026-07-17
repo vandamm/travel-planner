@@ -12,7 +12,7 @@
 // ISO 'YYYY-MM-DD' strings sort lexicographically, which is why the span checks
 // and the "latest check-in" comparison can use plain string comparison.
 
-import type { Accommodation, Day } from './schema'
+import type { Accommodation, Day, DayCityOverrides } from './schema'
 
 /**
  * Whether an accommodation's inclusive night span covers a given day. A stay
@@ -25,15 +25,17 @@ export function accommodationCoversDay(acc: Accommodation, dayKey: string): bool
 
 /**
  * Resolve the city id for a single day. Returns `undefined` when nothing
- * applies (a travel day). `overrides` maps day key → city id.
+ * applies (a travel day). A present `null` override explicitly blocks
+ * accommodation inheritance; an absent key uses Auto resolution.
  */
 export function resolveDayCity(
   dayKey: string,
   accommodations: Accommodation[],
-  overrides: Record<string, string> = {},
+  overrides: DayCityOverrides = {},
 ): string | undefined {
-  const override = overrides[dayKey]
-  if (override) return override
+  if (Object.prototype.hasOwnProperty.call(overrides, dayKey)) {
+    return overrides[dayKey] ?? undefined
+  }
 
   const covering = accommodations
     .filter((a) => a.cityId && accommodationCoversDay(a, dayKey))
