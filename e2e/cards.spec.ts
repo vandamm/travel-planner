@@ -10,21 +10,20 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 
   // Create a card on the first day.
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Visit Colosseum')
-  await editor.getByLabel('Set a time').check()
+  await editor.getByLabel('Title').fill('Visit Colosseum')
   await pickTime(editor, 'Start time', '10:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit Colosseum')
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h')
 
   // Edit the card.
   await firstColumn.getByRole('button', { name: 'Edit Visit Colosseum' }).click()
   const editAgain = page.getByRole('dialog', { name: 'Card editor' })
-  await expect(editAgain.getByLabel('Card title')).toHaveValue('Visit Colosseum')
-  await editAgain.getByLabel('Card title').fill('Visit the Forum')
+  await expect(editAgain.getByLabel('Title')).toHaveValue('Visit Colosseum')
+  await editAgain.getByLabel('Title').fill('Visit the Forum')
   await editAgain.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit the Forum')

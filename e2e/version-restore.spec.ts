@@ -35,7 +35,7 @@ test('Recent versions: restore reverts the board to an earlier snapshot', async 
   await page.goto(RESTORE_LINK)
   await setupTrip(page, { title: 'Current Draft', startDate: '2027-05-01', endDate: '2027-05-03' })
 
-  await page.getByRole('button', { name: 'Trip' }).click()
+  await page.getByRole('button', { name: 'Edit trip' }).click()
   const dialog = page.getByRole('dialog', { name: 'Trip details' })
   await dialog.getByText('Trip JSON (for AI)').click()
   await dialog.getByText('Recent versions').click()

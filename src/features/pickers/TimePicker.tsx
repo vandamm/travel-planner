@@ -78,7 +78,7 @@ function Wheel({
   const current = formatTime({ hour, minute })
 
   return (
-    <div className="w-44">
+    <div className="w-44 rounded-frame border border-edge-150 bg-white p-2 shadow-popover">
       <div className="flex items-stretch justify-center gap-1">
         <Column label="Hour" values={HOURS} selected={hour} onSelect={setHour} />
         <span className="self-center font-serif text-lg text-ink-400">:</span>
@@ -125,7 +125,7 @@ function Column({
   }, [selected])
 
   return (
-    <div role="listbox" aria-label={label} className="h-36 w-16 overflow-y-auto rounded-card border border-edge">
+    <div role="listbox" aria-label={label} className="h-36 w-16 overflow-y-auto rounded-card border border-edge-150 bg-surface">
       <div aria-hidden className="h-[55px]" />
       {values.map((v, i) => {
         const active = i === selected

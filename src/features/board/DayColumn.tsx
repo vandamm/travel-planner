@@ -6,9 +6,9 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { format, isWeekend, parseISO } from 'date-fns'
-import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day } from '../../data/schema'
 import { NO_CITY_COLOR } from '../cities/colors'
+import { CityPicker } from '../cities/CityPicker'
 import { SortableCard } from '../cards/Card'
 import {
   PX_PER_HOUR,
@@ -21,6 +21,7 @@ import {
 import { useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
+import { freeTimelineSlots } from './timelineSlots'
 import { COLUMN_WIDTH_REM } from './useViewport'
 
 export interface DayColumnProps {
@@ -40,9 +41,11 @@ export interface DayColumnProps {
   /** Set or clear this day's manual city override (`null` = Auto / no override). */
   onSetCity?: (dayKey: string, cityId: string | null) => void
   /** Open the editor to add a card to this day. */
-  onAddCard?: (dayKey: string) => void
+  onAddCard?: (dayKey: string, startTime?: string) => void
   /** Open the editor on an existing card. */
   onEditCard?: (card: CardType) => void
+  /** The mobile view supplies its own compact day header. */
+  showHeader?: boolean
 }
 
 function cardGapPx(
@@ -99,13 +102,15 @@ export function DayColumn({
   onSetCity,
   onAddCard,
   onEditCard,
+  showHeader = true,
 }: DayColumnProps) {
   const ordered = orderCardsForDirection(cards, direction)
+  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd)
   const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
   const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const cardCursor = { current: 0 }
-  const weekday = format(parseISO(day.key), 'EEE')
-  const dateLabel = formatDay(day.key) // day-first dd.MM for the EU audience
+  const weekday = format(parseISO(day.key), 'EEE').toUpperCase()
+  const dateLabel = format(parseISO(day.key), 'dd MMM').toUpperCase()
   const weekend = isWeekend(parseISO(day.key))
 
   // NOON hairline: a positional hint at noon's fraction of the day window.
@@ -131,7 +136,7 @@ export function DayColumn({
       style={{ width: COLUMN_WIDTH_REM }}
       className={`flex shrink-0 flex-col rounded-frame border bg-white shadow-sm ${dragOver ? 'border-sky-400 ring-2 ring-sky-300' : 'border-edge'}`}
     >
-      <header className="rounded-t-frame">
+      {showHeader && <header className="rounded-t-frame">
         <div className="flex flex-col gap-0.5 px-3 pb-2 pt-2.5">
           <span
             data-testid="day-label"
@@ -140,34 +145,11 @@ export function DayColumn({
             {weekday} · {dateLabel}
           </span>
           <div className="flex items-center justify-between gap-1.5">
-            <span
-              data-testid="city-name"
-              className="font-serif text-lg font-bold leading-tight text-ink"
-            >
+            <span data-testid="city-name" className="font-serif text-lg font-bold leading-tight text-ink">
               {city ? city.name : <span className="text-ink-300">No city</span>}
             </span>
             {cities.length > 0 && (
-              <select
-                data-testid="city-override"
-                aria-label={`City for ${weekday} ${dateLabel}`}
-                value={overrideCityId ?? ''}
-                onChange={(e) =>
-                  onSetCity?.(day.key, e.target.value === '' ? null : e.target.value)
-                }
-                className="max-w-[6rem] rounded-chip border border-edge bg-white px-1 py-0.5 text-xs text-ink-600"
-                style={
-                  overrideCityId && city
-                    ? { borderColor: city.color, color: city.color }
-                    : undefined
-                }
-              >
-                <option value="">Auto</option>
-                {cities.map((c) => (
-                  <option key={c.id} value={c.id} style={{ color: c.color }}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <CityPicker label="Choose city" value={overrideCityId} resolvedCityId={city?.id} cities={cities} onChange={(cityId) => onSetCity?.(day.key, cityId)} />
             )}
           </div>
         </div>
@@ -176,7 +158,7 @@ export function DayColumn({
           style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
           className="h-[3px] w-full"
         />
-      </header>
+      </header>}
 
       <div
         ref={setNodeRef}
@@ -216,7 +198,26 @@ export function DayColumn({
           ))}
         </ol>
 
-        <ol data-testid="card-list" className="relative flex flex-col pl-0">
+        {freeSlots.map((slot) => {
+          const start = clockMinutes(slot.startTime)
+          const end = clockMinutes(slot.endTime)
+          const offset = direction === 'up' ? clockMinutes(dayEnd) - end : start - clockMinutes(dayStart)
+          return (
+            <button
+              key={`${slot.startTime}-${slot.endTime}`}
+              type="button"
+              data-testid="timeline-slot"
+              aria-label={`+ add activity at ${slot.startTime}`}
+              onClick={() => onAddCard?.(day.key, slot.startTime)}
+              style={{ top: (offset / 60) * PX_PER_HOUR, height: ((end - start) / 60) * PX_PER_HOUR }}
+              className="absolute left-3 right-3 z-0 border-y border-dashed border-edge-150 text-left font-serif text-xs italic text-ink-300 opacity-0 transition-opacity hover:opacity-100 focus:opacity-100"
+            >
+              + add activity
+            </button>
+          )
+        })}
+
+        <ol data-testid="card-list" className="relative z-10 flex flex-col pl-0">
           {ordered.map((c) => {
             const gap = cardGapPx(c, direction, dayStart, dayEnd, cardCursor)
             return (
@@ -237,11 +238,11 @@ export function DayColumn({
       <footer className="px-3 pb-3 pt-1">
         <button
           type="button"
-          aria-label={`Add card to ${weekday} ${dateLabel}`}
+          aria-label="Add activity"
           onClick={() => onAddCard?.(day.key)}
-          className="w-full rounded border border-dashed border-edge-300 px-2 py-1 text-xs font-medium text-ink-500 hover:border-ink-300 hover:text-ink-600"
+          className="w-full rounded border border-dashed border-edge-300 px-2 py-1 font-serif text-xs italic text-ink-500 hover:border-ink-300 hover:text-ink-600"
         >
-          + Add card
+          + add activity
         </button>
       </footer>
     </section>

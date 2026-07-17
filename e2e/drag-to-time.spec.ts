@@ -39,18 +39,17 @@ test('dragging an untimed card toward the evening gives it an evening time', asy
     ['Dinner', '19:00'],
     ['Stroll', undefined],
   ] as const) {
-    await column.getByRole('button', { name: /Add card/ }).click()
+    await column.getByRole('button', { name: 'Add activity', exact: true }).click()
     const editor = page.getByRole('dialog', { name: 'Card editor' })
-    await editor.getByLabel('Card title').fill(title)
+    await editor.getByLabel('Title').fill(title)
     if (time) {
-      await editor.getByLabel('Set a time').check()
       await pickTime(editor, 'Start time', time)
     }
     await editor.getByRole('button', { name: 'Save card' }).click()
   }
 
   const stroll = column.locator('[data-testid="card"]', { hasText: 'Stroll' })
-  await expect(stroll.getByTestId('card-time')).toHaveText('1h')
+  await expect(stroll.getByTestId('card-time')).toHaveCount(0)
 
   // Drag the untimed card onto the evening (Dinner) card → lands beside it and
   // gains a time between 08:00 and 19:00 (or after it), i.e. it becomes timed.

@@ -6,20 +6,18 @@ import { pickTime, setupTrip, E2E_LINK } from './helpers'
 // times and unit-tested in cardHeight.test.ts; here we only prove the wheel
 // writes/clears the stored HH:mm.)
 
-test('setting a card start + end through the wheel shows the time range', async ({ page }) => {
+test('setting a card start through the wheel shows its start and duration', async ({ page }) => {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Train ride')
-  await editor.getByLabel('Set a time').check()
+  await editor.getByLabel('Title').fill('Train ride')
   await pickTime(editor, 'Start time', '10:00')
-  await pickTime(editor, 'End time', '12:30')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00–12:30')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h')
 })
 
 test('clearing a card start time in the wheel untimes the card', async ({ page }) => {
@@ -27,13 +25,12 @@ test('clearing a card start time in the wheel untimes the card', async ({ page }
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Loose plan')
-  await editor.getByLabel('Set a time').check()
+  await editor.getByLabel('Title').fill('Loose plan')
   await pickTime(editor, 'Start time', '09:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('09:00')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('09:00 · 1h')
 
   // Reopen, clear the start time in the wheel, save → the card is untimed.
   await firstColumn.getByRole('button', { name: 'Edit Loose plan' }).click()
@@ -49,7 +46,7 @@ test('setting the trip day window through the wheel updates the field', async ({
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
-  await page.getByRole('button', { name: 'Trip' }).click()
+  await page.getByRole('button', { name: 'Edit trip' }).click()
   const trip = page.getByRole('dialog', { name: 'Trip details' })
   await expect(trip.getByRole('button', { name: 'Day start' })).toHaveText('06:00')
   await pickTime(trip, 'Day start', '08:00')
@@ -63,9 +60,8 @@ test.describe('mobile time picker', () => {
     await page.goto('/mobile-picker-e2e')
     await setupTrip(page, { title: 'Picker', startDate: '2027-05-01', endDate: '2027-05-01' })
 
-    await page.getByRole('button', { name: /Add card/ }).click()
+    await page.getByRole('button', { name: 'Add activity', exact: true }).click()
     const editor = page.getByRole('dialog', { name: 'Card editor' })
-    await editor.getByLabel('Set a time').check()
     await editor.getByRole('button', { name: 'Start time' }).click()
 
     const picker = page.getByRole('dialog', { name: 'Start time' })

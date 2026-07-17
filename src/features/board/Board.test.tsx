@@ -75,7 +75,7 @@ describe('Board', () => {
     expect(screen.getByTestId('accommodation-cell')).toHaveStyle({ gridColumn: '1 / span 2' })
   })
 
-  it('overrides a day’s city from its header, then reverts to Auto', () => {
+  it('overrides a day’s city from its header, then reverts to Auto', async () => {
     renderBoard(<Board />)
     act(() => {
       setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' })
@@ -93,17 +93,14 @@ describe('Board', () => {
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
 
     // Choose Florence via the header picker → recolors the day.
-    const select = within(column).getByTestId('city-override')
-    act(() => {
-      fireEvent.change(select, { target: { value: 'florence' } })
-    })
+    fireEvent.click(within(column).getByRole('button', { name: 'Choose city' }))
+    fireEvent.click(screen.getByRole('button', { name: /Florence/ }))
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#3b82f6' })
     expect(within(column).queryByTestId('override-indicator')).not.toBeInTheDocument()
 
     // Auto clears the override → back to the accommodation's Rome.
-    act(() => {
-      fireEvent.change(within(column).getByTestId('city-override'), { target: { value: '' } })
-    })
+    fireEvent.click(within(column).getByRole('button', { name: 'Choose city' }))
+    fireEvent.click(screen.getByRole('button', { name: /Auto/ }))
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
   })
 

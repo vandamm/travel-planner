@@ -35,10 +35,11 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   await expect(firstBand).toHaveCSS('background-color', 'rgb(194, 187, 168)') // ink-200 warm neutral
 
   // Add a stay covering the first two nights, in Rome.
-  await page.getByRole('button', { name: 'Add stay' }).click()
+  await page.getByTestId('add-stay').click()
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
   await editor.getByLabel('Accommodation label').fill('Hotel Roma')
-  await editor.getByLabel('City').selectOption({ label: 'Rome' })
+  await editor.getByRole('button', { name: 'City' }).click()
+  await page.getByRole('button', { name: /Rome/ }).click()
   await pickRange(editor, 'Stay nights', '2027-05-01', '2027-05-02')
   await editor.getByRole('button', { name: 'Save stay' }).click()
 

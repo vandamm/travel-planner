@@ -57,7 +57,8 @@ describe('AccommodationEditor', () => {
     renderEditor(<CreateMode />)
 
     await user.type(screen.getByLabelText('Accommodation label'), 'Hotel Roma')
-    await user.selectOptions(screen.getByLabelText('City'), 'rome')
+    await user.click(screen.getByRole('button', { name: 'City' }))
+    await user.click(screen.getByRole('button', { name: /Rome/ }))
     // Pick a first→last range through the calendar (seeded to May 2027).
     await user.click(screen.getByRole('button', { name: 'Stay nights' }))
     await user.click(screen.getByRole('button', { name: '1 May 2027' }))

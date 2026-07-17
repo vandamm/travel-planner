@@ -17,7 +17,7 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: `env -u VITE_WORKER_URL npm run dev -- --host 127.0.0.1 --port ${port}`,
+    command: `VITE_E2E=true env -u VITE_WORKER_URL npm run dev -- --host 127.0.0.1 --port ${port}`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 120_000,

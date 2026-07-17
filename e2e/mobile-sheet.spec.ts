@@ -11,7 +11,7 @@ async function openCardEditor(page: import('@playwright/test').Page) {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
   const firstColumn = page.locator('[data-testid="day-column"]').first()
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
   return page.getByRole('dialog', { name: 'Card editor' })
 }
 

@@ -22,7 +22,7 @@ describe('AccommodationLane', () => {
 
     expect(screen.getByTestId('accommodation-lane').parentElement).toHaveClass(
       'flex-col',
-      'sm:flex-row',
+      'min-[400px]:flex-row',
     )
   })
 
@@ -35,7 +35,7 @@ describe('AccommodationLane', () => {
 
     const bar = screen.getByTestId('accommodation-bar')
     expect(bar).toHaveTextContent('Hotel Roma')
-    expect(bar).toHaveStyle({ backgroundColor: '#ef4444' })
+    expect(bar).toHaveStyle({ backgroundColor: 'color-mix(in srgb, #ef4444 18%, white)' })
   })
 
   it('skips stays that fall outside the visible days', () => {
@@ -108,11 +108,11 @@ describe('AccommodationLane', () => {
     // The half-day inset is applied so the bars meet at the middle of the shared day.
     expect(cellA.querySelector('div')).toHaveAttribute(
       'style',
-      expect.stringContaining('margin-right: calc(8.875rem);'),
+      expect.stringContaining('margin-right: calc(8.9375rem);'),
     )
     expect(cellB.querySelector('div')).toHaveAttribute(
       'style',
-      expect.stringContaining('margin-left: calc(8.875rem);'),
+      expect.stringContaining('margin-left: calc(8.9375rem);'),
     )
   })
 

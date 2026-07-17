@@ -12,8 +12,8 @@ test.describe('mobile: ≡ menu', () => {
     await page.goto(E2E_LINK)
 
     // Inline buttons are lg:-only → not in the mobile a11y tree; ≡ is present.
-    await expect(page.getByRole('button', { name: 'Trip' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Cities' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Edit trip' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Cities & colours' })).toHaveCount(0)
     const menuButton = page.getByRole('button', { name: 'Menu' })
     await expect(menuButton).toBeVisible()
 
@@ -45,8 +45,8 @@ test.describe('desktop: inline header buttons', () => {
 
   test('keeps inline Trip/Cities and has no ≡', async ({ page }) => {
     await page.goto(E2E_LINK)
-    await expect(page.getByRole('button', { name: 'Trip' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Cities' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Edit trip' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cities & colours' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(0)
   })
 })

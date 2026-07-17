@@ -55,14 +55,14 @@ describe('Card', () => {
     expect(screen.getByRole('button', { name: 'Drag Colosseum' })).toBeInTheDocument()
   })
 
-  it('shows the duration for an untimed card', () => {
+  it('hides schedule metadata for an untimed card', () => {
     render(<Card card={{ ...base, duration: 'custom', durationHours: 1.5 }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('1.5h')
+    expect(screen.queryByTestId('card-time')).not.toBeInTheDocument()
   })
 
-  it('shows a duration when the card is untimed', () => {
+  it('hides the duration when the card is untimed', () => {
     render(<Card card={base} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('1h')
+    expect(screen.queryByTestId('card-time')).not.toBeInTheDocument()
   })
 
   it('renders an optional note', () => {

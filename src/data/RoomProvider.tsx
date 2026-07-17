@@ -62,7 +62,9 @@ export function RoomProvider({
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ""
   const roomId = roomIdProp === undefined ? currentRoomId() : roomIdProp
   // An empty Worker base is the valid same-origin production setup (`/api/auth`).
-  const autoSync = import.meta.env.MODE !== "test" && Boolean(roomId)
+  // Browser e2e runs a local Vite server without the Worker, so it explicitly
+  // opts into the same local-first path as unit tests.
+  const autoSync = import.meta.env.MODE !== "test" && import.meta.env.VITE_E2E !== "true" && Boolean(roomId)
   const hasIndexedDb = typeof globalThis.indexedDB !== "undefined" && globalThis.indexedDB !== null
 
   // The Y.Doc is cheap and owns no external resources, so it can live in useMemo

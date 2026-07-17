@@ -45,6 +45,7 @@ export function TripModal({ onClose }: TripModalProps) {
   const [pasteText, setPasteText] = useState('')
   const [applyError, setApplyError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [dateError, setDateError] = useState<string | null>(null)
 
   // "Recent versions" — pre-write snapshots the Worker records on each AI write.
   const [versions, setVersions] = useState<VersionMeta[]>([])
@@ -54,6 +55,24 @@ export function TripModal({ onClose }: TripModalProps) {
     if (currentJson === null) return
     void navigator.clipboard?.writeText(currentJson)
     setCopied(true)
+  }
+
+  function setStartDate(startDate: string) {
+    if (trip.endDate && startDate > trip.endDate) {
+      setDateError('Start date must be on or before end date.')
+      return
+    }
+    setDateError(null)
+    setTrip(doc, { startDate })
+  }
+
+  function setEndDate(endDate: string) {
+    if (trip.startDate && endDate < trip.startDate) {
+      setDateError('End date must be on or after start date.')
+      return
+    }
+    setDateError(null)
+    setTrip(doc, { endDate })
   }
 
   // Full replace — a native confirm is enough of a guard for a personal planner.
@@ -114,10 +133,12 @@ export function TripModal({ onClose }: TripModalProps) {
   return (
     <Modal
       label="Trip details"
+      title="Trip details"
       onClose={onClose}
-      className="flex w-full flex-col gap-4 sm:max-w-md"
+      mobileAction={<button type="button" onClick={onClose} className="button-label text-ink">Done</button>}
+      className="flex w-full flex-col gap-4 min-[400px]:max-w-md"
     >
-      <div className="hidden items-center gap-3 border-b border-edge pb-3 sm:flex">
+      <div className="hidden items-center gap-3 border-b border-edge pb-3 min-[400px]:flex">
         {/* Vermilion seal — mirrors the header mark, per the mock. */}
         <div
           aria-hidden
@@ -146,7 +167,7 @@ export function TripModal({ onClose }: TripModalProps) {
           <DatePicker
             label="Start date"
             value={trip.startDate}
-            onSelect={(iso) => setTrip(doc, { startDate: iso })}
+            onSelect={setStartDate}
             placeholder="Pick a start date"
             triggerClassName={`${fieldInput} font-serif text-left`}
           />
@@ -157,12 +178,13 @@ export function TripModal({ onClose }: TripModalProps) {
           <DatePicker
             label="End date"
             value={trip.endDate}
-            onSelect={(iso) => setTrip(doc, { endDate: iso })}
+            onSelect={setEndDate}
             placeholder="Pick an end date"
             triggerClassName={`${fieldInput} font-serif text-left`}
           />
         </div>
       </div>
+      {dateError && <p role="alert" className="text-xs text-city-vermilion">{dateError}</p>}
 
       <label className="flex flex-col gap-1.5">
         <span className={sectionLabel}>Trip colour</span>
@@ -299,7 +321,7 @@ export function TripModal({ onClose }: TripModalProps) {
         </div>
       </details>
 
-      <div className="mt-1 flex justify-end">
+      <div className="mt-1 flex justify-end max-[399px]:hidden">
         <button
           type="button"
           onClick={onClose}

@@ -47,7 +47,7 @@ describe('App (with a room slug path)', () => {
     expect(screen.getByTestId('sync-status')).toHaveTextContent('Local')
   })
 
-  it('shows loading instead of flashing the trip shell before a missing response', async () => {
+  it('keeps the board mounted while connecting, then shows a missing trip response', async () => {
     vi.stubEnv('MODE', 'production')
     const doc = new Y.Doc()
     let emitStatus!: (status: provider.SyncStatus) => void
@@ -65,8 +65,7 @@ describe('App (with a room slug path)', () => {
     } as unknown as provider.RoomConnection)
 
     render(<App />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
-    expect(screen.queryByTestId('app-seal')).not.toBeInTheDocument()
+    expect(screen.getByTestId('app-seal')).toBeInTheDocument()
 
     act(() => emitStatus('missing'))
     expect(await screen.findByRole('heading', { name: "This trip doesn't exist." })).toBeInTheDocument()

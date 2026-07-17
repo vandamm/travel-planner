@@ -69,7 +69,7 @@ function isMobile(page: Page): boolean {
 async function openEditor(
   page: Page,
   menuItem: 'Trip setup' | 'Cities & colours',
-  inline: 'Trip' | 'Cities',
+  inline: 'Edit trip' | 'Cities & colours',
 ) {
   if (isMobile(page)) {
     await page.getByRole('button', { name: 'Menu' }).click()
@@ -89,7 +89,7 @@ export async function setupTrip(
   page: Page,
   { title, startDate, endDate }: { title?: string; startDate?: string; endDate?: string },
 ) {
-  await openEditor(page, 'Trip setup', 'Trip')
+  await openEditor(page, 'Trip setup', 'Edit trip')
   const dialog = page.getByRole('dialog', { name: 'Trip details' })
   if (title !== undefined) await dialog.getByLabel('Trip title').fill(title)
   if (startDate !== undefined) await pickDate(dialog, 'Start date', startDate)
@@ -105,7 +105,7 @@ export async function setupTrip(
  * city) open it themselves.
  */
 export async function addCity(page: Page, name: string) {
-  await openEditor(page, 'Cities & colours', 'Cities')
+  await openEditor(page, 'Cities & colours', 'Cities & colours')
   const dialog = page.getByRole('dialog', { name: 'Cities & colours' })
   await dialog.getByLabel('New city name').fill(name)
   await dialog.getByRole('button', { name: 'Add' }).click()

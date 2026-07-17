@@ -26,12 +26,13 @@ import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
 import { MobileDayView } from './MobileDayView'
 import { BoardToolbar } from './BoardToolbar'
+import { BoardEmptyState } from './BoardEmptyState'
 import { useTimeDirection } from './useTimeDirection'
 import { useUndoManager } from './undoManager'
 import { COLUMN_GAP_REM, useColumnsThatFit, useViewport } from './useViewport'
 
 /** Which card the editor is open on: a new card on a day, or an existing card. */
-type EditorState = { mode: 'create'; dayKey: string } | { mode: 'edit'; card: Card }
+type EditorState = { mode: 'create'; dayKey: string; startTime?: string } | { mode: 'edit'; card: Card }
 
 /** Which stay the accommodation editor is open on: a new one (optionally seeded
  * with a first night), or an existing one. */
@@ -169,9 +170,7 @@ export function Board({
       )}
 
       {days.length === 0 ? (
-        <p data-testid="board-empty" className="px-6 text-ink-500">
-          Set start and end dates to build the board.
-        </p>
+        <BoardEmptyState onOpenTrip={onOpenTrip} />
       ) : viewport === 'mobile' ? (
         // Below 640px: one day at a time, paged by swipe or the
         // prev/next controls. Same cards/accommodation/direction logic as desktop.
@@ -194,11 +193,12 @@ export function Board({
               dayStart={trip.dayStart}
               dayEnd={trip.dayEnd}
               columns={columns}
-              onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
+              onAddCard={(dayKey, startTime) => setEditor({ mode: 'create', dayKey, startTime })}
               onEditCard={(card) => setEditor({ mode: 'edit', card })}
               onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
               onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
               onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
+              onOpenCities={onOpenCities}
             />
           </BoardDnd>
         </div>
@@ -242,7 +242,7 @@ export function Board({
                       cities={cities}
                       overrideCityId={overrides[day.key]}
                       onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
-                      onAddCard={(dayKey) => setEditor({ mode: 'create', dayKey })}
+                      onAddCard={(dayKey, startTime) => setEditor({ mode: 'create', dayKey, startTime })}
                       onEditCard={(card) => setEditor({ mode: 'edit', card })}
                     />
                   )
@@ -266,6 +266,7 @@ export function Board({
         <CardEditor
           card={editor.mode === 'edit' ? editor.card : undefined}
           dayKey={editor.mode === 'create' ? editor.dayKey : undefined}
+          defaultStartTime={editor.mode === 'create' ? editor.startTime : undefined}
           onClose={() => setEditor(null)}
         />
       )}

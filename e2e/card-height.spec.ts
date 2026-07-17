@@ -18,15 +18,15 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   expect(dayBody!.height).toBe(900)
 
   // A default-height card (exact duration, untimed → one block).
-  await column.getByRole('button', { name: /Add card/ }).click()
+  await column.getByRole('button', { name: 'Add activity', exact: true }).click()
   let editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Quick stop')
+  await editor.getByLabel('Title').fill('Quick stop')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   // A whole-day card.
-  await column.getByRole('button', { name: /Add card/ }).click()
+  await column.getByRole('button', { name: 'Add activity', exact: true }).click()
   editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('All day tour')
+  await editor.getByLabel('Title').fill('All day tour')
   await editor.getByRole('button', { name: 'Day', exact: true }).click()
   await editor.getByRole('button', { name: 'Save card' }).click()
 

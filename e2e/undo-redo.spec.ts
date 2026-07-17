@@ -8,10 +8,9 @@ test('undo removes a hand-added card; redo restores it', async ({ page }) => {
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 
   // Create a card by hand — this is what the undo stack should track.
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Visit Colosseum')
-  await editor.getByLabel('Set a time').check()
+  await editor.getByLabel('Title').fill('Visit Colosseum')
   await pickTime(editor, 'Start time', '10:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit Colosseum')

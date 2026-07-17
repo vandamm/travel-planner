@@ -51,9 +51,9 @@ test('drag a card to another day column', async ({ page }) => {
   const secondColumn = columns.nth(1)
 
   // Add one card to the first day.
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Museum')
+  await editor.getByLabel('Title').fill('Museum')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Museum')
@@ -76,9 +76,9 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
   const firstColumn = columns.nth(0)
   const secondColumn = columns.nth(1)
 
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Museum')
+  await editor.getByLabel('Title').fill('Museum')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   // Begin a drag and pause with the pointer over the second column — without
@@ -120,9 +120,9 @@ test('dropping an untimed card within a day assigns its timeline time', async ({
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 
   for (const title of ['First', 'Second', 'Third']) {
-    await firstColumn.getByRole('button', { name: /Add card/ }).click()
+    await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
     const editor = page.getByRole('dialog', { name: 'Card editor' })
-    await editor.getByLabel('Card title').fill(title)
+    await editor.getByLabel('Title').fill(title)
     await editor.getByRole('button', { name: 'Save card' }).click()
   }
 

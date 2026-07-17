@@ -75,7 +75,7 @@ export function Card({
     <article
       data-testid="card"
       data-category={category}
-      className="flex h-full flex-col gap-1.5 overflow-hidden rounded-card border border-edge-100 bg-surface px-2.5 py-2 text-sm text-ink shadow-sm"
+      className="flex h-full flex-col gap-1.5 overflow-hidden rounded-card border border-edge-100 bg-surface px-[11px] py-[9px] text-sm text-ink shadow-sm min-[400px]:px-[13px] min-[400px]:py-[11px]"
     >
       <div className="flex items-baseline gap-1">
         {dragHandleProps && (
@@ -100,14 +100,11 @@ export function Card({
           >
             {card.title}
           </span>
-          {
-            <span
-              data-testid="card-time"
-              className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
-            >
-              {card.startTime ? `${card.startTime} · ${duration}` : duration}
+          {card.startTime && (
+            <span data-testid="card-time" className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500">
+              {card.startTime} · {duration}
             </span>
-          }
+          )}
         </button>
       </div>
 

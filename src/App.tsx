@@ -17,16 +17,20 @@ function MobileMenu({
   onOpenTrip,
   onOpenCities,
   onAddStay,
+  onOpenShare,
+  status,
 }: {
   onClose: () => void
   onOpenTrip: () => void
   onOpenCities: () => void
   onAddStay: () => void
+  onOpenShare: () => void
+  status: string
 }) {
   const item =
     'w-full rounded-card border border-edge-300 bg-white px-4 py-3 text-left font-sans text-base font-medium text-ink-600 hover:bg-surface-chip'
   return (
-    <Modal label="Menu" onClose={onClose} className="flex w-full flex-col gap-3 sm:max-w-xs">
+    <Modal label="Menu" onClose={onClose} className="flex w-full flex-col gap-3 min-[400px]:max-w-xs">
       <h2 className="font-serif text-xl font-semibold text-ink">Menu</h2>
       <button type="button" className={item} onClick={onOpenTrip}>
         <span aria-hidden>✎</span> Trip setup
@@ -37,6 +41,13 @@ function MobileMenu({
       <button type="button" className={item} onClick={onAddStay}>
         <span aria-hidden>＋</span> Add stay
       </button>
+      <button type="button" className={item} onClick={onOpenShare}>
+        <span aria-hidden>↗</span> Share
+      </button>
+      <button type="button" className={item} onClick={() => void navigator.clipboard?.writeText(location.href)}>
+        <span aria-hidden>⧉</span> Copy trip link
+      </button>
+      <p role="status" className="px-1 text-xs text-ink-500">{status === 'synced' ? 'Live' : status}</p>
     </Modal>
   )
 }
@@ -51,16 +62,6 @@ function AppShell() {
   const [addStayNonce, setAddStayNonce] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
 
-  if (status === 'connecting') {
-    return (
-      <main
-        role="status"
-        className="flex min-h-screen items-center justify-center bg-surface text-ink-500"
-      >
-        Loading
-      </main>
-    )
-  }
   if (status === 'missing') return <MissingTrip />
 
   return (
@@ -87,6 +88,11 @@ function AppShell() {
             setMenuOpen(false)
             setAddStayNonce((n) => n + 1)
           }}
+          onOpenShare={() => {
+            setMenuOpen(false)
+            setShareOpen(true)
+          }}
+          status={status}
         />
       )}
       {tripOpen && <TripModal onClose={() => setTripOpen(false)} />}

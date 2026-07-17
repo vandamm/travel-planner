@@ -65,11 +65,9 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('city-name')).toHaveTextContent('No city')
   })
 
-  it('labels the day with a day-first dd.MM date', () => {
+  it('labels the day with the approved uppercase weekday and date', () => {
     render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
-    // 2027-05-01 → "Sat · 01.05" (day-first, not "1 May")
-    expect(screen.getByTestId('day-label')).toHaveTextContent('01.05')
-    expect(screen.getByTestId('day-label')).not.toHaveTextContent('May')
+    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT · 01 MAY')
   })
 
   it('lays out cards morning→evening with the down direction', () => {
@@ -148,9 +146,17 @@ describe('DayColumn', () => {
     }
     expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
     expect(screen.getByTestId('card-list')).not.toHaveClass('gap-2')
-    const addCard = screen.getByRole('button', { name: /Add card/ })
+    const addCard = screen.getByRole('button', { name: 'Add activity' })
     expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
     expect(addCard.className).not.toMatch(/slate-/)
+  })
+
+  it('offers every free timeline slot and seeds a new activity with its start time', () => {
+    const onAddCard = vi.fn()
+    render(<DayColumn day={day} cards={cards} direction="down" onAddCard={onAddCard} />)
+    expect(screen.getAllByTestId('timeline-slot')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: '+ add activity at 06:00' }))
+    expect(onAddCard).toHaveBeenCalledWith(day.key, '06:00')
   })
 
   it('scales each card by its duration', () => {
@@ -189,12 +195,7 @@ describe('DayColumn', () => {
     render(
       <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
     )
-    const select = screen.getByTestId('city-override') as HTMLSelectElement
-    expect([...select.options].map((o) => o.textContent)).toEqual(['Auto', 'Rome', 'Florence'])
-    expect(select.value).toBe('') // no override → Auto
-    expect(select).not.toHaveAttribute('style')
-    expect(select.options[1]).toHaveStyle({ color: '#ef4444' })
-    expect(select.options[2]).toHaveStyle({ color: '#3b82f6' })
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('Rome')
   })
 
   it('reflects an existing manual override without an extra marker', () => {
@@ -208,9 +209,7 @@ describe('DayColumn', () => {
         overrideCityId="florence"
       />,
     )
-    const select = screen.getByTestId('city-override') as HTMLSelectElement
-    expect(select.value).toBe('florence')
-    expect(select).toHaveStyle({ borderColor: '#3b82f6', color: '#3b82f6' })
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('Florence')
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
@@ -226,16 +225,17 @@ describe('DayColumn', () => {
         onSetCity={onSetCity}
       />,
     )
-    const select = screen.getByTestId('city-override')
-    fireEvent.change(select, { target: { value: 'florence' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Choose city' }))
+    fireEvent.click(screen.getByRole('button', { name: /Florence/ }))
     expect(onSetCity).toHaveBeenCalledWith('2027-05-01', 'florence')
-    fireEvent.change(select, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Choose city' }))
+    fireEvent.click(screen.getByRole('button', { name: /Auto/ }))
     expect(onSetCity).toHaveBeenCalledWith('2027-05-01', null)
   })
 
   it('omits the override control when there are no cities to choose from', () => {
     render(<DayColumn day={day} cards={[]} direction="down" cities={[]} />)
-    expect(screen.queryByTestId('city-override')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Choose city' })).not.toBeInTheDocument()
   })
 
   it('flags weekends with a bold-vermilion weekday label, weekdays muted, no tint', () => {
