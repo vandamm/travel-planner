@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Safari zooms the page when a focused form field is smaller than 16px. Keep
+   textual controls at that threshold on phone/tablet widths, including sheets. */
+@media (max-width: 1023px) {
+  input:not([type='color']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 @layer base {
   body {
     @apply m-0 font-sans text-ink antialiased;
