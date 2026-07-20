@@ -9,7 +9,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type * as Y from 'yjs'
 import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
@@ -60,6 +60,10 @@ export function BoardDnd({
     durationHours: number
   } | null>(null)
   const [overDayKey, setOverDayKey] = useState<string | null>(null)
+  useEffect(() => {
+    document.body.classList.toggle('cursor-grabbing', Boolean(activeCard))
+    return () => document.body.classList.remove('cursor-grabbing')
+  }, [activeCard])
   const resizeController = useMemo<CardResizeController>(
     () => ({
       plan(cardId, edge, deltaPx) {

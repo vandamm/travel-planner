@@ -162,6 +162,7 @@ describe('BoardDnd drag timing preview', () => {
 
     act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
     expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:00 1`)
+    expect(document.body).toHaveClass('cursor-grabbing')
 
     act(() => dndCallbacks.onDragMove?.(dragEvent(active, 355, dayKey)))
     expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:15 1`)
@@ -170,6 +171,7 @@ describe('BoardDnd drag timing preview', () => {
     expect(getCard(doc, active)?.startTime).toBe('10:15')
     expect(getCard(doc, neighbor)?.startTime).toBe('10:15')
     expect(screen.queryByTestId('drag-preview-state')).not.toBeInTheDocument()
+    expect(document.body).not.toHaveClass('cursor-grabbing')
   })
 
   it('starts untimed with dashes, previews over a day, and cancels without a write', () => {
