@@ -1,14 +1,8 @@
 import { createContext } from 'react'
 import type * as Y from 'yjs'
-import { getCard, getTrip, listCards, updateCard, updateCardSchedules } from '../../data/doc'
+import { getCard, getTrip, updateCard, updateCardSchedules } from '../../data/doc'
 import type { Card } from '../../data/schema'
-import {
-  clockMinutes,
-  clockString,
-  PX_PER_HOUR,
-  resolvedDurationHours,
-} from '../cards/cardHeight'
-import { isTimed } from '../cards/cardSort'
+import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
 import { planTimelineSchedule, type TimelineEditKind } from './timelineSchedule'
 import type { TimeDirection } from './timeDirection'
 
@@ -16,7 +10,6 @@ export type CardResizeEdge = 'start' | 'end'
 
 export interface CardResizeInput {
   card: Card
-  cards: Card[]
   edge: CardResizeEdge
   /** Vertical pointer/keyboard movement in display pixels. */
   deltaPx: number
@@ -32,7 +25,6 @@ export interface CardResizePlan {
   heightPx: number
   /** Change to the card's displayed top while previewing the resize. */
   topOffsetPx: number
-  pushed: { id: string; startTime: string }[]
 }
 
 function resizeEdit(edge: CardResizeEdge, direction: TimeDirection): TimelineEditKind {
@@ -51,7 +43,6 @@ function interval(card: Card, dayStart: string, dayEnd: string) {
 /** Plan a snapped resize without mutating the card or document. */
 export function planCardResize({
   card,
-  cards,
   edge,
   deltaPx,
   direction,
@@ -68,9 +59,6 @@ export function planCardResize({
   const result = planTimelineSchedule({
     active,
     requested: { start: requestedStart, duration: requestedEnd - requestedStart },
-    others: cards
-      .filter((other) => other.id !== card.id && other.dayKey === card.dayKey && isTimed(other))
-      .map((other) => interval(other, dayStart, dayEnd)),
     dayStart: clockMinutes(dayStart),
     dayEnd: clockMinutes(dayEnd),
     edit: resizeEdit(edge, direction),
@@ -87,7 +75,6 @@ export function planCardResize({
     durationHours: result.activeDuration / 60,
     heightPx: (result.activeDuration / 60) * PX_PER_HOUR,
     topOffsetPx: (topOffsetMinutes / 60) * PX_PER_HOUR,
-    pushed: result.pushed.map(({ id, start }) => ({ id, startTime: clockString(start) })),
   }
 }
 
@@ -104,7 +91,6 @@ export function applyCardResize(
   const { dayStart, dayEnd } = getTrip(doc)
   const result = planCardResize({
     card,
-    cards: listCards(doc),
     edge,
     deltaPx,
     direction,
@@ -118,10 +104,7 @@ export function applyCardResize(
       duration: result.duration,
       durationHours: result.durationHours,
     })
-    updateCardSchedules(doc, [
-      { id: cardId, startTime: result.startTime },
-      ...result.pushed,
-    ])
+    updateCardSchedules(doc, [{ id: cardId, startTime: result.startTime }])
   })
   return result
 }

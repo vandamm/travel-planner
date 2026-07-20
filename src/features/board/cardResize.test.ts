@@ -27,11 +27,9 @@ function plan(
   deltaPx: number,
   direction: TimeDirection = 'down',
   card = timed(),
-  cards: Card[] = [card],
 ) {
   return planCardResize({
     card,
-    cards,
     edge,
     deltaPx,
     direction,
@@ -83,18 +81,28 @@ describe('planCardResize', () => {
     },
   )
 
-  it('plans collision pushes when an edge extends into another card', () => {
-    const active = timed()
-    const later = timed({ id: 'later', title: 'Lunch', order: 1, startTime: '11:00' })
-    expect(plan('end', 60, 'down', active, [active, later])).toMatchObject({
-      durationHours: 2,
-      pushed: [{ id: 'later', startTime: '12:00' }],
-    })
-  })
+  it.each([
+    ['start', -60, 'down', '09:00', 2, -60],
+    ['end', 60, 'down', '10:00', 2, 0],
+    ['start', 60, 'up', '09:00', 2, 0],
+    ['end', -60, 'up', '10:00', 2, -60],
+  ] satisfies [CardResizeEdge, number, TimeDirection, string, number, number][])(
+    'allows the %s edge to overlap in %s direction without neighbor results',
+    (edge, deltaPx, direction, startTime, durationHours, topOffsetPx) => {
+      const active = timed()
+      expect(plan(edge, deltaPx, direction, active)).toEqual({
+        startTime,
+        duration: 'custom',
+        durationHours,
+        heightPx: 120,
+        topOffsetPx,
+      })
+    },
+  )
 })
 
 describe('applyCardResize', () => {
-  it('commits the custom duration, active schedule, and collision pushes atomically', () => {
+  it('commits the custom duration and active schedule without changing a neighbor', () => {
     const doc = new Y.Doc()
     setTrip(doc, { dayStart: DAY_START, dayEnd: DAY_END })
     addCard(doc, {
@@ -124,7 +132,7 @@ describe('applyCardResize', () => {
       duration: 'custom',
       durationHours: 8.5,
     })
-    expect(getCard(doc, 'later')).toMatchObject({ startTime: '18:30' })
+    expect(getCard(doc, 'later')).toMatchObject({ startTime: '17:30' })
     expect(transactionCount).toBe(1)
   })
 })

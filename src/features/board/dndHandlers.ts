@@ -1,8 +1,6 @@
 import type * as Y from 'yjs'
-import { getCard, getTrip, listCards, updateCardSchedules } from '../../data/doc'
-import type { Card } from '../../data/schema'
+import { getCard, getTrip, updateCardSchedules } from '../../data/doc'
 import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
-import { isTimed } from '../cards/cardSort'
 import {
   planTimelineSchedule,
   TIMELINE_SNAP_MINUTES,
@@ -70,15 +68,7 @@ function moveEditKind(
   return movedTowardTop ? 'move-top' : 'move-bottom'
 }
 
-function scheduleInterval(card: Card, dayStart: string, dayEnd: string) {
-  return {
-    id: card.id,
-    start: clockMinutes(card.startTime!),
-    duration: resolvedDurationHours(card, dayStart, dayEnd) * 60,
-  }
-}
-
-/** Schedule a dropped card and push its collision chain in the visual edit direction. */
+/** Schedule only the dropped card; overlaps are valid timeline state. */
 export function applyCardDrop(
   doc: Y.Doc,
   { activeId, targetDayKey, offsetPx }: CardDrop,
@@ -92,19 +82,10 @@ export function applyCardDrop(
   const requested = clockMinutes(
     dropTimeForOffset(offsetPx, activeDuration, dayStart, dayEnd, direction),
   )
-  const targetCards = listCards(doc)
-    .filter((card) => card.id !== activeId && card.dayKey === targetDayKey && isTimed(card))
-    .sort(
-      (a, b) =>
-        clockMinutes(a.startTime!) - clockMinutes(b.startTime!) ||
-        a.order - b.order ||
-        a.id.localeCompare(b.id),
-    )
   const currentStart = active.startTime ? clockMinutes(active.startTime) : requested
   const result = planTimelineSchedule({
     active: { id: activeId, start: currentStart, duration: activeDuration * 60 },
     requested: { start: requested, duration: activeDuration * 60 },
-    others: targetCards.map((card) => scheduleInterval(card, dayStart, dayEnd)),
     dayStart: clockMinutes(dayStart),
     dayEnd: clockMinutes(dayEnd),
     edit: moveEditKind(currentStart, requested, direction),
@@ -113,6 +94,5 @@ export function applyCardDrop(
 
   updateCardSchedules(doc, [
     { id: activeId, dayKey: targetDayKey, startTime: clockString(result.activeStart) },
-    ...result.pushed.map(({ id, start }) => ({ id, startTime: clockString(start) })),
   ])
 }

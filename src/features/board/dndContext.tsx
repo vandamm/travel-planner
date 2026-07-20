@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core'
 import { useMemo, useState, type ReactNode } from 'react'
 import type * as Y from 'yjs'
-import { getCard, listCards } from '../../data/doc'
+import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
 import { Card } from '../cards/Card'
 import {
@@ -60,7 +60,6 @@ export function BoardDnd({
         if (!card) return null
         return planCardResize({
           card,
-          cards: listCards(doc),
           edge,
           deltaPx,
           direction,
@@ -94,11 +93,11 @@ export function BoardDnd({
     const overId = event.over ? String(event.over.id) : null
     const targetDayKey = dayKeyOf(overId)
     const initial = event.active.rect.current.initial
-    const droppedTop = initial ? initial.top + event.delta.y : event.active.rect.current.translated?.top
+    const droppedTop = initial
+      ? initial.top + event.delta.y
+      : event.active.rect.current.translated?.top
     const dayBody = targetDayKey
-      ? document.querySelector<HTMLElement>(
-          `[data-day="${targetDayKey}"] [data-testid="day-body"]`,
-        )
+      ? document.querySelector<HTMLElement>(`[data-day="${targetDayKey}"] [data-testid="day-body"]`)
       : null
     if (targetDayKey && droppedTop !== undefined && dayBody) {
       const dayBodyRect = dayBody.getBoundingClientRect()

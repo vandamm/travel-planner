@@ -4,6 +4,7 @@ import { addCard, getCard, setTrip } from '../../data/doc'
 import { applyCardDrop, dayDroppableId, dropTimeForOffset, timelineDropOffset } from './dndHandlers'
 
 const DAY1 = '2027-05-01'
+const DAY2 = '2027-05-02'
 
 function addTimed(doc: Y.Doc, title: string, startTime: string, durationHours = 1, dayKey = DAY1) {
   return addCard(doc, {
@@ -56,7 +57,7 @@ describe('applyCardDrop — same-day time drag', () => {
     expect(getCard(doc, id)?.startTime).toBe('10:00')
   })
 
-  it('moves a timed card and pushes every later collision forward', () => {
+  it('moves a timed card into an overlap without changing neighbors', () => {
     const doc = new Y.Doc()
     const active = addTimed(doc, 'Breakfast', '08:00')
     const museum = addTimed(doc, 'Museum', '10:00', 2)
@@ -65,11 +66,11 @@ describe('applyCardDrop — same-day time drag', () => {
     applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 240 })
 
     expect(getCard(doc, active)?.startTime).toBe('10:00')
-    expect(getCard(doc, museum)?.startTime).toBe('11:00')
-    expect(getCard(doc, lunch)?.startTime).toBe('13:00')
+    expect(getCard(doc, museum)?.startTime).toBe('10:00')
+    expect(getCard(doc, lunch)?.startTime).toBe('12:00')
   })
 
-  it('commits the dropped card and its push chain atomically', () => {
+  it('commits only the dropped card in one update', () => {
     const doc = new Y.Doc()
     const active = addTimed(doc, 'Breakfast', '08:00')
     addTimed(doc, 'Museum', '10:00', 2)
@@ -82,18 +83,18 @@ describe('applyCardDrop — same-day time drag', () => {
     expect(updates).toBe(1)
   })
 
-  it('commits an earlier push chain atomically', () => {
+  it('moves across days into an overlap without changing source or target neighbors', () => {
     const doc = new Y.Doc()
-    addTimed(doc, 'Breakfast', '08:00')
-    addTimed(doc, 'Museum', '09:00', 2)
-    const active = addTimed(doc, 'Lunch', '12:00')
-    let updates = 0
-    doc.on('update', () => (updates += 1))
+    const sourceNeighbor = addTimed(doc, 'Breakfast', '08:00')
+    const active = addTimed(doc, 'Museum', '09:00', 2)
+    const targetNeighbor = addTimed(doc, 'Lunch', '10:00', 1, DAY2)
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 240 })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY2, offsetPx: 240 })
 
+    expect(getCard(doc, active)?.dayKey).toBe(DAY2)
     expect(getCard(doc, active)?.startTime).toBe('10:00')
-    expect(updates).toBe(1)
+    expect(getCard(doc, sourceNeighbor)?.startTime).toBe('08:00')
+    expect(getCard(doc, targetNeighbor)?.startTime).toBe('10:00')
   })
 
   it('does not write when a card is dropped back on the same time', () => {
