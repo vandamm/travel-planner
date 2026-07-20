@@ -325,13 +325,13 @@ export function SortableCard({
 
     const finish = (event: globalThis.PointerEvent) => finishResize(event, true)
     const cancel = (event: globalThis.PointerEvent) => finishResize(event, false)
-    window.addEventListener('pointermove', moveResize)
-    window.addEventListener('pointerup', finish)
-    window.addEventListener('pointercancel', cancel)
+    window.addEventListener('pointermove', moveResize, true)
+    window.addEventListener('pointerup', finish, true)
+    window.addEventListener('pointercancel', cancel, true)
     return () => {
-      window.removeEventListener('pointermove', moveResize)
-      window.removeEventListener('pointerup', finish)
-      window.removeEventListener('pointercancel', cancel)
+      window.removeEventListener('pointermove', moveResize, true)
+      window.removeEventListener('pointerup', finish, true)
+      window.removeEventListener('pointercancel', cancel, true)
     }
   }, [card.id, resizeController])
 
