@@ -7,6 +7,7 @@
 import { useDraggable } from '@dnd-kit/core'
 import {
   useContext,
+  useEffect,
   useRef,
   useState,
   type ButtonHTMLAttributes,
@@ -268,6 +269,7 @@ export function SortableCard({
     edge: CardResizeEdge
     originY: number
     lastDeltaPx: number
+    target: HTMLButtonElement
     initialPlan: CardResizePlan | null
     lastPlan: CardResizePlan | null
   } | null>(null)
@@ -291,31 +293,47 @@ export function SortableCard({
       edge,
       originY: event.clientY,
       lastDeltaPx: 0,
+      target: event.currentTarget,
       initialPlan,
       lastPlan: initialPlan,
     }
     setResizePreview(initialPlan)
   }
 
-  function moveResize(event: PointerEvent<HTMLButtonElement>) {
-    const active = pointerResize.current
-    if (!active || active.pointerId !== event.pointerId || !resizeController) return
-    const deltaPx = event.clientY - active.originY
-    active.lastDeltaPx = deltaPx
-    active.lastPlan = resizeController.plan(card.id, active.edge, deltaPx)
-    setResizePreview(active.lastPlan)
-  }
-
-  function finishResize(event: PointerEvent<HTMLButtonElement>, commit: boolean) {
-    const active = pointerResize.current
-    if (!active || active.pointerId !== event.pointerId) return
-    event.currentTarget.releasePointerCapture?.(event.pointerId)
-    if (commit && previewDiffers(active.initialPlan, active.lastPlan)) {
-      resizeController?.commit(card.id, active.edge, active.lastDeltaPx)
+  useEffect(() => {
+    function moveResize(event: globalThis.PointerEvent) {
+      const active = pointerResize.current
+      if (!active || active.pointerId !== event.pointerId || !resizeController) return
+      const deltaPx = event.clientY - active.originY
+      active.lastDeltaPx = deltaPx
+      active.lastPlan = resizeController.plan(card.id, active.edge, deltaPx)
+      setResizePreview(active.lastPlan)
     }
-    pointerResize.current = null
-    setResizePreview(null)
-  }
+
+    function finishResize(event: globalThis.PointerEvent, commit: boolean) {
+      const active = pointerResize.current
+      if (!active || active.pointerId !== event.pointerId) return
+      if (active.target.hasPointerCapture?.(event.pointerId)) {
+        active.target.releasePointerCapture(event.pointerId)
+      }
+      if (commit && previewDiffers(active.initialPlan, active.lastPlan)) {
+        resizeController?.commit(card.id, active.edge, active.lastDeltaPx)
+      }
+      pointerResize.current = null
+      setResizePreview(null)
+    }
+
+    const finish = (event: globalThis.PointerEvent) => finishResize(event, true)
+    const cancel = (event: globalThis.PointerEvent) => finishResize(event, false)
+    window.addEventListener('pointermove', moveResize)
+    window.addEventListener('pointerup', finish)
+    window.addEventListener('pointercancel', cancel)
+    return () => {
+      window.removeEventListener('pointermove', moveResize)
+      window.removeEventListener('pointerup', finish)
+      window.removeEventListener('pointercancel', cancel)
+    }
+  }, [card.id, resizeController])
 
   function keyboardResize(edge: CardResizeEdge, event: KeyboardEvent<HTMLButtonElement>) {
     const sign =
@@ -334,16 +352,10 @@ export function SortableCard({
       ? {
           start: {
             onPointerDown: (event: PointerEvent<HTMLButtonElement>) => startResize('start', event),
-            onPointerMove: moveResize,
-            onPointerUp: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, true),
-            onPointerCancel: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, false),
             onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => keyboardResize('start', event),
           },
           end: {
             onPointerDown: (event: PointerEvent<HTMLButtonElement>) => startResize('end', event),
-            onPointerMove: moveResize,
-            onPointerUp: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, true),
-            onPointerCancel: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, false),
             onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => keyboardResize('end', event),
           },
         }
@@ -364,10 +376,13 @@ export function SortableCard({
 
   return (
     <li ref={setNodeRef} style={style} data-testid="sortable-card">
-      {isDragging ? (
+      {isDragging || resizePreview ? (
         <EventTimingHint
-          startTime={card.startTime ?? null}
-          durationHours={resolvedDurationHours(card, dayStart ?? '06:00', dayEnd ?? '21:00')}
+          startTime={resizePreview?.startTime ?? card.startTime ?? null}
+          durationHours={
+            resizePreview?.durationHours ??
+            resolvedDurationHours(card, dayStart ?? '06:00', dayEnd ?? '21:00')
+          }
         />
       ) : (
         <Card
