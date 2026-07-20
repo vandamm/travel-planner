@@ -87,7 +87,7 @@ describe('DayColumn', () => {
   it('shows the time on time-bound cards', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const dinner = screen.getByText('Dinner').closest('[data-testid="card"]') as HTMLElement
-    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h')
+    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h 00m')
   })
 
   it('marks every timed card involved in an overlap', () => {

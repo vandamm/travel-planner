@@ -41,13 +41,6 @@ export default {
         transit: { DEFAULT: '#a8392b', bg: '#f7e6e2', border: '#e7c3bb' },
         outdoor: { DEFAULT: '#4f5e38', bg: '#edf1e1', border: '#d2dcbb' },
         indoor: { DEFAULT: '#34465a', bg: '#e6ecf2', border: '#cfd9e4' },
-        manipulation: {
-          bg: '#f3f5f7',
-          border: '#dde3e9',
-          text: '#34465a',
-          muted: '#6f7e8e',
-          duration: '#4f6275',
-        },
       },
       borderRadius: {
         frame: '5px',

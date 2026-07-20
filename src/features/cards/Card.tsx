@@ -78,7 +78,8 @@ function isSafeHref(link: string): boolean {
 }
 
 function formatDuration(hours: number): string {
-  return `${Number(hours.toFixed(2))}h`
+  const minutes = Math.round(hours * 60)
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
 }
 
 export function Card({
@@ -100,7 +101,7 @@ export function Card({
     : null
   const displayedTime = timingPreview
     ? timingPreview.startTime
-      ? `${timingPreview.startTime}–${previewEndTime} · ${duration}`
+      ? `${timingPreview.startTime} · ${duration}`
       : duration
     : card.startTime
       ? `${card.startTime} · ${duration}`

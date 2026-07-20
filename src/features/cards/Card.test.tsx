@@ -26,7 +26,7 @@ describe('Card', () => {
 
   it('shows the start time and duration without an end time', () => {
     render(<Card card={{ ...base, startTime: '10:00', duration: 'custom', durationHours: 2 }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 2h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 2h 00m')
     expect(screen.getByTestId('card-time')).not.toHaveTextContent('–')
   })
 
@@ -47,7 +47,8 @@ describe('Card', () => {
     expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:15')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('12:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:15–12:00 · 1.75h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:15 · 1h 45m')
+    expect(screen.getByTestId('card-time')).not.toHaveTextContent('12:00')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
     expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
@@ -213,7 +214,7 @@ describe('Card', () => {
     pointer('pointerDown', 100)
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:00')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00–11:00 · 1h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 1h 00m')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
     expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
@@ -238,7 +239,7 @@ describe('Card', () => {
     expect(sortable.style.marginTop).toBe('225px')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('09:45')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45–11:00 · 1.25h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 · 1h 15m')
     pointerWindow('pointerUp', 85)
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
@@ -302,12 +303,12 @@ describe('Card', () => {
 
   it('shows the duration for an untimed card', () => {
     render(<Card card={{ ...base, duration: 'custom', durationHours: 1.5 }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('1.5h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('1h 30m')
   })
 
   it('shows a duration when the card is untimed', () => {
     render(<Card card={base} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('1h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('1h 00m')
   })
 
   it('renders an optional note', () => {
