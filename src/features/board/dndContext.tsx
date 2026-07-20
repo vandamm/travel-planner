@@ -10,7 +10,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type * as Y from 'yjs'
 import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
@@ -60,7 +60,6 @@ export function BoardDnd({
     startTime: string | null
     durationHours: number
   } | null>(null)
-  const activePlan = useRef<CardDropPlan | null>(null)
   const [overDayKey, setOverDayKey] = useState<string | null>(null)
   const resizeController = useMemo<CardResizeController>(
     () => ({
@@ -85,7 +84,6 @@ export function BoardDnd({
 
   function handleDragStart(event: DragStartEvent) {
     const card = getCard(doc, String(event.active.id)) ?? null
-    activePlan.current = null
     setActiveCard(card)
     setDragPreview(
       card
@@ -134,23 +132,20 @@ export function BoardDnd({
   function handleDragMove(event: DragMoveEvent) {
     const plan = planFromEvent(event)
     if (!plan) return
-    activePlan.current = plan
     setDragPreview({ startTime: plan.startTime, durationHours: plan.durationHours })
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    const plan = planFromEvent(event) ?? activePlan.current
+    const plan = planFromEvent(event)
     if (plan && commitCardDropPlan(doc, String(event.active.id), plan)) {
       onTimelineChange?.()
     }
-    activePlan.current = null
     setActiveCard(null)
     setDragPreview(null)
     setOverDayKey(null)
   }
 
   function handleDragCancel() {
-    activePlan.current = null
     setActiveCard(null)
     setDragPreview(null)
     setOverDayKey(null)

@@ -195,4 +195,39 @@ describe('BoardDnd drag timing preview', () => {
     expect(updates).toBe(0)
     expect(screen.queryByTestId('event-timing-hint')).not.toBeInTheDocument()
   })
+
+  it('does not commit a cached preview when released outside every drop target', () => {
+    const doc = new Y.Doc()
+    const dayKey = '2027-05-01'
+    const active = addCard(doc, {
+      id: 'active',
+      dayKey,
+      title: 'Museum',
+      startTime: '10:00',
+      duration: 'custom',
+      durationHours: 1,
+    }).id
+    let updates = 0
+    doc.on('update', () => (updates += 1))
+
+    render(
+      createElement(BoardDnd, {
+        doc,
+        direction: 'down',
+        children: dayBody(dayKey),
+      }),
+    )
+
+    act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
+    act(() => dndCallbacks.onDragMove?.(dragEvent(active, 355, dayKey)))
+    act(() =>
+      dndCallbacks.onDragEnd?.({
+        ...dragEvent(active, 355, dayKey),
+        over: null,
+      }),
+    )
+
+    expect(getCard(doc, active)?.startTime).toBe('10:00')
+    expect(updates).toBe(0)
+  })
 })
