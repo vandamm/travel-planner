@@ -138,21 +138,15 @@ describe('Card', () => {
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
   })
 
-  it('keeps full resize targets while hiding their hairlines until hover or focus', () => {
+  it('keeps full invisible resize targets', () => {
     render(
       <Card card={{ ...base, startTime: '10:00' }} resizeHandleProps={{ start: {}, end: {} }} />,
     )
 
     for (const edge of ['start', 'end']) {
       const handle = screen.getByRole('button', { name: `Resize Colosseum ${edge}` })
-      const hairline = handle.querySelector('span')
-      expect(handle).toHaveClass('h-3', 'cursor-row-resize', 'focus-visible:ring-2', 'group')
-      expect(hairline).toHaveClass(
-        'h-px',
-        'bg-transparent',
-        'group-hover:bg-ink-300/40',
-        'group-focus-visible:bg-ink-300/40',
-      )
+      expect(handle).toHaveClass('h-3', 'cursor-row-resize', 'focus-visible:ring-2')
+      expect(handle.querySelector('span')).not.toBeInTheDocument()
     }
   })
 

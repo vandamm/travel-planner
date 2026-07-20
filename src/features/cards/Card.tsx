@@ -150,13 +150,8 @@ export function Card({
           event.stopPropagation()
           props.onKeyDown?.(event)
         }}
-        className={`group absolute inset-x-2 z-10 h-3 cursor-row-resize touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-city-indigo ${atTop ? 'top-0' : 'bottom-0'} ${props.className ?? ''}`}
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 h-px w-6 -translate-x-1/2 -translate-y-1/2 bg-transparent transition-colors group-hover:bg-ink-300/40 group-focus-visible:bg-ink-300/40"
-        />
-      </button>
+        className={`absolute inset-x-2 z-10 h-3 cursor-row-resize touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-city-indigo ${atTop ? 'top-0' : 'bottom-0'} ${props.className ?? ''}`}
+      />
     )
   }
 
