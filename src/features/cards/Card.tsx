@@ -21,6 +21,7 @@ import { CardResizeContext, type CardResizeEdge, type CardResizePlan } from '../
 import type { TimeDirection } from '../board/timeDirection'
 import { cardCategory } from './cardCategory'
 import { PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
+import { EventTimingHint } from './EventTimingHint'
 
 /** Chip-triad token classes (text / bg / border) per category. */
 const CATEGORY_CHIP: Record<CardCategory, string> = {
@@ -358,21 +359,28 @@ export function SortableCard({
     height: resizePreview?.heightPx ?? layoutStyle?.height,
     marginTop: resizePreview ? baseMarginTop + resizePreview.topOffsetPx : layoutStyle?.marginTop,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    opacity: isDragging ? 0.4 : undefined,
+    visibility: isDragging ? 'hidden' : undefined,
   }
 
   return (
     <li ref={setNodeRef} style={style} data-testid="sortable-card">
-      <Card
-        card={card}
-        conflict={conflict}
-        onEdit={onEdit}
-        dayStart={dayStart}
-        dayEnd={dayEnd}
-        direction={direction}
-        dragSurfaceProps={{ ...attributes, ...listeners }}
-        resizeHandleProps={resizeHandleProps}
-      />
+      {isDragging ? (
+        <EventTimingHint
+          startTime={card.startTime ?? null}
+          durationHours={resolvedDurationHours(card, dayStart ?? '06:00', dayEnd ?? '21:00')}
+        />
+      ) : (
+        <Card
+          card={card}
+          conflict={conflict}
+          onEdit={onEdit}
+          dayStart={dayStart}
+          dayEnd={dayEnd}
+          direction={direction}
+          dragSurfaceProps={{ ...attributes, ...listeners }}
+          resizeHandleProps={resizeHandleProps}
+        />
+      )}
     </li>
   )
 }

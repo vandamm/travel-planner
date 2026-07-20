@@ -1,5 +1,6 @@
 import type * as Y from 'yjs'
 import { getCard, getTrip, updateCardSchedules } from '../../data/doc'
+import type { Card } from '../../data/schema'
 import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
 import {
   planTimelineSchedule,
@@ -58,6 +59,21 @@ export interface CardDrop {
   offsetPx: number
 }
 
+export interface CardDropPlanInput {
+  card: Card
+  targetDayKey: string
+  offsetPx: number
+  dayStart: string
+  dayEnd: string
+  direction: TimeDirection
+}
+
+export interface CardDropPlan {
+  dayKey: string
+  startTime: string
+  durationHours: number
+}
+
 function moveEditKind(
   currentStart: number,
   requestedStart: number,
@@ -68,31 +84,60 @@ function moveEditKind(
   return movedTowardTop ? 'move-top' : 'move-bottom'
 }
 
-/** Schedule only the dropped card; overlaps are valid timeline state. */
-export function applyCardDrop(
-  doc: Y.Doc,
-  { activeId, targetDayKey, offsetPx }: CardDrop,
-  direction: TimeDirection = 'down',
-): void {
-  const active = getCard(doc, activeId)
-  if (!active) return
-
-  const { dayStart, dayEnd } = getTrip(doc)
-  const activeDuration = resolvedDurationHours(active, dayStart, dayEnd)
+export function planCardDrop({
+  card,
+  targetDayKey,
+  offsetPx,
+  dayStart,
+  dayEnd,
+  direction,
+}: CardDropPlanInput): CardDropPlan {
+  const durationHours = resolvedDurationHours(card, dayStart, dayEnd)
   const requested = clockMinutes(
-    dropTimeForOffset(offsetPx, activeDuration, dayStart, dayEnd, direction),
+    dropTimeForOffset(offsetPx, durationHours, dayStart, dayEnd, direction),
   )
-  const currentStart = active.startTime ? clockMinutes(active.startTime) : requested
+  const currentStart = card.startTime ? clockMinutes(card.startTime) : requested
   const result = planTimelineSchedule({
-    active: { id: activeId, start: currentStart, duration: activeDuration * 60 },
-    requested: { start: requested, duration: activeDuration * 60 },
+    active: { id: card.id, start: currentStart, duration: durationHours * 60 },
+    requested: { start: requested, duration: durationHours * 60 },
     dayStart: clockMinutes(dayStart),
     dayEnd: clockMinutes(dayEnd),
     edit: moveEditKind(currentStart, requested, direction),
     direction,
   })
 
-  updateCardSchedules(doc, [
-    { id: activeId, dayKey: targetDayKey, startTime: clockString(result.activeStart) },
-  ])
+  return {
+    dayKey: targetDayKey,
+    startTime: clockString(result.activeStart),
+    durationHours: result.activeDuration / 60,
+  }
+}
+
+export function commitCardDropPlan(doc: Y.Doc, activeId: string, plan: CardDropPlan): boolean {
+  if (!getCard(doc, activeId)) return false
+  updateCardSchedules(doc, [{ id: activeId, dayKey: plan.dayKey, startTime: plan.startTime }])
+  return true
+}
+
+/** Schedule only the dropped card; overlaps are valid timeline state. */
+export function applyCardDrop(
+  doc: Y.Doc,
+  { activeId, targetDayKey, offsetPx }: CardDrop,
+  direction: TimeDirection = 'down',
+): CardDropPlan | null {
+  const active = getCard(doc, activeId)
+  if (!active) return null
+
+  const { dayStart, dayEnd } = getTrip(doc)
+  const plan = planCardDrop({
+    card: active,
+    targetDayKey,
+    offsetPx,
+    dayStart,
+    dayEnd,
+    direction,
+  })
+
+  commitCardDropPlan(doc, activeId, plan)
+  return plan
 }

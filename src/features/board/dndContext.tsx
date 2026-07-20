@@ -6,14 +6,16 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import type * as Y from 'yjs'
 import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
-import { Card } from '../cards/Card'
+import { resolvedDurationHours } from '../cards/cardHeight'
+import { EventTimingHint } from '../cards/EventTimingHint'
 import {
   applyCardResize,
   CardResizeContext,
@@ -23,10 +25,12 @@ import {
 import { boardCollisionDetection } from './dndCollision'
 import { DragOverDayContext } from './dragOverDayContext'
 import {
-  applyCardDrop,
+  commitCardDropPlan,
   dayKeyFromDroppableId,
   isDayDroppableId,
+  planCardDrop,
   timelineDropOffset,
+  type CardDropPlan,
 } from './dndHandlers'
 import type { TimeDirection } from './timeDirection'
 
@@ -52,6 +56,11 @@ export function BoardDnd({
     useSensor(KeyboardSensor),
   )
   const [activeCard, setActiveCard] = useState<CardType | null>(null)
+  const [dragPreview, setDragPreview] = useState<{
+    startTime: string | null
+    durationHours: number
+  } | null>(null)
+  const activePlan = useRef<CardDropPlan | null>(null)
   const [overDayKey, setOverDayKey] = useState<string | null>(null)
   const resizeController = useMemo<CardResizeController>(
     () => ({
@@ -75,7 +84,17 @@ export function BoardDnd({
   )
 
   function handleDragStart(event: DragStartEvent) {
-    setActiveCard(getCard(doc, String(event.active.id)) ?? null)
+    const card = getCard(doc, String(event.active.id)) ?? null
+    activePlan.current = null
+    setActiveCard(card)
+    setDragPreview(
+      card
+        ? {
+            startTime: card.startTime ?? null,
+            durationHours: resolvedDurationHours(card, dayStart, dayEnd),
+          }
+        : null,
+    )
   }
 
   function dayKeyOf(overId: string | null): string | null {
@@ -89,35 +108,51 @@ export function BoardDnd({
     setOverDayKey(dayKeyOf(overId))
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const overId = event.over ? String(event.over.id) : null
-    const targetDayKey = dayKeyOf(overId)
+  function planFromEvent(event: DragMoveEvent | DragEndEvent): CardDropPlan | null {
+    const card = getCard(doc, String(event.active.id))
+    const targetDayKey = dayKeyOf(event.over ? String(event.over.id) : null)
     const initial = event.active.rect.current.initial
-    const droppedTop = initial
-      ? initial.top + event.delta.y
-      : event.active.rect.current.translated?.top
+    const droppedTop =
+      event.active.rect.current.translated?.top ??
+      (initial ? initial.top + event.delta.y : undefined)
     const dayBody = targetDayKey
       ? document.querySelector<HTMLElement>(`[data-day="${targetDayKey}"] [data-testid="day-body"]`)
       : null
-    if (targetDayKey && droppedTop !== undefined && dayBody) {
-      const dayBodyRect = dayBody.getBoundingClientRect()
-      applyCardDrop(
-        doc,
-        {
-          activeId: String(event.active.id),
-          targetDayKey,
-          offsetPx: timelineDropOffset(droppedTop, dayBodyRect.top, dayBody.scrollTop),
-        },
-        direction,
-      )
+    if (!card || !targetDayKey || droppedTop === undefined || !dayBody) return null
+
+    const dayBodyRect = dayBody.getBoundingClientRect()
+    return planCardDrop({
+      card,
+      targetDayKey,
+      offsetPx: timelineDropOffset(droppedTop, dayBodyRect.top, dayBody.scrollTop),
+      dayStart,
+      dayEnd,
+      direction,
+    })
+  }
+
+  function handleDragMove(event: DragMoveEvent) {
+    const plan = planFromEvent(event)
+    if (!plan) return
+    activePlan.current = plan
+    setDragPreview({ startTime: plan.startTime, durationHours: plan.durationHours })
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const plan = planFromEvent(event) ?? activePlan.current
+    if (plan && commitCardDropPlan(doc, String(event.active.id), plan)) {
       onTimelineChange?.()
     }
+    activePlan.current = null
     setActiveCard(null)
+    setDragPreview(null)
     setOverDayKey(null)
   }
 
   function handleDragCancel() {
+    activePlan.current = null
     setActiveCard(null)
+    setDragPreview(null)
     setOverDayKey(null)
   }
 
@@ -127,13 +162,19 @@ export function BoardDnd({
         sensors={sensors}
         collisionDetection={boardCollisionDetection}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
         <DragOverDayContext.Provider value={overDayKey}>{children}</DragOverDayContext.Provider>
         <DragOverlay>
-          {activeCard ? <Card card={activeCard} dayStart={dayStart} dayEnd={dayEnd} /> : null}
+          {activeCard && dragPreview ? (
+            <EventTimingHint
+              startTime={dragPreview.startTime}
+              durationHours={dragPreview.durationHours}
+            />
+          ) : null}
         </DragOverlay>
       </DndContext>
     </CardResizeContext.Provider>

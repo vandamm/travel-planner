@@ -61,6 +61,39 @@ describe('Card', () => {
     expect(screen.getByTestId('card')).toHaveAttribute('tabindex', '0')
   })
 
+  it('keeps the sortable item geometry while replacing an active drag with a timing hint', () => {
+    render(
+      <DndContext>
+        <SortableCard
+          card={{
+            ...base,
+            startTime: '10:00',
+            note: 'Bring tickets',
+            category: 'indoor',
+            link: 'https://example.com',
+          }}
+          conflict
+          layoutStyle={{ height: 60, marginTop: 240 }}
+        />
+      </DndContext>,
+    )
+
+    const card = screen.getByTestId('card')
+    card.focus()
+    fireEvent.keyDown(card, { key: ' ', code: 'Space' })
+
+    expect(screen.getByTestId('sortable-card')).toHaveStyle({
+      height: '60px',
+      marginTop: '240px',
+    })
+    expect(screen.getByTestId('event-timing-hint')).toBeInTheDocument()
+    expect(screen.queryByTestId('card-title')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card-note')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card-category')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card-link')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
+  })
+
   it('attaches pointer listeners to the card surface', () => {
     const onPointerDown = vi.fn()
     render(<Card card={base} dragSurfaceProps={{ onPointerDown }} />)
