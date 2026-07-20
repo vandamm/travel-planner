@@ -80,6 +80,24 @@ describe('Card', () => {
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
   })
 
+  it('keeps full resize targets while hiding their hairlines until hover or focus', () => {
+    render(
+      <Card card={{ ...base, startTime: '10:00' }} resizeHandleProps={{ start: {}, end: {} }} />,
+    )
+
+    for (const edge of ['start', 'end']) {
+      const handle = screen.getByRole('button', { name: `Resize Colosseum ${edge}` })
+      const hairline = handle.querySelector('span')
+      expect(handle).toHaveClass('h-3', 'cursor-row-resize', 'focus-visible:ring-2', 'group')
+      expect(hairline).toHaveClass(
+        'h-px',
+        'bg-transparent',
+        'group-hover:bg-ink-300/40',
+        'group-focus-visible:bg-ink-300/40',
+      )
+    }
+  })
+
   it('keeps links and resize handles from activating a card move', () => {
     const onPointerDown = vi.fn()
     render(
@@ -104,7 +122,6 @@ describe('Card', () => {
         durationHours: deltaPx === 0 ? 1 : 1.25,
         heightPx: deltaPx === 0 ? 60 : 75,
         topOffsetPx: deltaPx < 0 ? -15 : 0,
-        pushed: [],
       }),
     )
     const commit = vi.fn()

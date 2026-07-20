@@ -17,11 +17,7 @@ import {
   type PointerEvent,
 } from 'react'
 import type { Card as CardType, CardCategory } from '../../data/schema'
-import {
-  CardResizeContext,
-  type CardResizeEdge,
-  type CardResizePlan,
-} from '../board/cardResize'
+import { CardResizeContext, type CardResizeEdge, type CardResizePlan } from '../board/cardResize'
 import type { TimeDirection } from '../board/timeDirection'
 import { cardCategory } from './cardCategory'
 import { PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
@@ -102,10 +98,7 @@ export function Card({
     if (!event.defaultPrevented) onEdit?.(card)
   }
 
-  function resizeHandle(
-    edge: CardResizeEdge,
-    props: ButtonHTMLAttributes<HTMLButtonElement>,
-  ) {
+  function resizeHandle(edge: CardResizeEdge, props: ButtonHTMLAttributes<HTMLButtonElement>) {
     const atTop =
       (edge === 'start' && direction === 'down') || (edge === 'end' && direction === 'up')
     return (
@@ -138,11 +131,11 @@ export function Card({
           event.stopPropagation()
           props.onKeyDown?.(event)
         }}
-        className={`absolute inset-x-2 z-10 h-3 cursor-row-resize touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-city-indigo ${atTop ? 'top-0' : 'bottom-0'} ${props.className ?? ''}`}
+        className={`group absolute inset-x-2 z-10 h-3 cursor-row-resize touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-city-indigo ${atTop ? 'top-0' : 'bottom-0'} ${props.className ?? ''}`}
       >
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-ink-300/60"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-px w-6 -translate-x-1/2 -translate-y-1/2 bg-transparent transition-colors group-hover:bg-ink-300/40 group-focus-visible:bg-ink-300/40"
         />
       </button>
     )
@@ -157,12 +150,8 @@ export function Card({
       onClick={editFromSurface}
       className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border border-edge-100 bg-surface px-2.5 py-2 text-sm text-ink shadow-sm ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
     >
-      {card.startTime &&
-        resizeHandleProps &&
-        resizeHandle('start', resizeHandleProps.start)}
-      {card.startTime &&
-        resizeHandleProps &&
-        resizeHandle('end', resizeHandleProps.end)}
+      {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
+      {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
       <div className="flex items-baseline gap-1">
         <button
           type="button"
@@ -287,8 +276,7 @@ export function SortableCard({
     return (
       !!initial &&
       !!current &&
-      (initial.startTime !== current.startTime ||
-        initial.durationHours !== current.durationHours)
+      (initial.startTime !== current.startTime || initial.durationHours !== current.durationHours)
     )
   }
 
