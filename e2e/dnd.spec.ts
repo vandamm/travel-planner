@@ -7,18 +7,18 @@ async function openLocalBoard(page: Page) {
 }
 
 /**
- * Drag dnd-kit's grab handle onto a target with explicit, stepped pointer moves
+ * Drag dnd-kit's whole-card surface onto a target with explicit, stepped pointer moves
  * and short pauses. dnd-kit's PointerSensor needs real intermediate pointer
  * events (and our 4px activation threshold met) before it begins a drag, and its
  * `closestCenter` collision needs the pointer to settle over the target — both
  * of which Playwright's high-level `dragTo` does not reliably produce.
  */
-async function dragHandleOnto(page: Page, handle: Locator, target: Locator) {
+async function dragSurfaceOnto(page: Page, surface: Locator, target: Locator) {
   // The configurable day window makes columns tall, so the first card can sit
   // above the viewport top — scroll the handle in before reading its box, or the
   // drag starts at a clamped (off-screen) point and never activates.
-  await handle.scrollIntoViewIfNeeded()
-  const from = await handle.boundingBox()
+  await surface.scrollIntoViewIfNeeded()
+  const from = await surface.boundingBox()
   const to = await target.boundingBox()
   if (!from || !to) throw new Error('missing bounding box for drag')
 
@@ -60,8 +60,8 @@ test('drag a card to another day column', async ({ page }) => {
   await expect(secondColumn.getByTestId('card-title')).toHaveCount(0)
 
   // Drag it onto the (empty) second column.
-  const handle = firstColumn.getByRole('button', { name: 'Drag Museum' })
-  await dragHandleOnto(page, handle, secondColumn)
+  const surface = firstColumn.locator('[data-testid="card"]', { hasText: 'Museum' })
+  await dragSurfaceOnto(page, surface, secondColumn)
 
   await expect(secondColumn.getByTestId('card-title')).toHaveText('Museum')
   await expect(firstColumn.getByTestId('card-title')).toHaveCount(0)
@@ -83,9 +83,9 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
 
   // Begin a drag and pause with the pointer over the second column — without
   // releasing — to observe the live overlay + drop-target hint.
-  const handle = firstColumn.getByRole('button', { name: 'Drag Museum' })
-  await handle.scrollIntoViewIfNeeded()
-  const from = await handle.boundingBox()
+  const surface = firstColumn.locator('[data-testid="card"]', { hasText: 'Museum' })
+  await surface.scrollIntoViewIfNeeded()
+  const from = await surface.boundingBox()
   const to = await secondColumn.boundingBox()
   if (!from || !to) throw new Error('missing bounding box for drag')
   const sx = from.x + from.width / 2
@@ -99,9 +99,9 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
   await page.mouse.move(tx, ty, { steps: 15 })
   await page.waitForTimeout(150)
 
-  // The overlay is a second copy of the card (the original stays dimmed in place),
-  // and the second column is marked as the drop target.
-  await expect(page.getByTestId('card-title').filter({ hasText: 'Museum' })).toHaveCount(2)
+  // The source stays mounted but invisible while one timing hint follows the cursor.
+  await expect(page.getByTestId('card-title').filter({ hasText: 'Museum' })).toHaveCount(0)
+  await expect(page.locator('[data-testid="event-timing-hint"]:visible')).toHaveCount(1)
   await expect(secondColumn).toHaveAttribute('data-drag-over', '')
 
   await page.mouse.up()
@@ -130,9 +130,9 @@ test('dropping an untimed card within a day assigns its timeline time', async ({
   await expect(titles).toHaveText(['First', 'Second', 'Third'])
 
   // Drag the first card down onto the third; its dropped top lands at 08:00.
-  const handle = firstColumn.getByRole('button', { name: 'Drag First' })
+  const surface = firstColumn.locator('[data-testid="card"]', { hasText: 'First' })
   const thirdCard = firstColumn.getByTestId('card').nth(2)
-  await dragHandleOnto(page, handle, thirdCard)
+  await dragSurfaceOnto(page, surface, thirdCard)
 
   const firstCard = firstColumn.locator('[data-testid="card"]', { hasText: 'First' })
   await expect(firstCard.getByTestId('card-time')).toHaveText(/08:(00|30) · 1h/)

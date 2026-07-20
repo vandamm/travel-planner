@@ -7,6 +7,7 @@
 import { useDraggable } from '@dnd-kit/core'
 import {
   useContext,
+  useEffect,
   useRef,
   useState,
   type ButtonHTMLAttributes,
@@ -17,14 +18,10 @@ import {
   type PointerEvent,
 } from 'react'
 import type { Card as CardType, CardCategory } from '../../data/schema'
-import {
-  CardResizeContext,
-  type CardResizeEdge,
-  type CardResizePlan,
-} from '../board/cardResize'
+import { CardResizeContext, type CardResizeEdge, type CardResizePlan } from '../board/cardResize'
 import type { TimeDirection } from '../board/timeDirection'
 import { cardCategory } from './cardCategory'
-import { PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
+import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
 
 /** Chip-triad token classes (text / bg / border) per category. */
 const CATEGORY_CHIP: Record<CardCategory, string> = {
@@ -49,6 +46,11 @@ export interface CardProps {
   direction?: TimeDirection
   dayStart?: string
   dayEnd?: string
+  /** Ephemeral timing shown while this card is moved or resized. */
+  timingPreview?: {
+    startTime: string | null
+    durationHours: number
+  }
 }
 
 /** A compact, human-friendly label for a link (its host, falling back to raw). */
@@ -76,7 +78,8 @@ function isSafeHref(link: string): boolean {
 }
 
 function formatDuration(hours: number): string {
-  return `${Number(hours.toFixed(2))}h`
+  const minutes = Math.round(hours * 60)
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
 }
 
 export function Card({
@@ -88,9 +91,21 @@ export function Card({
   direction = 'down',
   dayStart = '06:00',
   dayEnd = '21:00',
+  timingPreview,
 }: CardProps) {
   const category = cardCategory(card)
-  const duration = formatDuration(resolvedDurationHours(card, dayStart, dayEnd))
+  const durationHours = timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
+  const duration = formatDuration(durationHours)
+  const previewEndTime = timingPreview?.startTime
+    ? clockString(clockMinutes(timingPreview.startTime) + Math.round(durationHours * 60))
+    : null
+  const displayedTime = timingPreview
+    ? timingPreview.startTime
+      ? `${timingPreview.startTime} · ${duration}`
+      : duration
+    : card.startTime
+      ? `${card.startTime} · ${duration}`
+      : duration
   const {
     className: dragClassName,
     onClick: onDragSurfaceClick,
@@ -102,10 +117,7 @@ export function Card({
     if (!event.defaultPrevented) onEdit?.(card)
   }
 
-  function resizeHandle(
-    edge: CardResizeEdge,
-    props: ButtonHTMLAttributes<HTMLButtonElement>,
-  ) {
+  function resizeHandle(edge: CardResizeEdge, props: ButtonHTMLAttributes<HTMLButtonElement>) {
     const atTop =
       (edge === 'start' && direction === 'down') || (edge === 'end' && direction === 'up')
     return (
@@ -139,30 +151,21 @@ export function Card({
           props.onKeyDown?.(event)
         }}
         className={`absolute inset-x-2 z-10 h-3 cursor-row-resize touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-city-indigo ${atTop ? 'top-0' : 'bottom-0'} ${props.className ?? ''}`}
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-ink-300/60"
-        />
-      </button>
+      />
     )
   }
 
-  return (
+  const cardContent = (
     <article
       {...surfaceProps}
       data-testid="card"
       data-category={category}
       aria-label={dragSurfaceProps ? `Move or edit ${card.title}` : undefined}
       onClick={editFromSurface}
-      className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border border-edge-100 bg-surface px-2.5 py-2 text-sm text-ink shadow-sm ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
+      className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border px-2.5 py-2 text-sm text-ink shadow-sm ${timingPreview ? 'border-indoor-border bg-indoor-bg/40 shadow-none' : 'border-edge-100 bg-surface'} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
     >
-      {card.startTime &&
-        resizeHandleProps &&
-        resizeHandle('start', resizeHandleProps.start)}
-      {card.startTime &&
-        resizeHandleProps &&
-        resizeHandle('end', resizeHandleProps.end)}
+      {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
+      {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
       <div className="flex items-baseline gap-1">
         <button
           type="button"
@@ -185,7 +188,7 @@ export function Card({
               data-testid="card-time"
               className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
             >
-              {card.startTime ? `${card.startTime} · ${duration}` : duration}
+              {displayedTime}
             </span>
           }
         </button>
@@ -245,6 +248,26 @@ export function Card({
         ))}
     </article>
   )
+
+  if (!timingPreview) return cardContent
+
+  return (
+    <div className="relative h-full">
+      <span
+        data-testid="event-timing-start"
+        className="absolute left-1/2 -top-5 z-10 -translate-x-1/2 whitespace-nowrap font-sans text-[11px] font-medium leading-none text-ink-600"
+      >
+        {timingPreview.startTime ?? '—'}
+      </span>
+      {cardContent}
+      <span
+        data-testid="event-timing-end"
+        className="absolute left-1/2 -bottom-5 z-10 -translate-x-1/2 whitespace-nowrap font-sans text-[11px] font-medium leading-none text-ink-600"
+      >
+        {previewEndTime ?? '—'}
+      </span>
+    </div>
+  )
 }
 
 export interface SortableCardProps {
@@ -278,17 +301,22 @@ export function SortableCard({
     edge: CardResizeEdge
     originY: number
     lastDeltaPx: number
+    target: HTMLButtonElement
     initialPlan: CardResizePlan | null
     lastPlan: CardResizePlan | null
   } | null>(null)
   const [resizePreview, setResizePreview] = useState<CardResizePlan | null>(null)
 
+  useEffect(() => {
+    document.body.classList.toggle('cursor-row-resize', Boolean(resizePreview))
+    return () => document.body.classList.remove('cursor-row-resize')
+  }, [resizePreview])
+
   function previewDiffers(initial: CardResizePlan | null, current: CardResizePlan | null): boolean {
     return (
       !!initial &&
       !!current &&
-      (initial.startTime !== current.startTime ||
-        initial.durationHours !== current.durationHours)
+      (initial.startTime !== current.startTime || initial.durationHours !== current.durationHours)
     )
   }
 
@@ -302,31 +330,47 @@ export function SortableCard({
       edge,
       originY: event.clientY,
       lastDeltaPx: 0,
+      target: event.currentTarget,
       initialPlan,
       lastPlan: initialPlan,
     }
     setResizePreview(initialPlan)
   }
 
-  function moveResize(event: PointerEvent<HTMLButtonElement>) {
-    const active = pointerResize.current
-    if (!active || active.pointerId !== event.pointerId || !resizeController) return
-    const deltaPx = event.clientY - active.originY
-    active.lastDeltaPx = deltaPx
-    active.lastPlan = resizeController.plan(card.id, active.edge, deltaPx)
-    setResizePreview(active.lastPlan)
-  }
-
-  function finishResize(event: PointerEvent<HTMLButtonElement>, commit: boolean) {
-    const active = pointerResize.current
-    if (!active || active.pointerId !== event.pointerId) return
-    event.currentTarget.releasePointerCapture?.(event.pointerId)
-    if (commit && previewDiffers(active.initialPlan, active.lastPlan)) {
-      resizeController?.commit(card.id, active.edge, active.lastDeltaPx)
+  useEffect(() => {
+    function moveResize(event: globalThis.PointerEvent) {
+      const active = pointerResize.current
+      if (!active || active.pointerId !== event.pointerId || !resizeController) return
+      const deltaPx = event.clientY - active.originY
+      active.lastDeltaPx = deltaPx
+      active.lastPlan = resizeController.plan(card.id, active.edge, deltaPx)
+      setResizePreview(active.lastPlan)
     }
-    pointerResize.current = null
-    setResizePreview(null)
-  }
+
+    function finishResize(event: globalThis.PointerEvent, commit: boolean) {
+      const active = pointerResize.current
+      if (!active || active.pointerId !== event.pointerId) return
+      if (active.target.hasPointerCapture?.(event.pointerId)) {
+        active.target.releasePointerCapture(event.pointerId)
+      }
+      if (commit && previewDiffers(active.initialPlan, active.lastPlan)) {
+        resizeController?.commit(card.id, active.edge, active.lastDeltaPx)
+      }
+      pointerResize.current = null
+      setResizePreview(null)
+    }
+
+    const finish = (event: globalThis.PointerEvent) => finishResize(event, true)
+    const cancel = (event: globalThis.PointerEvent) => finishResize(event, false)
+    window.addEventListener('pointermove', moveResize, true)
+    window.addEventListener('pointerup', finish, true)
+    window.addEventListener('pointercancel', cancel, true)
+    return () => {
+      window.removeEventListener('pointermove', moveResize, true)
+      window.removeEventListener('pointerup', finish, true)
+      window.removeEventListener('pointercancel', cancel, true)
+    }
+  }, [card.id, resizeController])
 
   function keyboardResize(edge: CardResizeEdge, event: KeyboardEvent<HTMLButtonElement>) {
     const sign =
@@ -345,16 +389,10 @@ export function SortableCard({
       ? {
           start: {
             onPointerDown: (event: PointerEvent<HTMLButtonElement>) => startResize('start', event),
-            onPointerMove: moveResize,
-            onPointerUp: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, true),
-            onPointerCancel: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, false),
             onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => keyboardResize('start', event),
           },
           end: {
             onPointerDown: (event: PointerEvent<HTMLButtonElement>) => startResize('end', event),
-            onPointerMove: moveResize,
-            onPointerUp: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, true),
-            onPointerCancel: (event: PointerEvent<HTMLButtonElement>) => finishResize(event, false),
             onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => keyboardResize('end', event),
           },
         }
@@ -370,21 +408,36 @@ export function SortableCard({
     height: resizePreview?.heightPx ?? layoutStyle?.height,
     marginTop: resizePreview ? baseMarginTop + resizePreview.topOffsetPx : layoutStyle?.marginTop,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    opacity: isDragging ? 0.4 : undefined,
+    visibility: isDragging ? 'hidden' : undefined,
   }
 
   return (
     <li ref={setNodeRef} style={style} data-testid="sortable-card">
-      <Card
-        card={card}
-        conflict={conflict}
-        onEdit={onEdit}
-        dayStart={dayStart}
-        dayEnd={dayEnd}
-        direction={direction}
-        dragSurfaceProps={{ ...attributes, ...listeners }}
-        resizeHandleProps={resizeHandleProps}
-      />
+      {isDragging || resizePreview ? (
+        <Card
+          card={card}
+          conflict={conflict}
+          dayStart={dayStart}
+          dayEnd={dayEnd}
+          timingPreview={{
+            startTime: resizePreview?.startTime ?? card.startTime ?? null,
+            durationHours:
+              resizePreview?.durationHours ??
+              resolvedDurationHours(card, dayStart ?? '06:00', dayEnd ?? '21:00'),
+          }}
+        />
+      ) : (
+        <Card
+          card={card}
+          conflict={conflict}
+          onEdit={onEdit}
+          dayStart={dayStart}
+          dayEnd={dayEnd}
+          direction={direction}
+          dragSurfaceProps={{ ...attributes, ...listeners }}
+          resizeHandleProps={resizeHandleProps}
+        />
+      )}
     </li>
   )
 }

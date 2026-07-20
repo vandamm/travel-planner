@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { addCard, getCard, setTrip } from '../../data/doc'
-import { applyCardDrop, dayDroppableId, dropTimeForOffset, timelineDropOffset } from './dndHandlers'
+import {
+  applyCardDrop,
+  dayDroppableId,
+  dropTimeForOffset,
+  planCardDrop,
+  timelineDropOffset,
+} from './dndHandlers'
 
 const DAY1 = '2027-05-01'
+const DAY2 = '2027-05-02'
 
 function addTimed(doc: Y.Doc, title: string, startTime: string, durationHours = 1, dayKey = DAY1) {
   return addCard(doc, {
@@ -47,6 +54,32 @@ describe('dropTimeForOffset', () => {
 })
 
 describe('applyCardDrop — same-day time drag', () => {
+  it('uses the same pure plan for the preview and committed drop', () => {
+    const doc = new Y.Doc()
+    const active = addTimed(doc, 'Breakfast', '08:00')
+    const neighbor = addTimed(doc, 'Museum', '10:00', 2)
+    const card = getCard(doc, active)!
+    const input = {
+      card,
+      targetDayKey: DAY1,
+      offsetPx: 255,
+      dayStart: '06:00',
+      dayEnd: '21:00',
+      direction: 'down' as const,
+    }
+
+    const preview = planCardDrop(input)
+    expect(preview).toEqual({
+      dayKey: DAY1,
+      startTime: '10:15',
+      durationHours: 1,
+    })
+
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 255 })
+    expect(getCard(doc, active)).toMatchObject(preview)
+    expect(getCard(doc, neighbor)?.startTime).toBe('10:00')
+  })
+
   it('gives an untimed card the time represented by its drop position', () => {
     const doc = new Y.Doc()
     const id = addCard(doc, { dayKey: DAY1, title: 'Stroll' }).id
@@ -56,7 +89,7 @@ describe('applyCardDrop — same-day time drag', () => {
     expect(getCard(doc, id)?.startTime).toBe('10:00')
   })
 
-  it('moves a timed card and pushes every later collision forward', () => {
+  it('moves a timed card into an overlap without changing neighbors', () => {
     const doc = new Y.Doc()
     const active = addTimed(doc, 'Breakfast', '08:00')
     const museum = addTimed(doc, 'Museum', '10:00', 2)
@@ -65,11 +98,11 @@ describe('applyCardDrop — same-day time drag', () => {
     applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 240 })
 
     expect(getCard(doc, active)?.startTime).toBe('10:00')
-    expect(getCard(doc, museum)?.startTime).toBe('11:00')
-    expect(getCard(doc, lunch)?.startTime).toBe('13:00')
+    expect(getCard(doc, museum)?.startTime).toBe('10:00')
+    expect(getCard(doc, lunch)?.startTime).toBe('12:00')
   })
 
-  it('commits the dropped card and its push chain atomically', () => {
+  it('commits only the dropped card in one update', () => {
     const doc = new Y.Doc()
     const active = addTimed(doc, 'Breakfast', '08:00')
     addTimed(doc, 'Museum', '10:00', 2)
@@ -82,18 +115,18 @@ describe('applyCardDrop — same-day time drag', () => {
     expect(updates).toBe(1)
   })
 
-  it('commits an earlier push chain atomically', () => {
+  it('moves across days into an overlap without changing source or target neighbors', () => {
     const doc = new Y.Doc()
-    addTimed(doc, 'Breakfast', '08:00')
-    addTimed(doc, 'Museum', '09:00', 2)
-    const active = addTimed(doc, 'Lunch', '12:00')
-    let updates = 0
-    doc.on('update', () => (updates += 1))
+    const sourceNeighbor = addTimed(doc, 'Breakfast', '08:00')
+    const active = addTimed(doc, 'Museum', '09:00', 2)
+    const targetNeighbor = addTimed(doc, 'Lunch', '10:00', 1, DAY2)
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 240 })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY2, offsetPx: 240 })
 
+    expect(getCard(doc, active)?.dayKey).toBe(DAY2)
     expect(getCard(doc, active)?.startTime).toBe('10:00')
-    expect(updates).toBe(1)
+    expect(getCard(doc, sourceNeighbor)?.startTime).toBe('08:00')
+    expect(getCard(doc, targetNeighbor)?.startTime).toBe('10:00')
   })
 
   it('does not write when a card is dropped back on the same time', () => {

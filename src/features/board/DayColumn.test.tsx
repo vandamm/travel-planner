@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
-import { DragOverDayContext } from './dragOverDayContext'
+import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
 
 const day: Day = { key: '2027-05-01', index: 0 }
 const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
@@ -87,7 +87,7 @@ describe('DayColumn', () => {
   it('shows the time on time-bound cards', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const dinner = screen.getByText('Dinner').closest('[data-testid="card"]') as HTMLElement
-    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h')
+    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h 00m')
   })
 
   it('marks every timed card involved in an overlap', () => {
@@ -309,6 +309,21 @@ describe('DayColumn', () => {
     const column = screen.getByTestId('day-column')
     expect(column).toHaveAttribute('data-drag-over', '')
     expect(column).toHaveClass('border-sky-400', 'ring-2', 'ring-sky-300')
+  })
+
+  it('renders the active drag preview inside its current target day', () => {
+    render(
+      <DragPreviewContext.Provider
+        value={{ card: cards[1], dayKey: day.key, startTime: '10:15', durationHours: 1 }}
+      >
+        <DayColumn day={day} city={rome} cards={cards} direction="down" />
+      </DragPreviewContext.Provider>,
+    )
+
+    const preview = within(screen.getByTestId('day-body')).getByTestId('drag-preview-card')
+    expect(preview).toHaveTextContent('Breakfast')
+    expect(within(preview).getByTestId('event-timing-start')).toHaveTextContent('10:15')
+    expect(within(preview).getByTestId('event-timing-end')).toHaveTextContent('11:15')
   })
 
   it('anchors the NOON divider at noon’s fraction — top when down, bottom when up', () => {

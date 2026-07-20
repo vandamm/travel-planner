@@ -26,8 +26,33 @@ describe('Card', () => {
 
   it('shows the start time and duration without an end time', () => {
     render(<Card card={{ ...base, startTime: '10:00', duration: 'custom', durationHours: 2 }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 2h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 2h 00m')
     expect(screen.getByTestId('card-time')).not.toHaveTextContent('–')
+  })
+
+  it('keeps card content visible while previewing a live start, end, and duration', () => {
+    render(
+      <Card
+        card={{
+          ...base,
+          startTime: '10:00',
+          note: 'Bring tickets',
+          category: 'indoor',
+          link: 'https://example.com',
+        }}
+        timingPreview={{ startTime: '10:15', durationHours: 1.75 }}
+      />,
+    )
+
+    expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
+    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:15')
+    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('12:00')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:15 · 1h 45m')
+    expect(screen.getByTestId('card-time')).not.toHaveTextContent('12:00')
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
+    expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
+    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
   })
 
   it('lets title and time use the full card width', () => {
@@ -61,6 +86,39 @@ describe('Card', () => {
     expect(screen.getByTestId('card')).toHaveAttribute('tabindex', '0')
   })
 
+  it('keeps the sortable item geometry while lightly tinting an active drag', () => {
+    render(
+      <DndContext>
+        <SortableCard
+          card={{
+            ...base,
+            startTime: '10:00',
+            note: 'Bring tickets',
+            category: 'indoor',
+            link: 'https://example.com',
+          }}
+          conflict
+          layoutStyle={{ height: 60, marginTop: 240 }}
+        />
+      </DndContext>,
+    )
+
+    const card = screen.getByTestId('card')
+    card.focus()
+    fireEvent.keyDown(card, { key: ' ', code: 'Space' })
+
+    expect(screen.getByTestId('sortable-card')).toHaveStyle({
+      height: '60px',
+      marginTop: '240px',
+    })
+    expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
+    expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
+    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
+    expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
+  })
+
   it('attaches pointer listeners to the card surface', () => {
     const onPointerDown = vi.fn()
     render(<Card card={base} dragSurfaceProps={{ onPointerDown }} />)
@@ -78,6 +136,18 @@ describe('Card', () => {
 
     rerender(<Card card={base} resizeHandleProps={resizeHandleProps} />)
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps full invisible resize targets', () => {
+    render(
+      <Card card={{ ...base, startTime: '10:00' }} resizeHandleProps={{ start: {}, end: {} }} />,
+    )
+
+    for (const edge of ['start', 'end']) {
+      const handle = screen.getByRole('button', { name: `Resize Colosseum ${edge}` })
+      expect(handle).toHaveClass('h-3', 'cursor-row-resize', 'focus-visible:ring-2')
+      expect(handle.querySelector('span')).not.toBeInTheDocument()
+    }
   })
 
   it('keeps links and resize handles from activating a card move', () => {
@@ -104,7 +174,6 @@ describe('Card', () => {
         durationHours: deltaPx === 0 ? 1 : 1.25,
         heightPx: deltaPx === 0 ? 60 : 75,
         topOffsetPx: deltaPx < 0 ? -15 : 0,
-        pushed: [],
       }),
     )
     const commit = vi.fn()
@@ -113,7 +182,14 @@ describe('Card', () => {
       <CardResizeContext.Provider value={controller}>
         <DndContext>
           <SortableCard
-            card={{ ...base, startTime: '10:00' }}
+            card={{
+              ...base,
+              startTime: '10:00',
+              note: 'Bring tickets',
+              category: 'indoor',
+              link: 'https://example.com',
+            }}
+            conflict
             direction="down"
             layoutStyle={{ height: 60, marginTop: 240 }}
           />
@@ -130,27 +206,105 @@ describe('Card', () => {
       fireEvent(start, event)
     }
     pointer('pointerDown', 100)
-    pointer('pointerMove', 85)
+    expect(document.body).toHaveClass('cursor-row-resize')
+    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:00')
+    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 1h 00m')
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
+    expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
+    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
+    expect(screen.getByTestId('card-conflict')).toHaveTextContent('Overlap')
+    expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
+
+    const pointerWindow = (
+      type: 'pointerMove' | 'pointerUp' | 'pointerCancel',
+      clientY: number,
+    ) => {
+      const event = new Event(type.toLowerCase())
+      Object.defineProperties(event, {
+        pointerId: { value: 1 },
+        clientY: { value: clientY },
+      })
+      fireEvent(window, event)
+    }
+    pointerWindow('pointerMove', 85)
     const sortable = screen.getByTestId('sortable-card')
     expect(sortable).toHaveStyle({ height: '75px' })
     expect(sortable.style.marginTop).toBe('225px')
-    pointer('pointerUp', 85)
+    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('09:45')
+    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 · 1h 15m')
+    pointerWindow('pointerUp', 85)
+    expect(document.body).not.toHaveClass('cursor-row-resize')
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
 
-    fireEvent.keyDown(start, { key: 'ArrowUp' })
+    const restoredStart = screen.getByRole('button', { name: 'Resize Colosseum start' })
+    fireEvent.keyDown(restoredStart, { key: 'ArrowUp' })
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
-    fireEvent.keyDown(start, { key: 'ArrowDown', shiftKey: true })
+    fireEvent.keyDown(restoredStart, { key: 'ArrowDown', shiftKey: true })
     expect(commit).toHaveBeenCalledWith('x', 'start', 60)
+  })
+
+  it('restores the original card and geometry after a cancelled resize without committing', () => {
+    const plan = vi.fn(
+      (_cardId: string, _edge: string, deltaPx: number): CardResizePlan => ({
+        startTime: '10:00',
+        duration: 'custom',
+        durationHours: deltaPx === 0 ? 1 : 1.25,
+        heightPx: deltaPx === 0 ? 60 : 75,
+        topOffsetPx: 0,
+      }),
+    )
+    const commit = vi.fn()
+    render(
+      <CardResizeContext.Provider value={{ plan, commit }}>
+        <DndContext>
+          <SortableCard
+            card={{ ...base, startTime: '10:00' }}
+            layoutStyle={{ height: 60, marginTop: 240 }}
+          />
+        </DndContext>
+      </CardResizeContext.Provider>,
+    )
+
+    const handle = screen.getByRole('button', { name: 'Resize Colosseum end' })
+    const down = createEvent.pointerDown(handle)
+    Object.defineProperties(down, {
+      pointerId: { value: 2 },
+      clientY: { value: 100 },
+    })
+    fireEvent(handle, down)
+
+    const move = new Event('pointermove')
+    Object.defineProperties(move, {
+      pointerId: { value: 2 },
+      clientY: { value: 115 },
+    })
+    fireEvent(window, move)
+    expect(screen.getByTestId('sortable-card')).toHaveStyle({ height: '75px' })
+
+    const cancel = new Event('pointercancel')
+    Object.defineProperty(cancel, 'pointerId', { value: 2 })
+    fireEvent(window, cancel)
+
+    expect(commit).not.toHaveBeenCalled()
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
+    expect(screen.getByTestId('sortable-card')).toHaveStyle({
+      height: '60px',
+      marginTop: '240px',
+    })
   })
 
   it('shows the duration for an untimed card', () => {
     render(<Card card={{ ...base, duration: 'custom', durationHours: 1.5 }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('1.5h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('1h 30m')
   })
 
   it('shows a duration when the card is untimed', () => {
     render(<Card card={base} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('1h')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('1h 00m')
   })
 
   it('renders an optional note', () => {
