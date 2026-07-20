@@ -18,20 +18,25 @@ export function EventTimingHint({ startTime, durationHours }: EventTimingHintPro
   return (
     <article
       data-testid="event-timing-hint"
-      className="relative z-20 flex h-full min-h-[84px] flex-col justify-center rounded-card border border-manipulation-border bg-manipulation-bg px-3 font-sans text-manipulation-text shadow-none"
+      className="relative z-20 flex h-full min-h-[84px] items-center justify-center rounded-card border border-indoor-border bg-indoor-bg px-3 font-sans shadow-none"
     >
-      <div className="flex items-center gap-2 text-[22px] font-medium leading-none">
-        <span data-testid="event-timing-start">{startTime ?? '—'}</span>
-        <span aria-hidden className="text-manipulation-muted">
-          →
-        </span>
-        <span data-testid="event-timing-end">{endTime ?? '—'}</span>
-      </div>
+      <span
+        data-testid="event-timing-start"
+        className="absolute left-1/2 -top-5 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium leading-none text-ink-600"
+      >
+        {startTime ?? '—'}
+      </span>
       <span
         data-testid="event-timing-duration"
-        className="mt-2 border-t border-manipulation-text/10 pt-2 text-center text-base font-medium text-manipulation-duration"
+        className="text-center text-[11px] font-medium leading-none text-ink-600"
       >
         {formatDuration(durationMinutes)}
+      </span>
+      <span
+        data-testid="event-timing-end"
+        className="absolute left-1/2 -bottom-5 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium leading-none text-ink-600"
+      >
+        {endTime ?? '—'}
       </span>
     </article>
   )

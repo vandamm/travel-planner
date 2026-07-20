@@ -27,19 +27,20 @@ describe('EventTimingHint', () => {
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('—')
   })
 
-  it('uses approved semantic styling without labels or card details', () => {
+  it('uses the indoor palette with times outside and a compact centered duration', () => {
     render(<EventTimingHint startTime="10:15" durationHours={1.75} />)
 
     expect(screen.getByTestId('event-timing-hint')).toHaveClass(
-      'border-manipulation-border',
-      'bg-manipulation-bg',
+      'border-indoor-border',
+      'bg-indoor-bg',
       'font-sans',
-      'text-manipulation-text',
       'shadow-none',
     )
+    expect(screen.getByTestId('event-timing-start')).toHaveClass('absolute', '-top-5')
+    expect(screen.getByTestId('event-timing-end')).toHaveClass('absolute', '-bottom-5')
     expect(screen.getByTestId('event-timing-duration')).toHaveClass(
-      'border-manipulation-text/10',
-      'text-manipulation-duration',
+      'text-[11px]',
+      'text-ink-600',
     )
     expect(screen.queryByText(/Moving activity/i)).not.toBeInTheDocument()
     expect(screen.queryByTestId('card-title')).not.toBeInTheDocument()
