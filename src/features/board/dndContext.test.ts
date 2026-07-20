@@ -159,7 +159,7 @@ describe('BoardDnd drag timing preview', () => {
     act(() => dndCallbacks.onDragEnd?.(dragEvent(active, 355, dayKey)))
     expect(getCard(doc, active)?.startTime).toBe('10:15')
     expect(getCard(doc, neighbor)?.startTime).toBe('10:15')
-    expect(screen.queryByTestId('event-timing-hint')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card')).not.toBeInTheDocument()
   })
 
   it('starts untimed with dashes, previews over a day, and cancels without a write', () => {
@@ -193,7 +193,7 @@ describe('BoardDnd drag timing preview', () => {
     act(() => dndCallbacks.onDragCancel?.())
     expect(getCard(doc, active)?.startTime).toBeUndefined()
     expect(updates).toBe(0)
-    expect(screen.queryByTestId('event-timing-hint')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card')).not.toBeInTheDocument()
   })
 
   it('does not commit a cached preview when released outside every drop target', () => {

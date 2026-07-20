@@ -15,7 +15,7 @@ import type * as Y from 'yjs'
 import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
 import { resolvedDurationHours } from '../cards/cardHeight'
-import { EventTimingHint } from '../cards/EventTimingHint'
+import { Card } from '../cards/Card'
 import {
   applyCardResize,
   CardResizeContext,
@@ -165,9 +165,11 @@ export function BoardDnd({
         <DragOverDayContext.Provider value={overDayKey}>{children}</DragOverDayContext.Provider>
         <DragOverlay>
           {activeCard && dragPreview ? (
-            <EventTimingHint
-              startTime={dragPreview.startTime}
-              durationHours={dragPreview.durationHours}
+            <Card
+              card={activeCard}
+              dayStart={dayStart}
+              dayEnd={dayEnd}
+              timingPreview={dragPreview}
             />
           ) : null}
         </DragOverlay>

@@ -30,6 +30,30 @@ describe('Card', () => {
     expect(screen.getByTestId('card-time')).not.toHaveTextContent('–')
   })
 
+  it('keeps card content visible while previewing a live start, end, and duration', () => {
+    render(
+      <Card
+        card={{
+          ...base,
+          startTime: '10:00',
+          note: 'Bring tickets',
+          category: 'indoor',
+          link: 'https://example.com',
+        }}
+        timingPreview={{ startTime: '10:15', durationHours: 1.75 }}
+      />,
+    )
+
+    expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
+    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:15')
+    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('12:00')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:15–12:00 · 1.75h')
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
+    expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
+    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
+  })
+
   it('lets title and time use the full card width', () => {
     render(
       <Card
@@ -61,7 +85,7 @@ describe('Card', () => {
     expect(screen.getByTestId('card')).toHaveAttribute('tabindex', '0')
   })
 
-  it('keeps the sortable item geometry while replacing an active drag with a timing hint', () => {
+  it('keeps the sortable item geometry while lightly tinting an active drag', () => {
     render(
       <DndContext>
         <SortableCard
@@ -86,11 +110,11 @@ describe('Card', () => {
       height: '60px',
       marginTop: '240px',
     })
-    expect(screen.getByTestId('event-timing-hint')).toBeInTheDocument()
-    expect(screen.queryByTestId('card-title')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('card-note')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('card-category')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('card-link')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
+    expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
+    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
   })
 
@@ -189,12 +213,12 @@ describe('Card', () => {
     pointer('pointerDown', 100)
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:00')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('event-timing-duration')).toHaveTextContent('1h')
-    expect(screen.queryByTestId('card-title')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('card-note')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('card-category')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('card-link')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('card-conflict')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00–11:00 · 1h')
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
+    expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
+    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
+    expect(screen.getByTestId('card-conflict')).toHaveTextContent('Overlap')
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
 
     const pointerWindow = (
@@ -214,7 +238,7 @@ describe('Card', () => {
     expect(sortable.style.marginTop).toBe('225px')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('09:45')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('event-timing-duration')).toHaveTextContent('1h 15m')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45–11:00 · 1.25h')
     pointerWindow('pointerUp', 85)
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')

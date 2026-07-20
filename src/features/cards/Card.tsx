@@ -21,8 +21,7 @@ import type { Card as CardType, CardCategory } from '../../data/schema'
 import { CardResizeContext, type CardResizeEdge, type CardResizePlan } from '../board/cardResize'
 import type { TimeDirection } from '../board/timeDirection'
 import { cardCategory } from './cardCategory'
-import { PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
-import { EventTimingHint } from './EventTimingHint'
+import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
 
 /** Chip-triad token classes (text / bg / border) per category. */
 const CATEGORY_CHIP: Record<CardCategory, string> = {
@@ -47,6 +46,11 @@ export interface CardProps {
   direction?: TimeDirection
   dayStart?: string
   dayEnd?: string
+  /** Ephemeral timing shown while this card is moved or resized. */
+  timingPreview?: {
+    startTime: string | null
+    durationHours: number
+  }
 }
 
 /** A compact, human-friendly label for a link (its host, falling back to raw). */
@@ -86,9 +90,21 @@ export function Card({
   direction = 'down',
   dayStart = '06:00',
   dayEnd = '21:00',
+  timingPreview,
 }: CardProps) {
   const category = cardCategory(card)
-  const duration = formatDuration(resolvedDurationHours(card, dayStart, dayEnd))
+  const durationHours = timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
+  const duration = formatDuration(durationHours)
+  const previewEndTime = timingPreview?.startTime
+    ? clockString(clockMinutes(timingPreview.startTime) + Math.round(durationHours * 60))
+    : null
+  const displayedTime = timingPreview
+    ? timingPreview.startTime
+      ? `${timingPreview.startTime}–${previewEndTime} · ${duration}`
+      : duration
+    : card.startTime
+      ? `${card.startTime} · ${duration}`
+      : duration
   const {
     className: dragClassName,
     onClick: onDragSurfaceClick,
@@ -143,14 +159,14 @@ export function Card({
     )
   }
 
-  return (
+  const cardContent = (
     <article
       {...surfaceProps}
       data-testid="card"
       data-category={category}
       aria-label={dragSurfaceProps ? `Move or edit ${card.title}` : undefined}
       onClick={editFromSurface}
-      className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border border-edge-100 bg-surface px-2.5 py-2 text-sm text-ink shadow-sm ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
+      className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border px-2.5 py-2 text-sm text-ink shadow-sm ${timingPreview ? 'border-indoor-border bg-indoor-bg/40 shadow-none' : 'border-edge-100 bg-surface'} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
     >
       {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
       {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
@@ -176,7 +192,7 @@ export function Card({
               data-testid="card-time"
               className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
             >
-              {card.startTime ? `${card.startTime} · ${duration}` : duration}
+              {displayedTime}
             </span>
           }
         </button>
@@ -235,6 +251,26 @@ export function Card({
           </span>
         ))}
     </article>
+  )
+
+  if (!timingPreview) return cardContent
+
+  return (
+    <div className="relative h-full">
+      <span
+        data-testid="event-timing-start"
+        className="absolute left-1/2 -top-5 z-10 -translate-x-1/2 whitespace-nowrap font-sans text-[11px] font-medium leading-none text-ink-600"
+      >
+        {timingPreview.startTime ?? '—'}
+      </span>
+      {cardContent}
+      <span
+        data-testid="event-timing-end"
+        className="absolute left-1/2 -bottom-5 z-10 -translate-x-1/2 whitespace-nowrap font-sans text-[11px] font-medium leading-none text-ink-600"
+      >
+        {previewEndTime ?? '—'}
+      </span>
+    </div>
   )
 }
 
@@ -377,12 +413,17 @@ export function SortableCard({
   return (
     <li ref={setNodeRef} style={style} data-testid="sortable-card">
       {isDragging || resizePreview ? (
-        <EventTimingHint
-          startTime={resizePreview?.startTime ?? card.startTime ?? null}
-          durationHours={
-            resizePreview?.durationHours ??
-            resolvedDurationHours(card, dayStart ?? '06:00', dayEnd ?? '21:00')
-          }
+        <Card
+          card={card}
+          conflict={conflict}
+          dayStart={dayStart}
+          dayEnd={dayEnd}
+          timingPreview={{
+            startTime: resizePreview?.startTime ?? card.startTime ?? null,
+            durationHours:
+              resizePreview?.durationHours ??
+              resolvedDurationHours(card, dayStart ?? '06:00', dayEnd ?? '21:00'),
+          }}
         />
       ) : (
         <Card
