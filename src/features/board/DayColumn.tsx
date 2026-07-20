@@ -9,7 +9,7 @@ import { format, isWeekend, parseISO } from 'date-fns'
 import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day, DayCityOverride } from '../../data/schema'
 import { NO_CITY_COLOR } from '../cities/colors'
-import { SortableCard } from '../cards/Card'
+import { Card, SortableCard } from '../cards/Card'
 import {
   PX_PER_HOUR,
   cardHeightPx,
@@ -18,7 +18,7 @@ import {
   resolvedDurationHours,
   windowHeightPx,
 } from '../cards/cardHeight'
-import { useIsDragOverDay } from './dragOverDayContext'
+import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
 import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
 import { COLUMN_WIDTH_REM } from './useViewport'
@@ -126,6 +126,16 @@ export function DayColumn({
   const { setNodeRef } = useDroppable({ id: dayDroppableId(day.key) })
   // Highlight this column while a card is dragged over it — the "lands here" hint.
   const dragOver = useIsDragOverDay(day.key)
+  const dragPreview = useDragPreview()
+  const previewTopPx =
+    dragPreview?.dayKey === day.key && dragPreview.startTime
+      ? ((direction === 'up'
+          ? clockMinutes(dayEnd) -
+            (clockMinutes(dragPreview.startTime) + dragPreview.durationHours * 60)
+          : clockMinutes(dragPreview.startTime) - clockMinutes(dayStart)) /
+          60) *
+        PX_PER_HOUR
+      : 0
 
   return (
     <section
@@ -254,6 +264,24 @@ export function DayColumn({
             )
           })}
         </ol>
+
+        {dragPreview?.dayKey === day.key && (
+          <div
+            data-testid="drag-preview-card"
+            style={{
+              top: previewTopPx,
+              height: dragPreview.durationHours * PX_PER_HOUR,
+            }}
+            className="pointer-events-none absolute inset-x-3 z-20"
+          >
+            <Card
+              card={dragPreview.card}
+              dayStart={dayStart}
+              dayEnd={dayEnd}
+              timingPreview={dragPreview}
+            />
+          </div>
+        )}
       </div>
 
       <footer className="px-3 pb-3 pt-1">

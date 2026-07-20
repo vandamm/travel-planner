@@ -6,6 +6,7 @@ import { addCard, getCard, setTrip } from '../../data/doc'
 import { CardResizeContext, type CardResizeController } from './cardResize'
 import { prioritizeCardCollisions } from './dndCollision'
 import { BoardDnd } from './dndContext'
+import { useDragPreview } from './dragOverDayContext'
 
 const dndCallbacks = vi.hoisted(() => ({
   onDragStart: undefined as ((event: unknown) => void) | undefined,
@@ -83,6 +84,17 @@ describe('BoardDnd card resizing', () => {
 })
 
 describe('BoardDnd drag timing preview', () => {
+  function PreviewProbe() {
+    const preview = useDragPreview()
+    return preview
+      ? createElement(
+          'output',
+          { 'data-testid': 'drag-preview-state' },
+          `${preview.dayKey} ${preview.startTime} ${preview.durationHours}`,
+        )
+      : null
+  }
+
   function dayBody(dayKey: string) {
     return createElement(
       'section',
@@ -144,22 +156,20 @@ describe('BoardDnd drag timing preview', () => {
       createElement(BoardDnd, {
         doc,
         direction: 'down',
-        children: dayBody(dayKey),
+        children: createElement('div', null, dayBody(dayKey), createElement(PreviewProbe)),
       }),
     )
 
     act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
-    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:00')
-    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
+    expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:00 1`)
 
     act(() => dndCallbacks.onDragMove?.(dragEvent(active, 355, dayKey)))
-    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:15')
-    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:15')
+    expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:15 1`)
 
     act(() => dndCallbacks.onDragEnd?.(dragEvent(active, 355, dayKey)))
     expect(getCard(doc, active)?.startTime).toBe('10:15')
     expect(getCard(doc, neighbor)?.startTime).toBe('10:15')
-    expect(screen.queryByTestId('card')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('drag-preview-state')).not.toBeInTheDocument()
   })
 
   it('starts untimed with dashes, previews over a day, and cancels without a write', () => {
@@ -179,21 +189,54 @@ describe('BoardDnd drag timing preview', () => {
       createElement(BoardDnd, {
         doc,
         direction: 'down',
-        children: dayBody(dayKey),
+        children: createElement('div', null, dayBody(dayKey), createElement(PreviewProbe)),
       }),
     )
 
     act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
-    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('—')
-    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('—')
+    expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} null 1`)
 
     act(() => dndCallbacks.onDragMove?.(dragEvent(active, 355, dayKey)))
-    expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:15')
+    expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:15 1`)
 
     act(() => dndCallbacks.onDragCancel?.())
     expect(getCard(doc, active)?.startTime).toBeUndefined()
     expect(updates).toBe(0)
-    expect(screen.queryByTestId('card')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('drag-preview-state')).not.toBeInTheDocument()
+  })
+
+  it('moves the in-column preview to the day beneath the pointer', () => {
+    const doc = new Y.Doc()
+    const dayKey = '2027-05-01'
+    const targetDayKey = '2027-05-02'
+    const active = addCard(doc, {
+      id: 'active',
+      dayKey,
+      title: 'Museum',
+      startTime: '10:00',
+      duration: 'custom',
+      durationHours: 1,
+    }).id
+
+    render(
+      createElement(BoardDnd, {
+        doc,
+        direction: 'down',
+        children: createElement(
+          'div',
+          null,
+          dayBody(dayKey),
+          dayBody(targetDayKey),
+          createElement(PreviewProbe),
+        ),
+      }),
+    )
+
+    act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
+    act(() => dndCallbacks.onDragMove?.(dragEvent(active, 355, targetDayKey)))
+
+    expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${targetDayKey} 10:15 1`)
+    expect(getCard(doc, active)?.dayKey).toBe(dayKey)
   })
 
   it('does not commit a cached preview when released outside every drop target', () => {

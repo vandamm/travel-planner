@@ -1,6 +1,5 @@
 import {
   DndContext,
-  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -15,7 +14,6 @@ import type * as Y from 'yjs'
 import { getCard } from '../../data/doc'
 import type { Card as CardType } from '../../data/schema'
 import { resolvedDurationHours } from '../cards/cardHeight'
-import { Card } from '../cards/Card'
 import {
   applyCardResize,
   CardResizeContext,
@@ -23,7 +21,7 @@ import {
   type CardResizeController,
 } from './cardResize'
 import { boardCollisionDetection } from './dndCollision'
-import { DragOverDayContext } from './dragOverDayContext'
+import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
 import {
   commitCardDropPlan,
   dayKeyFromDroppableId,
@@ -57,6 +55,7 @@ export function BoardDnd({
   )
   const [activeCard, setActiveCard] = useState<CardType | null>(null)
   const [dragPreview, setDragPreview] = useState<{
+    dayKey: string
     startTime: string | null
     durationHours: number
   } | null>(null)
@@ -88,6 +87,7 @@ export function BoardDnd({
     setDragPreview(
       card
         ? {
+            dayKey: card.dayKey,
             startTime: card.startTime ?? null,
             durationHours: resolvedDurationHours(card, dayStart, dayEnd),
           }
@@ -132,7 +132,11 @@ export function BoardDnd({
   function handleDragMove(event: DragMoveEvent) {
     const plan = planFromEvent(event)
     if (!plan) return
-    setDragPreview({ startTime: plan.startTime, durationHours: plan.durationHours })
+    setDragPreview({
+      dayKey: plan.dayKey,
+      startTime: plan.startTime,
+      durationHours: plan.durationHours,
+    })
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -162,17 +166,11 @@ export function BoardDnd({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <DragOverDayContext.Provider value={overDayKey}>{children}</DragOverDayContext.Provider>
-        <DragOverlay>
-          {activeCard && dragPreview ? (
-            <Card
-              card={activeCard}
-              dayStart={dayStart}
-              dayEnd={dayEnd}
-              timingPreview={dragPreview}
-            />
-          ) : null}
-        </DragOverlay>
+        <DragPreviewContext.Provider
+          value={activeCard && dragPreview ? { card: activeCard, ...dragPreview } : null}
+        >
+          <DragOverDayContext.Provider value={overDayKey}>{children}</DragOverDayContext.Provider>
+        </DragPreviewContext.Provider>
       </DndContext>
     </CardResizeContext.Provider>
   )
