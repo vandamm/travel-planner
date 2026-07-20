@@ -312,6 +312,11 @@ export function SortableCard({
   } | null>(null)
   const [resizePreview, setResizePreview] = useState<CardResizePlan | null>(null)
 
+  useEffect(() => {
+    document.body.classList.toggle('cursor-row-resize', Boolean(resizePreview))
+    return () => document.body.classList.remove('cursor-row-resize')
+  }, [resizePreview])
+
   function previewDiffers(initial: CardResizePlan | null, current: CardResizePlan | null): boolean {
     return (
       !!initial &&

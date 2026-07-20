@@ -212,6 +212,7 @@ describe('Card', () => {
       fireEvent(start, event)
     }
     pointer('pointerDown', 100)
+    expect(document.body).toHaveClass('cursor-row-resize')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:00')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
     expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 1h 00m')
@@ -241,6 +242,7 @@ describe('Card', () => {
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
     expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 · 1h 15m')
     pointerWindow('pointerUp', 85)
+    expect(document.body).not.toHaveClass('cursor-row-resize')
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
 
