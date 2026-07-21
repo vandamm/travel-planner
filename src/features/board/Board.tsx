@@ -262,7 +262,7 @@ export function Board({
               dayEnd={trip.dayEnd}
               onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
             >
-              <div data-testid="board" className="flex" style={{ gap: COLUMN_GAP_REM }}>
+              <div data-testid="board" className="flex min-w-full" style={{ gap: COLUMN_GAP_REM }}>
                 {days.map((day) => {
                   const cityId = resolveDayCity(day.key, accommodations, overrides)
                   return (

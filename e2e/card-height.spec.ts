@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip, E2E_LINK } from './helpers'
+import { addActivity, setupTrip, E2E_LINK } from './helpers'
 
 test('a card set to whole-day grows taller than a default card', async ({ page }) => {
   await page.addInitScript(() => {
@@ -22,13 +22,13 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   expect(dayBody!.height).toBeGreaterThan(timelineTrack!.height)
 
   // A default-height card (exact duration, untimed → one block).
-  await column.getByRole('button', { name: 'Add activity', exact: true }).click()
+  await addActivity(column)
   let editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('Quick stop')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   // A whole-day card.
-  await columns.nth(1).getByRole('button', { name: 'Add activity', exact: true }).click()
+  await addActivity(columns.nth(1))
   editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('All day tour')
   await editor.getByRole('button', { name: 'Day', exact: true }).click()

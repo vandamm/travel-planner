@@ -9,10 +9,17 @@ import { uncoveredGaps } from '../../data/cityResolution'
 import type { Accommodation, City, Day } from '../../data/schema'
 import { AccommodationBar } from './AccommodationBar'
 import { packAccommodations } from './accommodationSpan'
-import { COLUMN_GAP_REM, COLUMN_WIDTH_REM } from '../board/useViewport'
+import {
+  COLUMN_GAP_PX,
+  COLUMN_GAP_REM,
+  COLUMN_WIDTH_PX,
+  COLUMN_WIDTH_REM,
+} from '../board/useViewport'
 
-/** Half a column (incl. its gap) — a changeover bar starts/ends at the day's middle. */
-const HALF_DAY_INSET = `calc((${COLUMN_WIDTH_REM} + ${COLUMN_GAP_REM}) / 2)`
+/** Half one day track plus half its following gap, within a multi-day grid cell. */
+function halfDayInset(span: number): string {
+  return `calc(${(50 / span).toFixed(4)}% + ${(COLUMN_GAP_PX / (2 * span)).toFixed(4)}px)`
+}
 
 export interface AccommodationLaneProps {
   days: Day[]
@@ -39,6 +46,8 @@ export function AccommodationLane({
   // covers a gap day, so row 1 of that column is always free.
   const dayIndex = new Map(days.map((d, i) => [d.key, i]))
   const gaps = uncoveredGaps(days, accommodations)
+  const minimumLaneWidth =
+    days.length * COLUMN_WIDTH_PX + Math.max(0, days.length - 1) * COLUMN_GAP_PX
 
   return (
     <div className="mb-2">
@@ -46,7 +55,8 @@ export function AccommodationLane({
         data-testid="accommodation-lane"
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${days.length}, ${COLUMN_WIDTH_REM})`,
+          gridTemplateColumns: `repeat(${days.length}, minmax(${COLUMN_WIDTH_REM}, 1fr))`,
+          minWidth: minimumLaneWidth,
           columnGap: COLUMN_GAP_REM,
           rowGap: '0.25rem',
         }}
@@ -85,8 +95,8 @@ export function AccommodationLane({
               ) : p.startHalf || p.endHalf ? (
                 <div
                   style={{
-                    marginLeft: p.startHalf ? HALF_DAY_INSET : undefined,
-                    marginRight: p.endHalf ? HALF_DAY_INSET : undefined,
+                    marginLeft: p.startHalf ? halfDayInset(p.span) : undefined,
+                    marginRight: p.endHalf ? halfDayInset(p.span) : undefined,
                   }}
                 >
                   {bar}

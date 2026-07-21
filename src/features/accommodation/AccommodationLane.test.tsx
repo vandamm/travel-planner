@@ -17,6 +17,15 @@ const stay = (over: Partial<Accommodation> = {}): Accommodation => ({
 })
 
 describe('AccommodationLane', () => {
+  it('uses the same flexible full-width tracks as the day columns', () => {
+    render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
+
+    expect(screen.getByTestId('accommodation-lane')).toHaveStyle({
+      gridTemplateColumns: 'repeat(5, minmax(17rem, 1fr))',
+      minWidth: '1416px',
+    })
+  })
+
   it('keeps uncovered-gap creation without a separate trailing stay action', () => {
     render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
 
@@ -106,11 +115,11 @@ describe('AccommodationLane', () => {
     // The half-day inset is applied so the bars meet at the middle of the shared day.
     expect(cellA.querySelector('div')).toHaveAttribute(
       'style',
-      expect.stringContaining('margin-right: calc(8.9375rem);'),
+      expect.stringContaining('margin-right: calc(16.6667% + 2.3333px);'),
     )
     expect(cellB.querySelector('div')).toHaveAttribute(
       'style',
-      expect.stringContaining('margin-left: calc(8.9375rem);'),
+      expect.stringContaining('margin-left: calc(16.6667% + 2.3333px);'),
     )
   })
 

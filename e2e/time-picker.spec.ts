@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { pickTime, setupTrip, E2E_LINK } from './helpers'
+import { addActivity, pickTime, setupTrip, E2E_LINK } from './helpers'
 
 // Native time inputs preserve the existing HH:mm storage while using the
 // platform's formatted time-entry surface.
@@ -9,7 +9,7 @@ test('setting a card start through the native input shows its start and duration
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
-  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
+  await addActivity(firstColumn)
   const editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('Train ride')
   await pickTime(editor, 'Start time', '10:00')
@@ -23,7 +23,7 @@ test('clearing a native card start time untimes the card', async ({ page }) => {
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
-  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
+  await addActivity(firstColumn)
   const editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('Loose plan')
   await pickTime(editor, 'Start time', '09:00')
@@ -64,7 +64,7 @@ test.describe('mobile native time input', () => {
     await page.goto('/mobile-picker-e2e')
     await setupTrip(page, { title: 'Picker', startDate: '2027-05-01', endDate: '2027-05-01' })
 
-    await page.getByRole('button', { name: 'Add activity', exact: true }).click()
+    await addActivity(page)
     const editor = page.getByRole('dialog', { name: 'Card editor' })
     const input = editor.getByLabel('Start time')
     await expect(input).toHaveAttribute('type', 'time')

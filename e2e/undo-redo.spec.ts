@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { pickTime, setupTrip, E2E_LINK } from './helpers'
+import { addActivity, pickTime, setupTrip, E2E_LINK } from './helpers'
 
 test('undo removes a hand-added card; redo restores it', async ({ page }) => {
   await page.goto(E2E_LINK)
@@ -8,7 +8,7 @@ test('undo removes a hand-added card; redo restores it', async ({ page }) => {
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 
   // Create a card by hand — this is what the undo stack should track.
-  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
+  await addActivity(firstColumn)
   const editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('Visit Colosseum')
   await pickTime(editor, 'Start time', '10:00')

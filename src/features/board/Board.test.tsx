@@ -43,6 +43,7 @@ describe('Board', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-03' }))
     expect(screen.getAllByTestId('day-column')).toHaveLength(3)
+    expect(screen.getByTestId('board')).toHaveClass('min-w-full')
   })
 
   it('colors a day header from its covering accommodation', () => {

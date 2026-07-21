@@ -409,7 +409,12 @@ export function SortableCard({
   }
 
   return (
-    <li ref={setNodeRef} style={style} data-testid="sortable-card">
+    <li
+      ref={setNodeRef}
+      style={style}
+      data-testid="sortable-card"
+      className="pointer-events-auto"
+    >
       {isDragging || resizePreview ? (
         <Card
           card={card}

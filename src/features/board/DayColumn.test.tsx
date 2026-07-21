@@ -61,6 +61,14 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
   })
 
+  it('fills available board width while keeping the multi-week minimum width', () => {
+    render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
+
+    const column = screen.getByTestId('day-column')
+    expect(column).toHaveStyle({ flex: '1 0 17rem', minWidth: '17rem' })
+    expect(column.style.width).toBe('')
+  })
+
   it('shows a neutral header when no city is resolved', () => {
     render(<DayColumn day={day} cards={[]} direction="down" />)
     expect(screen.getByTestId('city-name')).toHaveTextContent('No city')
@@ -150,19 +158,33 @@ describe('DayColumn', () => {
       expect(hasSlateClass(label)).toBe(false)
     }
     expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
+    expect(screen.getByTestId('card-list')).toHaveClass('pointer-events-none')
+    for (const card of screen.getAllByTestId('sortable-card')) {
+      expect(card).toHaveClass('pointer-events-auto')
+    }
     expect(screen.getByTestId('card-list')).not.toHaveClass('gap-2')
-    const addCard = screen.getByRole('button', { name: 'Add activity' })
-    expect(addCard).toHaveClass('border-edge-300', 'text-ink-500')
+    const addCard = screen.getAllByTestId('timeline-slot')[0]
+    expect(addCard).toHaveClass('border-edge-300', 'text-ink-400')
     expect(addCard.className).not.toMatch(/slate-/)
   })
 
-  it('has no interactive empty slots and keeps only the footer add action', () => {
+  it('shows visible add targets in every free timed interval', () => {
     const onAddCard = vi.fn()
     render(<DayColumn day={day} cards={cards} direction="down" onAddCard={onAddCard} />)
-    expect(screen.queryByTestId('timeline-slot')).not.toBeInTheDocument()
-    const add = screen.getByRole('button', { name: 'Add activity' })
-    fireEvent.click(add)
-    expect(onAddCard).toHaveBeenCalledWith(day.key)
+
+    const slots = screen.getAllByTestId('timeline-slot')
+    expect(slots).toHaveLength(2)
+    expect(slots[0]).toHaveStyle({ top: '0px', height: '120px' })
+    expect(slots[1]).toHaveStyle({ top: '180px', height: '600px' })
+    for (const slot of slots) {
+      expect(slot).toHaveTextContent('+ add activity')
+      expect(slot).toHaveClass('flex', 'border-dashed')
+      expect(slot).not.toHaveClass('opacity-0')
+    }
+
+    fireEvent.click(slots[1])
+    expect(onAddCard).toHaveBeenCalledWith(day.key, '09:00')
+    expect(screen.queryByRole('button', { name: 'Add activity' })).not.toBeInTheDocument()
   })
 
   it('scales each card by its duration', () => {

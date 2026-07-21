@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { pickTime, setupTrip, E2E_LINK } from './helpers'
+import { addActivity, pickTime, setupTrip, E2E_LINK } from './helpers'
 
 test('create, edit, and delete an activity card on the board', async ({ page }) => {
   await page.goto(E2E_LINK)
@@ -10,7 +10,7 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 
   // Create a card on the first day.
-  await firstColumn.getByRole('button', { name: 'Add activity', exact: true }).click()
+  await addActivity(firstColumn)
   const editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('Visit Colosseum')
   await pickTime(editor, 'Start time', '10:00')
@@ -23,6 +23,11 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   await expect(titleRow).toHaveClass(/flex-wrap/)
   await expect(titleRow.getByTestId('card-title')).toHaveText('Visit Colosseum')
   await expect(titleRow.getByTestId('card-category')).toHaveText('transit')
+
+  // The free-time target after a positioned card remains directly clickable.
+  await firstColumn.getByTestId('timeline-slot').last().click()
+  await expect(page.getByRole('dialog', { name: 'Card editor' })).toBeVisible()
+  await page.keyboard.press('Escape')
 
   // Edit the card.
   await firstColumn

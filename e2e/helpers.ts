@@ -53,6 +53,13 @@ export async function pickTime(scope: Page | Locator, triggerName: string, hhmm:
   await scope.getByLabel(triggerName).fill(hhmm)
 }
 
+/** Open the card editor from the first visible free-time target in a day. */
+export async function addActivity(scope: Page | Locator) {
+  const target = scope.getByTestId('timeline-slot').first()
+  await expect(target).toBeVisible()
+  await target.click()
+}
+
 /** Open Trip / Cities through the compact edit menu beside the trip title. */
 async function openEditor(page: Page, menuItem: 'Trip details' | 'Cities & colours') {
   await page.getByRole('button', { name: 'Edit trip menu' }).click()
