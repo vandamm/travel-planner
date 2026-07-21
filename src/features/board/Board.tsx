@@ -147,7 +147,7 @@ export function Board({
     <section
       data-testid="board-frame"
       aria-label="Board"
-      className="mx-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-frame border border-ink-frame bg-white min-[400px]:mx-6"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
     >
       <BoardToolbar
         title={wordmark}
@@ -158,7 +158,6 @@ export function Board({
         onOpenCities={onOpenCities}
         onOpenShare={onOpenShare}
         onOpenMenu={onOpenMenu}
-        onAddStay={() => setAccEditor({ mode: 'create' })}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -235,7 +234,6 @@ export function Board({
               onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
               onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
               onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
-              onOpenCities={onOpenCities}
             />
           </BoardDnd>
         </div>

@@ -14,10 +14,15 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   const editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('Visit Colosseum')
   await pickTime(editor, 'Start time', '10:00')
+  await editor.getByRole('button', { name: 'Transit' }).click()
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit Colosseum')
   await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h 00m')
+  const titleRow = firstColumn.getByTestId('card-title-row')
+  await expect(titleRow).toHaveClass(/flex-wrap/)
+  await expect(titleRow.getByTestId('card-title')).toHaveText('Visit Colosseum')
+  await expect(titleRow.getByTestId('card-category')).toHaveText('transit')
 
   // Edit the card.
   await firstColumn

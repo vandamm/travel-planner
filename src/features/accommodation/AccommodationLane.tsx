@@ -21,8 +21,7 @@ export interface AccommodationLaneProps {
   cityById: Map<string, City>
   onEditAccommodation?: (accommodation: Accommodation) => void
   /**
-   * Open the create editor. `startNight` seeds the first night — the per-gap
-   * buttons pass their gap's first day; the right-end button passes nothing.
+   * Open the create editor. `startNight` seeds the first uncovered night.
    */
   onAddStay?: (startNight?: string) => void
 }
@@ -42,7 +41,7 @@ export function AccommodationLane({
   const gaps = uncoveredGaps(days, accommodations)
 
   return (
-    <div className="mb-2 flex flex-col items-start gap-3 min-[400px]:flex-row">
+    <div className="mb-2">
       <div
         data-testid="accommodation-lane"
         style={{
@@ -115,15 +114,6 @@ export function AccommodationLane({
         ))}
       </div>
 
-      <button
-        type="button"
-        data-testid="add-stay"
-        aria-label="Add stay"
-        onClick={() => onAddStay?.()}
-        className="shrink-0 rounded border border-edge-300 bg-white px-3 py-1 text-sm font-medium text-ink-600 hover:bg-surface-chip"
-      >
-        + Add stay
-      </button>
     </div>
   )
 }

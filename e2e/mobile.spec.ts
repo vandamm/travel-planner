@@ -74,7 +74,7 @@ test('mobile swipes between days', async ({ page }) => {
 
 test('mobile sheet inputs use a 16px font to prevent iOS focus zoom', async ({ page }) => {
   await page.goto(E2E_LINK)
-  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page
     .getByRole('dialog', { name: 'Menu' })
     .getByRole('button', { name: 'Cities & colours' })

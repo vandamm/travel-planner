@@ -27,12 +27,15 @@ describe('App (with a room slug path)', () => {
     expect(seal).toHaveTextContent('I')
   })
 
-  it('puts trip controls inside the framed board at the 400px boundary', () => {
+  it('fills the viewport without an exterior board frame', () => {
     render(<App />)
 
-    expect(screen.getByTestId('board-frame')).toContainElement(screen.getByTestId('board-toolbar'))
-    expect(screen.getByRole('button', { name: 'Edit trip' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cities & colours' })).toBeInTheDocument()
+    const board = screen.getByTestId('board-frame')
+    const shell = board.closest('main')
+    expect(board).toContainElement(screen.getByTestId('board-toolbar'))
+    expect(board.className).not.toMatch(/\bmx-|rounded-frame|\bborder\b/)
+    expect(shell?.className).not.toMatch(/bg-surface|\bgap-|\bpy-/)
+    expect(screen.getByRole('button', { name: 'Edit trip menu' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument()
   })
 
@@ -116,7 +119,8 @@ describe('App (with a room slug path)', () => {
     // Trip setup lives behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Trip details' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Edit trip' }))
+    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
+    await user.click(screen.getByRole('button', { name: 'Trip details' }))
     expect(screen.getByRole('dialog', { name: 'Trip details' })).toBeInTheDocument()
 
     // Escape flips AppShell's open flag back off, unmounting the modal.
@@ -130,6 +134,7 @@ describe('App (with a room slug path)', () => {
     // Cities live behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
     await user.click(screen.getByRole('button', { name: 'Cities & colours' }))
     expect(screen.getByRole('dialog', { name: 'Cities & colours' })).toBeInTheDocument()
 

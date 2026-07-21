@@ -6,7 +6,6 @@
 
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
-import { TimePicker } from '../pickers/TimePicker'
 import { addCard, removeCard, updateCard } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import type { Card, CardCategory, CardDuration } from '../../data/schema'
@@ -215,17 +214,16 @@ export function CardEditor({ card, dayKey, defaultStartTime, onClose }: CardEdit
         </div>
 
         <div className="flex items-end gap-2">
-          <div className="flex flex-1 flex-col gap-1.5">
+          <label className="flex flex-1 flex-col gap-1.5">
             <span className={sectionLabel}>Start time</span>
-            <TimePicker
-              label="Start time"
+            <input
+              type="time"
+              step={900}
               value={startTime}
-              onChange={setStartTime}
-              onClear={() => setStartTime('')}
-              placeholder="Untimed"
-              triggerClassName={`${fieldInput} text-center font-serif`}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={`${fieldInput} text-center font-serif`}
             />
-          </div>
+          </label>
         </div>
 
         <div className="mt-1 flex items-center justify-between gap-2 max-[399px]:flex-col">

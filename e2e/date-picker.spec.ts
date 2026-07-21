@@ -13,7 +13,8 @@ test('picking the trip start via the calendar rebuilds the board to that date', 
   await expect(labels.nth(0)).toHaveText('SAT · 01 MAY')
 
   // Re-picking a different month moves the whole board.
-  await page.getByRole('button', { name: 'Edit trip' }).click()
+  await page.getByRole('button', { name: 'Edit trip menu' }).click()
+  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: 'Trip details' }).click()
   const trip = page.getByRole('dialog', { name: 'Trip details' })
   await pickDate(trip, 'End date', '2027-06-12')
   await pickDate(trip, 'Start date', '2027-06-10')
@@ -25,7 +26,7 @@ test('a stay range highlights both endpoints and the days between', async ({ pag
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
 
-  await page.getByTestId('add-stay').click()
+  await page.getByTestId('add-stay-gap').click()
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
   await pickRange(editor, 'Stay nights', '2027-05-01', '2027-05-03')
 

@@ -11,7 +11,8 @@ const REPLACEMENT = JSON.stringify({
 })
 
 async function openJsonPanel(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: 'Edit trip' }).click()
+  await page.getByRole('button', { name: 'Edit trip menu' }).click()
+  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: 'Trip details' }).click()
   const dialog = page.getByRole('dialog', { name: 'Trip details' })
   await dialog.getByText('Trip JSON (for AI)').click()
   return dialog

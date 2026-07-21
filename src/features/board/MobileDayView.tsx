@@ -51,7 +51,6 @@ export interface MobileDayViewProps {
   /** Set, explicitly clear, or return a day's city to Auto. */
   onSetCity?: (dayKey: string, cityId: DayCityOverride | undefined) => void
   onSwapDay?: (dayKey: string) => void
-  onOpenCities?: () => void
 }
 
 export function MobileDayView({
@@ -71,7 +70,6 @@ export function MobileDayView({
   onAddStay,
   onSetCity,
   onSwapDay,
-  onOpenCities,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
@@ -166,10 +164,26 @@ export function MobileDayView({
       </div>
 
       <div className="mb-2 flex items-center justify-between border-b border-edge-150 pb-2">
-        <div>
+        <div className="min-w-0">
           <p className="font-serif text-lg font-semibold text-ink">
             {format(parseISO(activeDay.key), 'EEE, d MMM')}
           </p>
+          <div data-testid="mobile-city-row" className="flex items-center gap-1">
+            <span className="truncate font-serif text-sm font-semibold text-ink-600">
+              {activeCity?.name ?? 'No city'}
+            </span>
+            {(cities?.length ?? 0) > 0 && (
+              <CityPicker
+                label="Choose city"
+                value={overrides[activeDay.key]}
+                resolvedCityId={activeCity?.id}
+                cities={cities ?? []}
+                includeNoCity
+                bareEdit
+                onChange={(id) => onSetCity?.(activeDay.key, id)}
+              />
+            )}
+          </div>
           <p className="text-xs text-ink-500">Swipe or use arrows to change day</p>
         </div>
         <div className="flex items-center gap-1">
@@ -182,22 +196,6 @@ export function MobileDayView({
               Swap day
             </button>
           )}
-          <CityPicker
-            label="Choose city"
-            value={overrides[activeDay.key]}
-            resolvedCityId={activeCity?.id}
-            cities={cities ?? []}
-            includeNoCity
-            onChange={(id) => onSetCity?.(activeDay.key, id)}
-          />
-          <button
-            type="button"
-            aria-label="Add city"
-            onClick={onOpenCities}
-            className="h-7 w-7 rounded-full border border-edge-350 text-ink-600"
-          >
-            +
-          </button>
         </div>
       </div>
 

@@ -8,14 +8,13 @@ const actions = {
   onOpenCities: vi.fn(),
   onOpenShare: vi.fn(),
   onOpenMenu: vi.fn(),
-  onAddStay: vi.fn(),
   onUndo: vi.fn(),
   onRedo: vi.fn(),
   onToggleDirection: vi.fn(),
 }
 
 describe('BoardToolbar', () => {
-  it('keeps all approved desktop actions inside the framed-board toolbar', async () => {
+  it('opens trip and city actions from the compact edit menu', async () => {
     const user = userEvent.setup()
     render(
       <BoardToolbar
@@ -30,11 +29,54 @@ describe('BoardToolbar', () => {
       />,
     )
     expect(screen.getByTestId('board-toolbar')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Edit trip' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cities & colours' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add stay' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
+    const menu = screen.getByRole('dialog', { name: 'Edit trip' })
+    expect(screen.queryByRole('button', { name: 'Add stay' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Trip details' }))
+    expect(actions.onOpenTrip).toHaveBeenCalledOnce()
+    expect(menu).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
+    await user.click(screen.getByRole('button', { name: 'Cities & colours' }))
+    expect(actions.onOpenCities).toHaveBeenCalledOnce()
     expect(screen.getByText('Live')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Collaborators' }))
     expect(actions.onOpenShare).toHaveBeenCalledOnce()
+  })
+
+  it('keeps a fixed-width sync status immediately before stable right controls', () => {
+    const { rerender } = render(
+      <BoardToolbar
+        title="Italy 2027"
+        meta="3 days · 2 cities"
+        status="local"
+        presences={[]}
+        canUndo={false}
+        canRedo={false}
+        direction="down"
+        {...actions}
+      />,
+    )
+    const sync = screen.getByTestId('sync-container')
+    const controls = screen.getByTestId('right-controls')
+    expect(sync).toHaveClass('w-24', 'shrink-0')
+    expect(sync.nextElementSibling).toBe(controls)
+
+    rerender(
+      <BoardToolbar
+        title="Italy 2027"
+        meta="3 days · 2 cities"
+        status="connecting"
+        presences={[]}
+        canUndo={false}
+        canRedo={false}
+        direction="down"
+        {...actions}
+      />,
+    )
+    expect(screen.getByTestId('sync-container')).toHaveTextContent('Connecting…')
+    expect(screen.getByTestId('sync-container').nextElementSibling).toBe(
+      screen.getByTestId('right-controls'),
+    )
   })
 })

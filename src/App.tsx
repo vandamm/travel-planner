@@ -92,7 +92,7 @@ function AppShell() {
   if (status === 'missing') return <MissingTrip />
 
   return (
-    <main className="flex h-dvh flex-col gap-6 overflow-hidden bg-surface py-6 text-ink sm:h-auto sm:min-h-screen sm:overflow-visible">
+    <main className="flex min-h-dvh flex-col bg-white text-ink">
       <Board
         addStayNonce={addStayNonce}
         onOpenTrip={() => setTripOpen(true)}

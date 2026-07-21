@@ -17,13 +17,11 @@ const stay = (over: Partial<Accommodation> = {}): Accommodation => ({
 })
 
 describe('AccommodationLane', () => {
-  it('stacks the trailing stay control below the 17rem grid on phones', () => {
+  it('keeps uncovered-gap creation without a separate trailing stay action', () => {
     render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
 
-    expect(screen.getByTestId('accommodation-lane').parentElement).toHaveClass(
-      'flex-col',
-      'min-[400px]:flex-row',
-    )
+    expect(screen.getByTestId('add-stay-gap')).toHaveAttribute('data-gap-start', '2027-05-01')
+    expect(screen.queryByTestId('add-stay')).not.toBeInTheDocument()
   })
 
   it('renders a bar spanning the covered columns, colored by its city', () => {
@@ -121,5 +119,17 @@ describe('AccommodationLane', () => {
       <AccommodationLane days={[]} accommodations={[stay()]} cityById={cityById} />,
     )
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders no stay creation action when every day is covered', () => {
+    render(
+      <AccommodationLane
+        days={days}
+        accommodations={[stay({ startNight: '2027-05-01', endNight: '2027-05-05' })]}
+        cityById={cityById}
+      />,
+    )
+    expect(screen.queryByTestId('add-stay-gap')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add stay' })).not.toBeInTheDocument()
   })
 })

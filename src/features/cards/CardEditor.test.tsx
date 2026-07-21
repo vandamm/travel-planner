@@ -97,19 +97,6 @@ function rows() {
   return screen.getAllByTestId('dump-row').map((n) => n.textContent ?? '')
 }
 
-/** Open a time-wheel trigger, pick hour + minute, and commit via "Set HH:mm". */
-async function setTimeViaWheel(
-  user: ReturnType<typeof userEvent.setup>,
-  trigger: string,
-  hour: string,
-  minute: string,
-) {
-  await user.click(screen.getByRole('button', { name: trigger }))
-  await user.click(screen.getByRole('option', { name: `Hour ${hour}` }))
-  await user.click(screen.getByRole('option', { name: `Minute ${minute}` }))
-  await user.click(screen.getByRole('button', { name: `Set ${hour}:${minute}` }))
-}
-
 describe('CardEditor — create', () => {
   it('adds a card with a title to the target day', () => {
     renderInRoom(<CreateHarness />)
@@ -135,16 +122,18 @@ describe('CardEditor — create', () => {
     expect(save).toBeEnabled()
   })
 
-  it('captures a note and optional start time', async () => {
-    const user = userEvent.setup()
+  it('captures a note and quarter-hour start through a native time input', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Train' } })
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'platform 4' } })
-    await setTimeViaWheel(user, 'Start time', '10', '00')
+    const start = screen.getByLabelText('Start time')
+    expect(start).toHaveAttribute('type', 'time')
+    expect(start).toHaveAttribute('step', '900')
+    fireEvent.change(start, { target: { value: '10:15' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Train')) ?? ''
-    expect(row).toContain('"startTime":"10:00"')
+    expect(row).toContain('"startTime":"10:15"')
     expect(row).toContain('"duration":"custom"')
     expect(row).toContain('"durationHours":1')
     expect(row).toContain('"note":"platform 4"')
@@ -277,15 +266,11 @@ describe('CardEditor — edit', () => {
     })
   })
 
-  it('untimes the card when the start time is cleared in the wheel', async () => {
-    const user = userEvent.setup()
+  it('untimes the card when the native start time is cleared', async () => {
     renderInRoom(<EditHarness />)
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Start time' })).toHaveTextContent('09:00'),
-    )
+    await waitFor(() => expect(screen.getByLabelText('Start time')).toHaveValue('09:00'))
 
-    await user.click(screen.getByRole('button', { name: 'Start time' }))
-    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     await waitFor(() => expect(rows().some((r) => r.includes('"startTime"'))).toBe(false))

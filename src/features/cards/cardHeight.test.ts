@@ -5,7 +5,6 @@ import {
   hoursToMinutes,
   MIN_CARD_MINUTES,
   minutesToHours,
-  noonFraction,
   PX_PER_HOUR,
   resolvedDurationHours,
   SNAP_MINUTES,
@@ -61,23 +60,5 @@ describe('cardHeightPx — duration', () => {
     expect(MIN_CARD_MINUTES).toBe(15)
     expect(hoursToMinutes(0.25)).toBe(15)
     expect(minutesToHours(15)).toBe(0.25)
-  })
-})
-
-describe('noonFraction', () => {
-  it('is the noon position within the window (06:00–21:00 → 6/15)', () => {
-    expect(noonFraction(START, END)).toBeCloseTo(6 / 15)
-  })
-
-  it('clamps to 0 when noon precedes the window start', () => {
-    expect(noonFraction('13:00', '21:00')).toBe(0)
-  })
-
-  it('clamps to 1 when noon follows the window end', () => {
-    expect(noonFraction('06:00', '11:00')).toBe(1)
-  })
-
-  it('falls back to the middle for a non-positive window', () => {
-    expect(noonFraction('21:00', '06:00')).toBe(0.5)
   })
 })

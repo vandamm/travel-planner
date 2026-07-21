@@ -2,13 +2,12 @@
 // scrim pop-over, opened from the header's `[✎ Trip]` button. Edits write
 // straight through the shared `setTrip` mutator — live, like every other edit —
 // so there is no Save/Cancel: a single ink `Done` (plus backdrop / Escape via
-// the shared `Modal`) closes it. Start date + day window use the custom
-// calendar / time-wheel pickers.
+// the shared `Modal`) closes it. Start date uses the custom calendar while the
+// day window uses native time inputs.
 
 import { useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { DatePicker } from '../pickers/DatePicker'
-import { TimePicker } from '../pickers/TimePicker'
 import { getTrip, setTrip } from '../../data/doc'
 import { applyTrip } from '../../data/applyTrip'
 import { exportTripJSON } from '../../data/exportTrip'
@@ -46,6 +45,7 @@ export function TripModal({ onClose }: TripModalProps) {
   const [applyError, setApplyError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [dateError, setDateError] = useState<string | null>(null)
+  const [timeError, setTimeError] = useState<string | null>(null)
 
   // "Recent versions" — pre-write snapshots the Worker records on each AI write.
   const [versions, setVersions] = useState<VersionMeta[]>([])
@@ -73,6 +73,32 @@ export function TripModal({ onClose }: TripModalProps) {
     }
     setDateError(null)
     setTrip(doc, { endDate })
+  }
+
+  function validDayTime(input: HTMLInputElement): string | null {
+    if (!input.value || !input.validity.valid) {
+      setTimeError('Enter a time in 15-minute increments.')
+      return null
+    }
+    return input.value
+  }
+
+  function setDayStart(dayStart: string) {
+    if (dayStart >= trip.dayEnd) {
+      setTimeError('Day end must be later than day start.')
+      return
+    }
+    setTimeError(null)
+    setTrip(doc, { dayStart })
+  }
+
+  function setDayEnd(dayEnd: string) {
+    if (dayEnd <= trip.dayStart) {
+      setTimeError('Day end must be later than day start.')
+      return
+    }
+    setTimeError(null)
+    setTrip(doc, { dayEnd })
   }
 
   // Full replace — a native confirm is enough of a guard for a personal planner.
@@ -205,20 +231,37 @@ export function TripModal({ onClose }: TripModalProps) {
           </span>
         </span>
         <div className="flex items-center gap-2">
-          <TimePicker
-            label="Day start"
-            value={trip.dayStart}
-            onChange={(v) => setTrip(doc, { dayStart: v })}
-            triggerClassName={`${fieldInput} flex-1 text-center font-serif`}
-          />
+          <label className="flex flex-1">
+            <span className="sr-only">Day start</span>
+            <input
+              type="time"
+              required
+              step={900}
+              value={trip.dayStart}
+              onChange={(e) => {
+                const value = validDayTime(e.currentTarget)
+                if (value !== null) setDayStart(value)
+              }}
+              className={`${fieldInput} min-w-0 flex-1 text-center font-serif`}
+            />
+          </label>
           <span className="text-xs font-semibold text-ink-400">to</span>
-          <TimePicker
-            label="Day end"
-            value={trip.dayEnd}
-            onChange={(v) => setTrip(doc, { dayEnd: v })}
-            triggerClassName={`${fieldInput} flex-1 text-center font-serif`}
-          />
+          <label className="flex flex-1">
+            <span className="sr-only">Day end</span>
+            <input
+              type="time"
+              required
+              step={900}
+              value={trip.dayEnd}
+              onChange={(e) => {
+                const value = validDayTime(e.currentTarget)
+                if (value !== null) setDayEnd(value)
+              }}
+              className={`${fieldInput} min-w-0 flex-1 text-center font-serif`}
+            />
+          </label>
         </div>
+        {timeError && <p role="alert" className="text-xs text-city-vermilion">{timeError}</p>}
       </div>
 
       {/* Low-prominence: copy the board as JSON for an AI, or paste an AI's

@@ -35,7 +35,7 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   await expect(firstBand).toHaveCSS('background-color', 'rgb(194, 187, 168)') // ink-200 warm neutral
 
   // Add a stay covering the first two nights, in Rome.
-  await page.getByTestId('add-stay').click()
+  await page.getByTestId('add-stay-gap').click()
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
   await editor.getByLabel('Accommodation label').fill('Hotel Roma')
   await editor.getByRole('button', { name: 'City' }).click()
@@ -64,13 +64,12 @@ test('add an accommodation and see day headers recolor', async ({ page }) => {
   await expect(page.getByTestId('accommodation-bar')).toHaveText('Hotel Roma Centro')
 })
 
-test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => {
+test('stays lane creates only from uncovered gaps', async ({ page }) => {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
 
-  // With no stays the whole trip is one gap: the right-end button is present and
-  // a single gap button sits on the first day.
-  await expect(page.getByTestId('add-stay')).toBeVisible()
+  // With no stays the whole trip is one gap, represented by its first day.
+  await expect(page.getByTestId('add-stay')).toHaveCount(0)
   await expect(page.getByTestId('add-stay-gap')).toHaveCount(1)
   await expect(page.getByTestId('add-stay-gap')).toHaveAttribute('data-gap-start', '2027-05-01')
 
@@ -83,7 +82,7 @@ test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => 
   const gapButton = page.getByTestId('add-stay-gap')
   await expect(gapButton).toHaveCount(1)
   await expect(gapButton).toHaveAttribute('data-gap-start', '2027-05-03')
-  await expect(page.getByTestId('add-stay')).toBeVisible()
+  await expect(page.getByTestId('add-stay')).toHaveCount(0)
 
   // Clicking the gap button opens the editor seeded with the gap's first day.
   await gapButton.click()
@@ -91,15 +90,14 @@ test('stays lane shows gap and right-end Add stay buttons', async ({ page }) => 
   await expect(editor.getByRole('button', { name: 'Stay nights' })).toContainText('03.05')
 })
 
-test('Add-stay popup preselects the first uncovered night and saves a range', async ({ page }) => {
+test('gap action preselects the first uncovered night and saves a range', async ({ page }) => {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
 
-  // Cover the first two nights; the right-end "Add stay" should preselect the
-  // first uncovered night (day 3) as both range endpoints (a one-night default).
+  // Cover the first two nights; the remaining gap starts on day 3.
   await seedStays(page, [{ label: 'Hotel A', startNight: '2027-05-01', endNight: '2027-05-02' }])
 
-  await page.getByTestId('add-stay').click()
+  await page.getByTestId('add-stay-gap').click()
   const editor = page.getByRole('dialog', { name: 'Accommodation editor' })
   const nights = editor.getByRole('button', { name: 'Stay nights' })
   await expect(nights).toContainText('03.05 → 03.05')
@@ -112,6 +110,17 @@ test('Add-stay popup preselects the first uncovered night and saves a range', as
   await editor.getByLabel('Accommodation label').fill('Hotel C')
   await editor.getByRole('button', { name: 'Save stay' }).click()
   await expect(page.getByTestId('accommodation-bar').filter({ hasText: 'Hotel C' })).toBeVisible()
+})
+
+test('fully covered trip has no in-lane Add stay action', async ({ page }) => {
+  await page.goto(E2E_LINK)
+  await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-05' })
+  await seedStays(page, [
+    { label: 'Hotel A', startNight: '2027-05-01', endNight: '2027-05-05' },
+  ])
+
+  await expect(page.getByTestId('add-stay-gap')).toHaveCount(0)
+  await expect(page.getByTestId('add-stay')).toHaveCount(0)
 })
 
 test('two stays sharing a changeover day render on one row meeting mid-day', async ({ page }) => {

@@ -10,12 +10,16 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   })
   await page.goto(E2E_LINK)
 
-  await setupTrip(page, { title: 'Heights', startDate: '2027-05-01', endDate: '2027-05-01' })
+  await setupTrip(page, { title: 'Heights', startDate: '2027-05-01', endDate: '2027-05-02' })
 
-  const column = page.locator('[data-testid="day-column"]').first()
+  const columns = page.locator('[data-testid="day-column"]')
+  const column = columns.first()
   const dayBody = await column.getByTestId('day-body').boundingBox()
+  const timelineTrack = await column.getByTestId('timeline-track').boundingBox()
   expect(dayBody).not.toBeNull()
-  expect(dayBody!.height).toBe(900)
+  expect(timelineTrack).not.toBeNull()
+  expect(timelineTrack!.height).toBe(900)
+  expect(dayBody!.height).toBeGreaterThan(timelineTrack!.height)
 
   // A default-height card (exact duration, untimed → one block).
   await column.getByRole('button', { name: 'Add activity', exact: true }).click()
@@ -24,19 +28,23 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   // A whole-day card.
-  await column.getByRole('button', { name: 'Add activity', exact: true }).click()
+  await columns.nth(1).getByRole('button', { name: 'Add activity', exact: true }).click()
   editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('All day tour')
   await editor.getByRole('button', { name: 'Day', exact: true }).click()
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   const defaultCard = column.locator('[data-testid="card-list"] > li', { hasText: 'Quick stop' })
-  const fullCard = column.locator('[data-testid="card-list"] > li', { hasText: 'All day tour' })
+  const fullCard = columns.nth(1).locator('[data-testid="card-list"] > li', { hasText: 'All day tour' })
 
   const defaultBox = await defaultCard.getByTestId('card').boundingBox()
   const fullBox = await fullCard.getByTestId('card').boundingBox()
+  const fullBody = await columns.nth(1).getByTestId('day-body').boundingBox()
   expect(defaultBox).not.toBeNull()
   expect(fullBox).not.toBeNull()
+  expect(fullBody).not.toBeNull()
   // 15h window → 900px vs the 60px default block.
   expect(fullBox!.height).toBe(defaultBox!.height * 15)
+  expect(fullBox!.y).toBeGreaterThan(fullBody!.y)
+  expect(fullBody!.y + fullBody!.height).toBeGreaterThan(fullBox!.y + fullBox!.height)
 })

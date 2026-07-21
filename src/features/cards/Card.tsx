@@ -167,7 +167,7 @@ export function Card({
     >
       {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
       {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
-      <div className="flex items-baseline gap-1">
+      <div data-testid="card-title-row" className="flex flex-wrap items-center gap-1">
         <button
           type="button"
           aria-label={`Edit ${card.title}`}
@@ -176,22 +176,30 @@ export function Card({
             event.stopPropagation()
             onEdit?.(card)
           }}
-          className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left hover:text-ink"
+          className="min-w-0 max-w-full flex-none text-left hover:text-ink"
         >
           <span
             data-testid="card-title"
-            className="min-w-0 font-serif text-[15px] font-semibold leading-tight text-ink"
+            className="min-w-0 break-words font-serif text-[15px] font-semibold leading-tight text-ink"
           >
             {card.title}
           </span>
-          <span
-            data-testid="card-time"
-            className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
-          >
-            {displayedTime}
-          </span>
         </button>
+        {category && (
+          <span
+            data-testid="card-category"
+            className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
+          >
+            {category}
+          </span>
+        )}
       </div>
+      <span
+        data-testid="card-time"
+        className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
+      >
+        {displayedTime}
+      </span>
 
       {card.note && (
         <p
@@ -202,24 +210,14 @@ export function Card({
         </p>
       )}
 
-      {(category || conflict) && (
-        <div className="flex flex-wrap gap-1">
-          {category && (
-            <span
-              data-testid="card-category"
-              className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
-            >
-              {category}
-            </span>
-          )}
-          {conflict && (
-            <span
-              data-testid="card-conflict"
-              className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
-            >
-              Overlap
-            </span>
-          )}
+      {conflict && (
+        <div data-testid="card-badge-row" className="flex flex-wrap gap-1">
+          <span
+            data-testid="card-conflict"
+            className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
+          >
+            Overlap
+          </span>
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import type { Presence } from '../../data/RoomContext'
 import type { SyncStatus } from '../../data/provider'
+import { Popover } from '../../components/Popover'
 import type { TimeDirection } from './timeDirection'
 
 export interface BoardToolbarProps {
@@ -11,7 +12,6 @@ export interface BoardToolbarProps {
   onOpenCities: () => void
   onOpenShare: () => void
   onOpenMenu: () => void
-  onAddStay: () => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -37,7 +37,6 @@ export function BoardToolbar({
   onOpenCities,
   onOpenShare,
   onOpenMenu,
-  onAddStay,
   onUndo,
   onRedo,
   canUndo,
@@ -60,68 +59,83 @@ export function BoardToolbar({
       <h1 className="truncate font-serif text-[18px] font-semibold leading-none text-ink min-[400px]:text-2xl">
         {title}
       </h1>
-      <button
-        type="button"
-        aria-label="Edit trip"
-        onClick={onOpenTrip}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-card border border-edge-350 text-sm text-ink-600 hover:bg-surface-chip"
+      <Popover
+        label="Edit trip"
+        trigger="✎"
+        triggerAriaLabel="Edit trip menu"
+        triggerClassName="flex h-7 w-7 shrink-0 items-center justify-center rounded-card border border-edge-350 text-sm text-ink-600 hover:bg-surface-chip"
       >
-        ✎
-      </button>
+        {(close) => (
+          <div className="flex min-w-44 flex-col gap-1">
+            <button
+              type="button"
+              className="rounded-card px-3 py-2 text-left text-sm font-medium text-ink-600 hover:bg-surface-chip"
+              onClick={() => {
+                close()
+                onOpenTrip()
+              }}
+            >
+              Trip details
+            </button>
+            <button
+              type="button"
+              className="rounded-card px-3 py-2 text-left text-sm font-medium text-ink-600 hover:bg-surface-chip"
+              onClick={() => {
+                close()
+                onOpenCities()
+              }}
+            >
+              Cities &amp; colours
+            </button>
+          </div>
+        )}
+      </Popover>
       <span data-testid="app-meta" className="hidden border-l border-edge-150 pl-3 text-xs text-ink-500 min-[400px]:block">
         {meta}
       </span>
-      <button
-        type="button"
-        aria-label="Cities & colours"
-        onClick={onOpenCities}
-        className="button-label ml-auto hidden rounded-card border border-edge-350 px-3 py-2 text-ink-600 hover:bg-surface-chip min-[400px]:block"
+      <div
+        data-testid="sync-container"
+        className="ml-auto hidden w-24 shrink-0 justify-end min-[400px]:flex"
       >
-        Cities &amp; colours
-      </button>
-      <button
-        type="button"
-        aria-label="Collaborators"
-        onClick={onOpenShare}
-        className="flex -space-x-1.5"
-      >
-        {presences.slice(0, 3).map((presence) => (
-          <span
-            key={presence.userId}
-            data-presence-avatar
-            title={presence.name}
-            className="flex h-7 w-7 items-center justify-center rounded-[2px] border-2 border-white text-xs font-bold text-white"
-            style={{ backgroundColor: presence.color }}
-          >
-            {presence.name.slice(0, 1).toUpperCase()}
-          </span>
-        ))}
-      </button>
-      <span data-testid="sync-status" role="status" aria-live="polite" className="hidden items-center gap-1 text-xs text-ink-500 min-[400px]:flex">
-        <span className="h-2 w-2 rounded-full bg-city-pine" />
-        {statusText[status]}
-      </span>
-      <button
-        type="button"
-        onClick={onAddStay}
-        className="button-label hidden rounded-card border border-edge-350 px-3 py-2 text-ink-600 hover:bg-surface-chip min-[400px]:block"
-      >
-        Add stay
-      </button>
-      <div className="hidden items-center gap-1 min-[400px]:flex">
-        <button type="button" aria-label="Undo" disabled={!canUndo} onClick={onUndo} className="h-8 w-8 rounded-card border border-edge-350 text-ink-600 disabled:opacity-40">
-          ↶
+        <span data-testid="sync-status" role="status" aria-live="polite" className="flex items-center gap-1 text-xs text-ink-500">
+          <span className="h-2 w-2 rounded-full bg-city-pine" />
+          {statusText[status]}
+        </span>
+      </div>
+      <div data-testid="right-controls" className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          aria-label="Collaborators"
+          onClick={onOpenShare}
+          className="hidden -space-x-1.5 min-[400px]:flex"
+        >
+          {presences.slice(0, 3).map((presence) => (
+            <span
+              key={presence.userId}
+              data-presence-avatar
+              title={presence.name}
+              className="flex h-7 w-7 items-center justify-center rounded-[2px] border-2 border-white text-xs font-bold text-white"
+              style={{ backgroundColor: presence.color }}
+            >
+              {presence.name.slice(0, 1).toUpperCase()}
+            </span>
+          ))}
         </button>
-        <button type="button" aria-label="Redo" disabled={!canRedo} onClick={onRedo} className="h-8 w-8 rounded-card border border-edge-350 text-ink-600 disabled:opacity-40">
-          ↷
-        </button>
-        <button type="button" aria-label="Toggle time direction" aria-pressed={direction === 'up'} onClick={onToggleDirection} className="button-label rounded-card border border-edge-350 px-2 py-2 text-ink-600">
-          {direction === 'down' ? '↓' : '↑'}
+        <div className="hidden items-center gap-1 min-[400px]:flex">
+          <button type="button" aria-label="Undo" disabled={!canUndo} onClick={onUndo} className="h-8 w-8 rounded-card border border-edge-350 text-ink-600 disabled:opacity-40">
+            ↶
+          </button>
+          <button type="button" aria-label="Redo" disabled={!canRedo} onClick={onRedo} className="h-8 w-8 rounded-card border border-edge-350 text-ink-600 disabled:opacity-40">
+            ↷
+          </button>
+          <button type="button" aria-label="Toggle time direction" aria-pressed={direction === 'up'} onClick={onToggleDirection} className="button-label rounded-card border border-edge-350 px-2 py-2 text-ink-600">
+            {direction === 'down' ? '↓' : '↑'}
+          </button>
+        </div>
+        <button type="button" aria-label="Menu" onClick={onOpenMenu} className="flex h-8 w-8 items-center justify-center rounded-card border border-edge-350 text-xl text-ink-600 min-[400px]:hidden">
+          ≡
         </button>
       </div>
-      <button type="button" aria-label="Menu" onClick={onOpenMenu} className="flex h-8 w-8 items-center justify-center rounded-card border border-edge-350 text-xl text-ink-600 min-[400px]:hidden">
-        ≡
-      </button>
     </header>
   )
 }

@@ -170,6 +170,21 @@ describe('MobileDayView', () => {
     expect(active).toHaveStyle({ backgroundColor: '#5f6f44' })
   })
 
+  it('puts a bare city edit icon beside the visible city name without an add-city button', () => {
+    renderView({
+      overrides: { '2027-05-01': 'kyoto' },
+      cities: [{ id: 'kyoto', name: 'Kyoto', color: '#5f6f44' }],
+      cityById: new Map<string, City>([
+        ['kyoto', { id: 'kyoto', name: 'Kyoto', color: '#5f6f44' }],
+      ]),
+    })
+    const cityRow = screen.getByTestId('mobile-city-row')
+    expect(cityRow).toHaveTextContent('Kyoto')
+    expect(cityRow).toContainElement(screen.getByRole('button', { name: 'Choose city' }))
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
+    expect(screen.queryByRole('button', { name: 'Add city' })).not.toBeInTheDocument()
+  })
+
   it('forwards the visible day through the shared Swap day action', async () => {
     const user = userEvent.setup()
     const onSwapDay = vi.fn()

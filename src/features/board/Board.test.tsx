@@ -161,11 +161,11 @@ describe('Board', () => {
     expect(JSON.stringify(listAccommodations(doc))).toBe(accommodationsBefore)
   })
 
-  it('opens the accommodation editor from the Add stay button', () => {
+  it('has no toolbar or trailing Add stay button on desktop', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-02' }))
-    act(() => within(screen.getByTestId('board-toolbar')).getByRole('button', { name: 'Add stay' }).click())
-    expect(screen.getByRole('dialog', { name: 'Accommodation editor' })).toBeInTheDocument()
+    expect(within(screen.getByTestId('board-toolbar')).queryByRole('button', { name: 'Add stay' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-stay')).not.toBeInTheDocument()
   })
 
   it('opens the editor when the Add stay nonce bumps, not on mount, and re-opens on repeat', () => {

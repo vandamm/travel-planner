@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
 import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
+import { TIMELINE_VERTICAL_PADDING_PX } from '../cards/cardHeight'
 
 const day: Day = { key: '2027-05-01', index: 0 }
 const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
@@ -128,11 +129,15 @@ describe('DayColumn', () => {
     expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: '0px' })
   })
 
-  it('sizes the body to the day window even when empty', () => {
-    // 06:00–21:00 = 15h × 60px/h = 900px, so columns stay aligned regardless of
-    // how many cards each holds.
+  it('pads the exact day-window track above and below the activity range', () => {
     render(<DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />)
-    expect(screen.getByTestId('day-body')).toHaveStyle({ height: '900px' })
+    expect(screen.getByTestId('day-body')).toHaveStyle({
+      height: `${900 + TIMELINE_VERTICAL_PADDING_PX * 2}px`,
+    })
+    expect(screen.getByTestId('timeline-track')).toHaveStyle({
+      top: `${TIMELINE_VERTICAL_PADDING_PX}px`,
+      height: '900px',
+    })
   })
 
   it('anchors the time scale above and below the full-width card list', () => {
@@ -151,12 +156,13 @@ describe('DayColumn', () => {
     expect(addCard.className).not.toMatch(/slate-/)
   })
 
-  it('offers every free timeline slot and seeds a new activity with its start time', () => {
+  it('has no interactive empty slots and keeps only the footer add action', () => {
     const onAddCard = vi.fn()
     render(<DayColumn day={day} cards={cards} direction="down" onAddCard={onAddCard} />)
-    expect(screen.getAllByTestId('timeline-slot')).toHaveLength(2)
-    fireEvent.click(screen.getByRole('button', { name: '+ add activity at 06:00' }))
-    expect(onAddCard).toHaveBeenCalledWith(day.key, '06:00')
+    expect(screen.queryByTestId('timeline-slot')).not.toBeInTheDocument()
+    const add = screen.getByRole('button', { name: 'Add activity' })
+    fireEvent.click(add)
+    expect(onAddCard).toHaveBeenCalledWith(day.key)
   })
 
   it('scales each card by its duration', () => {
@@ -199,7 +205,8 @@ describe('DayColumn', () => {
       <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
     )
     const picker = screen.getByRole('button', { name: 'Choose city' })
-    expect(picker).toHaveTextContent('Rome')
+    expect(picker).toHaveTextContent('✎')
+    expect(picker).not.toHaveClass('border', 'rounded-card')
     fireEvent.click(picker)
     expect(screen.getByRole('button', { name: /Auto/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /No city/ })).toBeInTheDocument()
@@ -218,7 +225,7 @@ describe('DayColumn', () => {
         overrideCityId="florence"
       />,
     )
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('Florence')
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
@@ -249,7 +256,7 @@ describe('DayColumn', () => {
     render(
       <DayColumn day={day} cards={[]} direction="down" cities={[rome]} overrideCityId={null} />,
     )
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('No city')
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
   })
 
   it('opens the day swap workflow from the header action', () => {
@@ -285,10 +292,12 @@ describe('DayColumn', () => {
     expect(band).toHaveClass('h-[3px]')
   })
 
-  it('renders a labelled NOON divider in the body', () => {
+  it('removes persistent column chrome, internal scrolling, and the noon divider', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
-    const noon = within(screen.getByTestId('day-body')).getByTestId('noon-divider')
-    expect(noon).toHaveTextContent('NOON')
+    const column = screen.getByTestId('day-column')
+    expect(column.className).not.toMatch(/rounded|shadow|\bborder\b/)
+    expect(screen.getByTestId('day-body')).not.toHaveClass('overflow-y-auto')
+    expect(screen.queryByTestId('noon-divider')).not.toBeInTheDocument()
   })
 
   it('highlights the column when the drag context marks this day as the drop target', () => {
@@ -299,7 +308,7 @@ describe('DayColumn', () => {
     )
     const column = screen.getByTestId('day-column')
     expect(column).toHaveAttribute('data-drag-over', '')
-    expect(column).toHaveClass('border-sky-400', 'ring-2', 'ring-sky-300')
+    expect(column).toHaveClass('ring-2', 'ring-sky-300')
   })
 
   it('renders the active drag preview inside its current target day', () => {
@@ -311,25 +320,10 @@ describe('DayColumn', () => {
       </DragPreviewContext.Provider>,
     )
 
-    const preview = within(screen.getByTestId('day-body')).getByTestId('drag-preview-card')
+    const preview = within(screen.getByTestId('timeline-track')).getByTestId('drag-preview-card')
     expect(preview).toHaveTextContent('Breakfast')
     expect(within(preview).getByTestId('event-timing-start')).toHaveTextContent('10:15')
     expect(within(preview).getByTestId('event-timing-end')).toHaveTextContent('11:15')
   })
 
-  it('anchors the NOON divider at noon’s fraction — top when down, bottom when up', () => {
-    // 06:00–21:00 → noon at 6/15 of the 900px window = 360px.
-    // Asserting the value (not just non-empty) catches an inverted fraction or wrong window.
-    const { rerender } = render(
-      <DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />,
-    )
-    const down = screen.getByTestId('noon-divider')
-    expect(down.style.top).toBe('360px')
-    expect(down.style.bottom).toBe('')
-
-    rerender(<DayColumn day={day} cards={[]} direction="up" dayStart="06:00" dayEnd="21:00" />)
-    const up = screen.getByTestId('noon-divider')
-    expect(up.style.bottom).toBe('360px')
-    expect(up.style.top).toBe('')
-  })
 })

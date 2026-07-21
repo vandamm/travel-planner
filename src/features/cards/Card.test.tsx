@@ -69,10 +69,22 @@ describe('Card', () => {
     )
     expect(screen.getByRole('button', { name: 'Edit Brunch reservation' })).toHaveClass(
       'min-w-0',
-      'flex-1',
-      'flex-col',
+      'max-w-full',
+      'flex-none',
     )
-    expect(screen.getByTestId('card-title')).toHaveClass('min-w-0')
+    expect(screen.getByTestId('card-title')).toHaveClass('min-w-0', 'break-words')
+  })
+
+  it('puts category beside the title in a wrapping header, above time and conflict', () => {
+    render(<Card card={{ ...base, category: 'outdoor' }} conflict />)
+
+    const header = screen.getByTestId('card-title-row')
+    const category = screen.getByTestId('card-category')
+    expect(header).toHaveClass('flex', 'flex-wrap')
+    expect(header).toContainElement(screen.getByTestId('card-title'))
+    expect(header).toContainElement(category)
+    expect(screen.getByTestId('card-time').previousElementSibling).toBe(header)
+    expect(screen.getByTestId('card-conflict').parentElement).not.toContainElement(category)
   })
 
   it('uses the card surface as the drag activator without a separate handle', () => {

@@ -48,35 +48,15 @@ export async function pickRange(
   await clickCalendarDay(cal, endIso)
 }
 
-/** Pick a time through the custom hour/minute wheel pop-over (card / day window). */
+/** Fill a native time input (card / day window). */
 export async function pickTime(scope: Page | Locator, triggerName: string, hhmm: string) {
-  const [hh, mm] = hhmm.split(':')
-  await scope.getByRole('button', { name: triggerName }).click()
-  const wheel = pageOf(scope).getByRole('dialog', { name: triggerName })
-  await wheel.getByRole('option', { name: `Hour ${hh}` }).click()
-  await wheel.getByRole('option', { name: `Minute ${mm}` }).click()
-  await wheel.getByRole('button', { name: `Set ${hhmm}` }).click()
+  await scope.getByLabel(triggerName).fill(hhmm)
 }
 
-/** Below the 400px breakpoint the inline Trip/Cities buttons collapse into
- *  the header ≡ menu, so the path to those editors differs by viewport. */
-function isMobile(page: Page): boolean {
-  const size = page.viewportSize()
-  return size !== null && size.width < 400
-}
-
-/** Open Trip / Cities, handling the mobile ≡ menu vs. the desktop inline button. */
-async function openEditor(
-  page: Page,
-  menuItem: 'Trip setup' | 'Cities & colours',
-  inline: 'Edit trip' | 'Cities & colours',
-) {
-  if (isMobile(page)) {
-    await page.getByRole('button', { name: 'Menu' }).click()
-    await page.getByRole('dialog', { name: 'Menu' }).getByRole('button', { name: menuItem }).click()
-  } else {
-    await page.getByRole('button', { name: inline }).click()
-  }
+/** Open Trip / Cities through the compact edit menu beside the trip title. */
+async function openEditor(page: Page, menuItem: 'Trip details' | 'Cities & colours') {
+  await page.getByRole('button', { name: 'Edit trip menu' }).click()
+  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: menuItem }).click()
 }
 
 /**
@@ -89,7 +69,7 @@ export async function setupTrip(
   page: Page,
   { title, startDate, endDate }: { title?: string; startDate?: string; endDate?: string },
 ) {
-  await openEditor(page, 'Trip setup', 'Edit trip')
+  await openEditor(page, 'Trip details')
   const dialog = page.getByRole('dialog', { name: 'Trip details' })
   if (title !== undefined) await dialog.getByLabel('Trip title').fill(title)
   if (startDate !== undefined) await pickDate(dialog, 'Start date', startDate)
@@ -105,7 +85,7 @@ export async function setupTrip(
  * city) open it themselves.
  */
 export async function addCity(page: Page, name: string) {
-  await openEditor(page, 'Cities & colours', 'Cities & colours')
+  await openEditor(page, 'Cities & colours')
   const dialog = page.getByRole('dialog', { name: 'Cities & colours' })
   await dialog.getByLabel('New city name').fill(name)
   await dialog.getByRole('button', { name: 'Add' }).click()

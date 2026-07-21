@@ -5,8 +5,7 @@
 // back to the shared full-screen `Modal` sheet instead of anchoring — reuse, not
 // a second sheet implementation.
 //
-// ponytail: justified by two real consumers (DatePicker, TimePicker); `children`
-// is a render-prop so a consumer can `close()` after committing a value. No
+// `children` is a render-prop so a consumer can `close()` after committing a value. No
 // controlled-open / placement props "for later" — add them when a consumer needs one.
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'

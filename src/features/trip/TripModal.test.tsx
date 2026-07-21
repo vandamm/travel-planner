@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import type { ReactNode } from 'react'
-import { setTrip } from '../../data/doc'
+import { getTrip, setTrip } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import { RoomProvider } from '../../data/RoomProvider'
 import { TripModal } from './TripModal'
@@ -49,6 +49,11 @@ function TripWithMergedInvertedWindow() {
   return <TripModal onClose={() => {}} />
 }
 
+function TripWindowDump() {
+  const { doc } = useRoom()
+  return <output aria-label="Stored day window">{JSON.stringify(getTrip(doc))}</output>
+}
+
 describe('TripModal', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -76,17 +81,65 @@ describe('TripModal', () => {
     expect(screen.getByRole('button', { name: 'Start date' })).toHaveTextContent('01.05.2027')
   })
 
-  it('defaults and writes the day timeline window through the wheel', async () => {
-    const user = userEvent.setup()
+  it('uses required native quarter-hour inputs for the day timeline window', () => {
     renderInRoom(<TripModal onClose={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Day start' })).toHaveTextContent('06:00')
-    expect(screen.getByRole('button', { name: 'Day end' })).toHaveTextContent('21:00')
+    const start = screen.getByLabelText('Day start')
+    const end = screen.getByLabelText('Day end')
+    expect(start).toHaveValue('06:00')
+    expect(end).toHaveValue('21:00')
+    for (const input of [start, end]) {
+      expect(input).toHaveAttribute('type', 'time')
+      expect(input).toHaveAttribute('step', '900')
+      expect(input).toBeRequired()
+    }
 
-    await user.click(screen.getByRole('button', { name: 'Day start' }))
-    await user.click(screen.getByRole('option', { name: 'Hour 07' }))
-    await user.click(screen.getByRole('option', { name: 'Minute 30' }))
-    await user.click(screen.getByRole('button', { name: 'Set 07:30' }))
-    expect(screen.getByRole('button', { name: 'Day start' })).toHaveTextContent('07:30')
+    fireEvent.change(start, { target: { value: '07:30' } })
+    expect(start).toHaveValue('07:30')
+  })
+
+  it.each([
+    ['equal', '21:00'],
+    ['earlier', '22:00'],
+  ])('rejects a day start that is %s to the end without writing it', (_case, value) => {
+    renderInRoom(
+      <>
+        <TripModal onClose={() => {}} />
+        <TripWindowDump />
+      </>,
+    )
+    fireEvent.change(screen.getByLabelText('Day start'), { target: { value } })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Day end must be later than day start.')
+    expect(screen.getByLabelText('Day start')).toHaveValue('06:00')
+    expect(screen.getByLabelText('Stored day window')).toHaveTextContent('"dayStart":"06:00"')
+  })
+
+  it('rejects a day end before the start without writing it', () => {
+    renderInRoom(
+      <>
+        <TripModal onClose={() => {}} />
+        <TripWindowDump />
+      </>,
+    )
+    fireEvent.change(screen.getByLabelText('Day end'), { target: { value: '05:45' } })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Day end must be later than day start.')
+    expect(screen.getByLabelText('Day end')).toHaveValue('21:00')
+    expect(screen.getByLabelText('Stored day window')).toHaveTextContent('"dayEnd":"21:00"')
+  })
+
+  it('rejects an empty required day time without writing it', () => {
+    renderInRoom(
+      <>
+        <TripModal onClose={() => {}} />
+        <TripWindowDump />
+      </>,
+    )
+    fireEvent.change(screen.getByLabelText('Day start'), { target: { value: '' } })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a time in 15-minute increments.')
+    expect(screen.getByLabelText('Day start')).toHaveValue('06:00')
+    expect(screen.getByLabelText('Stored day window')).toHaveTextContent('"dayStart":"06:00"')
   })
 
   it('renders in a dialog with the seal + Lora "Trip details" heading, no slate skin', () => {

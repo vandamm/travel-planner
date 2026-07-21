@@ -11,6 +11,8 @@ export interface CityPickerProps {
   includeAddCity?: boolean
   onAddCity?: () => void
   hint?: string
+  /** Render only a bare edit glyph, for the picker directly beside a city name. */
+  bareEdit?: boolean
 }
 
 export function CityPicker({
@@ -23,6 +25,7 @@ export function CityPicker({
   includeAddCity = false,
   onAddCity,
   hint,
+  bareEdit = false,
 }: CityPickerProps) {
   const selectedId = value === undefined ? resolvedCityId : (value ?? undefined)
   const selected = selectedId ? cities.find((city) => city.id === selectedId) : undefined
@@ -31,7 +34,7 @@ export function CityPicker({
     <Popover
       label={label}
       triggerAriaLabel={label}
-      trigger={
+      trigger={bareEdit ? <span aria-hidden>✎</span> : (
         <span className="flex items-center gap-1 font-serif text-inherit">
           <span
             className="h-2.5 w-2.5 rounded-full"
@@ -39,8 +42,12 @@ export function CityPicker({
           />
           {selectedLabel} ▾
         </span>
+      )}
+      triggerClassName={
+        bareEdit
+          ? 'inline-flex h-6 w-6 items-center justify-center text-sm text-ink-500 hover:text-ink'
+          : 'inline-flex items-center rounded-card border border-edge-350 px-2 py-1 text-sm text-ink-600 hover:bg-surface-chip'
       }
-      triggerClassName="inline-flex items-center rounded-card border border-edge-350 px-2 py-1 text-sm text-ink-600 hover:bg-surface-chip"
     >
       {(close) => (
         <div className="flex min-w-48 flex-col gap-1">

@@ -1,12 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { pickTime, setupTrip, E2E_LINK } from './helpers'
 
-// §11 time picker: the custom hour/minute wheel pop-over replaces the native
-// time inputs on cards and the trip day window. (Card height is derived from the
-// times and unit-tested in cardHeight.test.ts; here we only prove the wheel
-// writes/clears the stored HH:mm.)
+// Native time inputs preserve the existing HH:mm storage while using the
+// platform's formatted time-entry surface.
 
-test('setting a card start through the wheel shows its start and duration', async ({ page }) => {
+test('setting a card start through the native input shows its start and duration', async ({ page }) => {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
@@ -20,7 +18,7 @@ test('setting a card start through the wheel shows its start and duration', asyn
   await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h 00m')
 })
 
-test('clearing a card start time in the wheel untimes the card', async ({ page }) => {
+test('clearing a native card start time untimes the card', async ({ page }) => {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
@@ -32,56 +30,45 @@ test('clearing a card start time in the wheel untimes the card', async ({ page }
   await editor.getByRole('button', { name: 'Save card' }).click()
   await expect(firstColumn.getByTestId('card-time')).toHaveText('09:00 · 1h 00m')
 
-  // Reopen, clear the start time in the wheel, save → the card is untimed.
+  // Reopen, clear the start time, save → the card is untimed.
   await firstColumn
     .getByTestId('card')
     .getByRole('button', { name: 'Edit Loose plan', exact: true })
     .click()
   const reopen = page.getByRole('dialog', { name: 'Card editor' })
-  await reopen.getByRole('button', { name: 'Start time' }).click()
-  await reopen
-    .getByRole('dialog', { name: 'Start time' })
-    .getByRole('button', { name: 'Clear' })
-    .click()
+  await reopen.getByLabel('Start time').fill('')
   await reopen.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-time')).toHaveText('1h 00m')
 })
 
-test('setting the trip day window through the wheel updates the field', async ({ page }) => {
+test('native trip day-window inputs update valid values and reject inverted windows', async ({ page }) => {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
-  await page.getByRole('button', { name: 'Edit trip' }).click()
+  await page.getByRole('button', { name: 'Edit trip menu' }).click()
+  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: 'Trip details' }).click()
   const trip = page.getByRole('dialog', { name: 'Trip details' })
-  await expect(trip.getByRole('button', { name: 'Day start' })).toHaveText('06:00')
+  await expect(trip.getByLabel('Day start')).toHaveValue('06:00')
   await pickTime(trip, 'Day start', '08:00')
-  await expect(trip.getByRole('button', { name: 'Day start' })).toHaveText('08:00')
+  await expect(trip.getByLabel('Day start')).toHaveValue('08:00')
+  await pickTime(trip, 'Day end', '08:00')
+  await expect(trip.getByRole('alert')).toHaveText('Day end must be later than day start.')
+  await expect(trip.getByLabel('Day end')).toHaveValue('21:00')
 })
 
-test.describe('mobile time picker', () => {
+test.describe('mobile native time input', () => {
   test.use({ viewport: { width: 456, height: 652 }, hasTouch: true, isMobile: true })
 
-  test('centers the first minute instead of pinning it to the top edge', async ({ page }) => {
+  test('uses the 16px iOS-safe text size without opening a custom wheel', async ({ page }) => {
     await page.goto('/mobile-picker-e2e')
     await setupTrip(page, { title: 'Picker', startDate: '2027-05-01', endDate: '2027-05-01' })
 
     await page.getByRole('button', { name: 'Add activity', exact: true }).click()
     const editor = page.getByRole('dialog', { name: 'Card editor' })
-    await editor.getByRole('button', { name: 'Start time' }).click()
-
-    const picker = page.getByRole('dialog', { name: 'Start time' })
-    const minutes = picker.getByRole('listbox', { name: 'Minute' })
-    const selected = minutes.getByRole('option', { name: 'Minute 00' })
-    await expect
-      .poll(async () => {
-        const [listBox, selectedBox] = await Promise.all([
-          minutes.boundingBox(),
-          selected.boundingBox(),
-        ])
-        if (!listBox || !selectedBox) return Number.POSITIVE_INFINITY
-        return Math.abs(listBox.y + listBox.height / 2 - (selectedBox.y + selectedBox.height / 2))
-      })
-      .toBeLessThanOrEqual(1)
+    const input = editor.getByLabel('Start time')
+    await expect(input).toHaveAttribute('type', 'time')
+    expect(await input.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16)
+    await expect(page.getByRole('dialog', { name: 'Start time' })).toHaveCount(0)
   })
 })
