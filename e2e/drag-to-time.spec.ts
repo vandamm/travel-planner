@@ -86,20 +86,22 @@ test('whole-card drag shows live timing and permits an overlap without moving it
 
   await holdSurfaceOnto(page, museum, lunch)
 
-  const hint = page.locator('[data-testid="event-timing-hint"]:visible')
-  await expect(hint).toHaveCount(1)
-  await expect(hint.getByTestId('event-timing-start')).toHaveText('11:00')
-  await expect(hint.getByTestId('event-timing-end')).toHaveText('12:00')
-  await expect(hint.getByTestId('event-timing-duration')).toHaveText('1h')
-  await expect(page.getByTestId('card-title').filter({ hasText: 'Museum' })).toHaveCount(0)
+  const preview = page.locator('[data-testid="drag-preview-card"]:visible')
+  await expect(preview).toHaveCount(1)
+  await expect(preview.getByTestId('event-timing-start')).toHaveText('11:00')
+  await expect(preview.getByTestId('event-timing-end')).toHaveText('12:00')
+  await expect(preview.getByTestId('card-time')).toHaveText('11:00 · 1h 00m')
+  await expect(
+    page.locator('[data-testid="card-title"]:visible').filter({ hasText: 'Museum' }),
+  ).toHaveCount(1)
   await expect(page.getByRole('button', { name: /Resize Museum/ })).toHaveCount(0)
 
   await page.mouse.up()
 
   const movedMuseum = column.locator('[data-testid="card"]', { hasText: 'Museum' })
   const unchangedLunch = column.locator('[data-testid="card"]', { hasText: 'Lunch' })
-  await expect(movedMuseum.getByTestId('card-time')).toHaveText('11:00 · 1h')
-  await expect(unchangedLunch.getByTestId('card-time')).toHaveText('11:00 · 1h')
+  await expect(movedMuseum.getByTestId('card-time')).toHaveText('11:00 · 1h 00m')
+  await expect(unchangedLunch.getByTestId('card-time')).toHaveText('11:00 · 1h 00m')
   await expect(movedMuseum.getByTestId('card-conflict')).toHaveText('Overlap')
   await expect(unchangedLunch.getByTestId('card-conflict')).toHaveText('Overlap')
   await expect(board).toHaveJSProperty('scrollLeft', beforeScrollLeft)

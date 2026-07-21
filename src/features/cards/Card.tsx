@@ -94,7 +94,8 @@ export function Card({
   timingPreview,
 }: CardProps) {
   const category = cardCategory(card)
-  const durationHours = timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
+  const durationHours =
+    timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
   const duration = formatDuration(durationHours)
   const previewEndTime = timingPreview?.startTime
     ? clockString(clockMinutes(timingPreview.startTime) + Math.round(durationHours * 60))
@@ -162,11 +163,11 @@ export function Card({
       data-category={category}
       aria-label={dragSurfaceProps ? `Move or edit ${card.title}` : undefined}
       onClick={editFromSurface}
-      className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border px-2.5 py-2 text-sm text-ink shadow-sm ${timingPreview ? 'border-indoor-border bg-indoor-bg/40 shadow-none' : 'border-edge-100 bg-surface'} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
+      className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border px-[11px] py-[9px] text-sm text-ink shadow-sm min-[400px]:px-[13px] min-[400px]:py-[11px] ${timingPreview ? 'border-indoor-border bg-indoor-bg/40 shadow-none' : 'border-edge-100 bg-surface'} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
     >
       {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
       {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
-      <div className="flex items-baseline gap-1">
+      <div data-testid="card-title-row" className="flex flex-wrap items-center gap-1">
         <button
           type="button"
           aria-label={`Edit ${card.title}`}
@@ -175,24 +176,30 @@ export function Card({
             event.stopPropagation()
             onEdit?.(card)
           }}
-          className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left hover:text-ink"
+          className="min-w-0 max-w-full flex-none text-left hover:text-ink"
         >
           <span
             data-testid="card-title"
-            className="min-w-0 font-serif text-[15px] font-semibold leading-tight text-ink"
+            className="min-w-0 break-words font-serif text-[15px] font-semibold leading-tight text-ink"
           >
             {card.title}
           </span>
-          {
-            <span
-              data-testid="card-time"
-              className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
-            >
-              {displayedTime}
-            </span>
-          }
         </button>
+        {category && (
+          <span
+            data-testid="card-category"
+            className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
+          >
+            {category}
+          </span>
+        )}
       </div>
+      <span
+        data-testid="card-time"
+        className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
+      >
+        {displayedTime}
+      </span>
 
       {card.note && (
         <p
@@ -203,24 +210,14 @@ export function Card({
         </p>
       )}
 
-      {(category || conflict) && (
-        <div className="flex flex-wrap gap-1">
-          {category && (
-            <span
-              data-testid="card-category"
-              className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
-            >
-              {category}
-            </span>
-          )}
-          {conflict && (
-            <span
-              data-testid="card-conflict"
-              className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
-            >
-              Overlap
-            </span>
-          )}
+      {conflict && (
+        <div data-testid="card-badge-row" className="flex flex-wrap gap-1">
+          <span
+            data-testid="card-conflict"
+            className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
+          >
+            Overlap
+          </span>
         </div>
       )}
 
@@ -412,7 +409,12 @@ export function SortableCard({
   }
 
   return (
-    <li ref={setNodeRef} style={style} data-testid="sortable-card">
+    <li
+      ref={setNodeRef}
+      style={style}
+      data-testid="sortable-card"
+      className="pointer-events-auto"
+    >
       {isDragging || resizePreview ? (
         <Card
           card={card}

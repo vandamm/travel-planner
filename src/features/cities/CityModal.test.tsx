@@ -88,7 +88,7 @@ describe('CityModal', () => {
     const onClose = vi.fn()
     renderInRoom(<CityModal onClose={onClose} />)
 
-    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getAllByRole('button', { name: 'Done' })[0])
     expect(onClose).toHaveBeenCalledTimes(1)
 
     await user.keyboard('{Escape}')

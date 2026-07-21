@@ -17,6 +17,22 @@ describe('Modal', () => {
     expect(screen.getByText('Body')).toBeInTheDocument()
   })
 
+  it('puts a supplied primary action in the phone sheet header', () => {
+    render(
+      <Modal
+        label="Editor"
+        onClose={() => {}}
+        mobileAction={<button type="button">Save</button>}
+      >
+        <p>Body</p>
+      </Modal>,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Editor' })
+    expect(dialog.parentElement).toHaveClass('bg-[rgba(31,29,24,0.46)]')
+    expect(dialog).toHaveClass('shadow-[0_30px_70px_-20px_rgba(20,18,14,0.60)]')
+    expect(screen.getByRole('button', { name: 'Save' }).parentElement).toHaveClass('ml-auto')
+  })
+
   it('switches directly from a titled full-screen mobile view to a floating card at 640px', () => {
     render(
       <Modal label="Test dialog" onClose={() => {}}>
@@ -26,11 +42,15 @@ describe('Modal', () => {
 
     const dialog = screen.getByRole('dialog')
     expect(screen.getByText('Test dialog')).toBeInTheDocument()
-    expect(dialog.parentElement).toHaveClass('sm:items-center', 'sm:justify-center', 'sm:p-4')
-    expect(dialog).toHaveClass('h-full', 'pt-0', 'sm:h-auto', 'sm:p-6', 'sm:rounded-frame')
-    expect(dialog).toHaveClass('[&_h2]:hidden', 'sm:[&_h2]:block')
+    expect(dialog.parentElement).toHaveClass(
+      'min-[400px]:items-center',
+      'min-[400px]:justify-center',
+      'min-[400px]:p-4',
+    )
+    expect(dialog).toHaveClass('h-full', 'pt-0', 'min-[400px]:h-auto', 'min-[400px]:p-6')
+    expect(dialog).toHaveClass('[&_h2]:hidden', 'min-[400px]:[_h2]:block')
     const ribbon = screen.getByRole('button', { name: 'Close' }).parentElement
-    expect(ribbon).toHaveClass('sm:hidden')
+    expect(ribbon).toHaveClass('min-[400px]:hidden')
     expect(ribbon).not.toHaveClass('-mt-6')
   })
 

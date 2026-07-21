@@ -2,13 +2,13 @@
 // its live sync status to the tree. UI components read the doc via "useRoom()"
 // and mutate it through the "doc.ts" mutators.
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as Y from "yjs"
 import { installDevBridge } from "./devBridge"
-import { connectRoom, type SyncStatus } from "./provider"
-import { RoomContext, type Presence as ContextPresence, type RoomContextValue } from "./RoomContext"
-import { slugFromPath } from "./slug"
-import { randomCityColor } from "../features/cities/colors"
+import { connectRoom, type RoomConnection, type SyncStatus } from './provider'
+import { RoomContext, type Presence as ContextPresence, type RoomContextValue } from './RoomContext'
+import { slugFromPath } from './slug'
+import { randomCityColor } from '../features/cities/colors'
 
 export interface RoomProviderProps {
   /** Worker base URL; defaults to "import.meta.env.VITE_WORKER_URL". */
@@ -62,7 +62,9 @@ export function RoomProvider({
   const workerBase = workerUrl ?? import.meta.env.VITE_WORKER_URL ?? ""
   const roomId = roomIdProp === undefined ? currentRoomId() : roomIdProp
   // An empty Worker base is the valid same-origin production setup (`/api/auth`).
-  const autoSync = import.meta.env.MODE !== "test" && Boolean(roomId)
+  // Browser e2e runs a local Vite server without the Worker, so it explicitly
+  // opts into the same local-first path as unit tests.
+  const autoSync = import.meta.env.MODE !== "test" && import.meta.env.VITE_E2E !== "true" && Boolean(roomId)
   const hasIndexedDb = typeof globalThis.indexedDB !== "undefined" && globalThis.indexedDB !== null
 
   // The Y.Doc is cheap and owns no external resources, so it can live in useMemo
@@ -82,7 +84,14 @@ export function RoomProvider({
     (enableSync ?? autoSync) ? "connecting" : "local",
   )
   const [presences, setPresences] = useState<ContextPresence[]>([])
-  const [myself, setMyself] = useState<ContextPresence | null>(null)
+  const [myself, setMyself] = useState<ContextPresence>(() => ({
+    userId: generateUserId(),
+    name: getUserName(),
+    color: getUserColor(),
+  }))
+  const initialPresenceRef = useRef<ContextPresence | null>(null)
+  if (!initialPresenceRef.current) initialPresenceRef.current = myself
+  const connectionRef = useRef<RoomConnection | null>(null)
 
   useEffect(() => {
     const connection = connectRoom({
@@ -90,17 +99,12 @@ export function RoomProvider({
       workerUrl: workerBase,
       enableSync: enableSync ?? autoSync,
       doc,
+      initialPresence: initialPresenceRef.current ?? undefined,
     })
+    connectionRef.current = connection
     installDevBridge(doc)
     setStatus(connection.getStatus())
     let active = true
-
-    // ponytail: generate user presence on mount, update Liveblocks
-    const userId = generateUserId()
-    const name = getUserName()
-    const color = getUserColor()
-    const myPresence = { userId, name, color }
-    setMyself(myPresence)
 
     // Subscribe to presence updates from Liveblocks
     const unsubPresence = connection.onPresences((list) => {
@@ -117,8 +121,14 @@ export function RoomProvider({
       unsubscribe()
       unsubPresence()
       connection.destroy()
+      if (connectionRef.current === connection) connectionRef.current = null
     }
   }, [doc, roomId, workerBase, enableSync, autoSync])
+
+  const visiblePresences = useMemo(
+    () => [myself, ...presences.filter((presence) => presence.userId !== myself.userId)],
+    [myself, presences],
+  )
 
   const value = useMemo<RoomContextValue>(
     () => ({
@@ -127,15 +137,13 @@ export function RoomProvider({
       status,
       workerUrl: workerBase,
       myself,
-      presences,
+      presences: visiblePresences,
       setPresence: (partial) => {
-        if (myself) {
-          const updated = { ...myself, ...partial }
-          setMyself(updated)
-        }
+        setMyself((current) => ({ ...current, ...partial }))
+        connectionRef.current?.updatePresence(partial)
       },
     }),
-    [doc, roomId, status, workerBase, myself, presences],
+    [doc, roomId, status, workerBase, myself, visiblePresences],
   )
 
   return (

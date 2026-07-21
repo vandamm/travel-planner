@@ -27,14 +27,16 @@ describe('App (with a room slug path)', () => {
     expect(seal).toHaveTextContent('I')
   })
 
-  it('uses the desktop board inset for the full-width trip header at 640px', () => {
+  it('fills the viewport without an exterior board frame', () => {
     render(<App />)
 
-    const header = screen.getByTestId('app-seal').closest('header')
-    expect(header).toHaveClass('w-full', 'px-6')
-    expect(header).not.toHaveClass('max-w-2xl')
-    expect(screen.getByRole('button', { name: 'Trip' }).parentElement).toHaveClass('sm:flex')
-    expect(screen.getByRole('button', { name: 'Menu' })).toHaveClass('sm:hidden')
+    const board = screen.getByTestId('board-frame')
+    const shell = board.closest('main')
+    expect(board).toContainElement(screen.getByTestId('board-toolbar'))
+    expect(board.className).not.toMatch(/\bmx-|rounded-frame|\bborder\b/)
+    expect(shell?.className).not.toMatch(/bg-surface|\bgap-|\bpy-/)
+    expect(screen.getByRole('button', { name: 'Edit trip menu' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument()
   })
 
   it('renders the meta line with day and city counts', () => {
@@ -70,7 +72,9 @@ describe('App (with a room slug path)', () => {
     expect(screen.queryByTestId('app-seal')).not.toBeInTheDocument()
 
     act(() => emitStatus('missing'))
-    expect(await screen.findByRole('heading', { name: "This trip doesn't exist." })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: "This trip doesn't exist." }),
+    ).toBeInTheDocument()
     spy.mockRestore()
   })
 
@@ -115,7 +119,8 @@ describe('App (with a room slug path)', () => {
     // Trip setup lives behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Trip details' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Trip' }))
+    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
+    await user.click(screen.getByRole('button', { name: 'Trip details' }))
     expect(screen.getByRole('dialog', { name: 'Trip details' })).toBeInTheDocument()
 
     // Escape flips AppShell's open flag back off, unmounting the modal.
@@ -129,7 +134,8 @@ describe('App (with a room slug path)', () => {
     // Cities live behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Cities' }))
+    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
+    await user.click(screen.getByRole('button', { name: 'Cities & colours' }))
     expect(screen.getByRole('dialog', { name: 'Cities & colours' })).toBeInTheDocument()
 
     // Escape flips AppShell's open flag back off, unmounting the modal.
@@ -215,9 +221,7 @@ describe('App without a room slug', () => {
 
     expect(await screen.findByText('5–9 Apr')).toBeInTheDocument()
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining(`validTo=${nextYear}-12-31`),
-      ),
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`validTo=${nextYear}-12-31`)),
     )
   })
 
@@ -294,12 +298,14 @@ describe('App without a room slug', () => {
       }),
     )
     const [, createInit] = fetchMock.mock.calls.at(-1)!
-    expect(JSON.parse(createInit?.body as string)).toEqual(expect.objectContaining({
-      room: 'japan-2028',
-      title: 'Japan Spring 2028',
-      startDate: '2028-03-10',
-      endDate: '2028-03-24',
-    }))
+    expect(JSON.parse(createInit?.body as string)).toEqual(
+      expect.objectContaining({
+        room: 'japan-2028',
+        title: 'Japan Spring 2028',
+        startDate: '2028-03-10',
+        endDate: '2028-03-24',
+      }),
+    )
   })
 
   it('links trip markings on the calendar to their boards', async () => {

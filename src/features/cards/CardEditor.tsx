@@ -6,7 +6,6 @@
 
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
-import { TimePicker } from '../pickers/TimePicker'
 import { addCard, removeCard, updateCard } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import type { Card, CardCategory, CardDuration } from '../../data/schema'
@@ -31,6 +30,8 @@ export interface CardEditorProps {
   card?: Card
   /** Target day for a new card (create mode). Ignored when editing. */
   dayKey?: string
+  /** Pre-fill a new card from a selected free timeline slot. */
+  defaultStartTime?: string
   onClose: () => void
 }
 
@@ -40,15 +41,14 @@ function clean(value: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
+export function CardEditor({ card, dayKey, defaultStartTime, onClose }: CardEditorProps) {
   const { doc } = useRoom()
   const isEdit = card !== undefined
 
   const [title, setTitle] = useState(card?.title ?? '')
   const [note, setNote] = useState(card?.note ?? '')
   const [link, setLink] = useState(card?.link ?? '')
-  const [timed, setTimed] = useState(Boolean(card?.startTime))
-  const [startTime, setStartTime] = useState(card?.startTime ?? '')
+  const [startTime, setStartTime] = useState(card?.startTime ?? defaultStartTime ?? '')
   // Legacy `transport: true` is derived to `'transit'` so an old card pre-selects it.
   const [category, setCategory] = useState<CardCategory | undefined>(
     card ? cardCategory(card) : undefined,
@@ -61,7 +61,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
     const trimmedTitle = title.trim()
     if (!trimmedTitle) return
 
-    const start = timed ? clean(startTime) : undefined
+    const start = clean(startTime)
     const customHours = duration === 'custom' ? durationHours : undefined
     if (customHours !== undefined && !isValidCustomDurationHours(customHours)) return
 
@@ -107,15 +107,16 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
       label="Card editor"
       title={isEdit ? 'Edit activity' : 'Add activity'}
       onClose={onClose}
-      className="flex w-full flex-col gap-4 sm:max-w-md"
+      mobileAction={<button type="submit" form="card-editor-form" disabled={title.trim() === ''} className="button-label text-ink disabled:opacity-40">Save</button>}
+      className="flex w-full flex-col gap-4 min-[400px]:max-w-md"
     >
       <h2 className="font-serif text-xl font-semibold text-ink">
         {isEdit ? 'Edit activity' : 'Add activity'}
       </h2>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form id="card-editor-form" onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className={sectionLabel}>Card title</span>
+          <span className={sectionLabel}>Title</span>
           <input
             type="text"
             autoFocus
@@ -127,7 +128,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className={sectionLabel}>Note</span>
+          <span className={sectionLabel}>Description</span>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -212,38 +213,25 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm font-medium text-ink-600">
-          <input
-            type="checkbox"
-            checked={timed}
-            onChange={(e) => setTimed(e.target.checked)}
-            className="h-4 w-4"
-          />
-          Set a time
-        </label>
+        <div className="flex items-end gap-2">
+          <label className="flex flex-1 flex-col gap-1.5">
+            <span className={sectionLabel}>Start time</span>
+            <input
+              type="time"
+              step={900}
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={`${fieldInput} text-center font-serif`}
+            />
+          </label>
+        </div>
 
-        {timed && (
-          <div className="flex items-end gap-2">
-            <div className="flex flex-1 flex-col gap-1.5">
-              <span className={sectionLabel}>Start time</span>
-              <TimePicker
-                label="Start time"
-                value={startTime}
-                onChange={setStartTime}
-                onClear={() => setStartTime('')}
-                placeholder="Set start"
-                triggerClassName={`${fieldInput} text-center font-serif`}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="mt-1 flex items-center justify-between gap-2">
+        <div className="mt-1 flex items-center justify-between gap-2 max-[399px]:flex-col">
           {isEdit ? (
             <button
               type="button"
               onClick={onDelete}
-              className="rounded-card border border-transit-border px-4 py-2 text-sm font-semibold text-city-vermilion hover:bg-transit-bg"
+              className="rounded-card border border-transit-border px-4 py-2 text-sm font-semibold text-city-vermilion hover:bg-transit-bg max-[399px]:mx-auto"
             >
               Delete card
             </button>
@@ -251,7 +239,7 @@ export function CardEditor({ card, dayKey, onClose }: CardEditorProps) {
             <span />
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 max-[399px]:hidden">
             <button
               type="button"
               onClick={onClose}

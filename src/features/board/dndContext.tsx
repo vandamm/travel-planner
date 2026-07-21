@@ -117,16 +117,16 @@ export function BoardDnd({
     const droppedTop =
       event.active.rect.current.translated?.top ??
       (initial ? initial.top + event.delta.y : undefined)
-    const dayBody = targetDayKey
-      ? document.querySelector<HTMLElement>(`[data-day="${targetDayKey}"] [data-testid="day-body"]`)
+    const timelineTrack = targetDayKey
+      ? document.querySelector<HTMLElement>(`[data-day="${targetDayKey}"] [data-testid="timeline-track"]`)
       : null
-    if (!card || !targetDayKey || droppedTop === undefined || !dayBody) return null
+    if (!card || !targetDayKey || droppedTop === undefined || !timelineTrack) return null
 
-    const dayBodyRect = dayBody.getBoundingClientRect()
+    const timelineRect = timelineTrack.getBoundingClientRect()
     return planCardDrop({
       card,
       targetDayKey,
-      offsetPx: timelineDropOffset(droppedTop, dayBodyRect.top, dayBody.scrollTop),
+      offsetPx: timelineDropOffset(droppedTop, timelineRect.top, 0),
       dayStart,
       dayEnd,
       direction,

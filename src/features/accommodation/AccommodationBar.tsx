@@ -34,8 +34,11 @@ export function AccommodationBar({
       data-acc={accommodation.id}
       aria-label={`Edit stay ${accommodation.label}`}
       onClick={() => onEdit?.(accommodation)}
-      style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
-      className="flex h-7 w-full items-center gap-1 overflow-hidden rounded-md px-2 text-left text-xs font-semibold text-white shadow-sm ring-1 ring-black/10 hover:brightness-95"
+      style={{
+        backgroundColor: `color-mix(in srgb, ${city?.color ?? NO_CITY_COLOR} 18%, white)`,
+        borderColor: `color-mix(in srgb, ${city?.color ?? NO_CITY_COLOR} 55%, transparent)`,
+      }}
+      className="flex h-7 w-full items-center gap-1 overflow-hidden rounded-card border px-2 text-left font-serif text-xs font-semibold text-ink shadow-sm hover:brightness-95"
     >
       {clippedStart && <span aria-hidden>‹</span>}
       <span data-testid="accommodation-label" className="truncate">

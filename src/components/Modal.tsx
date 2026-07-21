@@ -19,11 +19,20 @@ export interface ModalProps {
   title?: string
   onClose: () => void
   children: ReactNode
+  /** Primary action displayed in the phone sheet header. */
+  mobileAction?: ReactNode
   /** Extra classes for the card (layout/width); merged after the shell base. */
   className?: string
 }
 
-export function Modal({ label, title = label, onClose, children, className = '' }: ModalProps) {
+export function Modal({
+  label,
+  title = label,
+  onClose,
+  children,
+  mobileAction,
+  className = '',
+}: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
 
   // Escape close goes through the shared stack so only the top-most overlay
@@ -38,7 +47,7 @@ export function Modal({ label, title = label, onClose, children, className = '' 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-10 flex bg-ink/40 sm:items-center sm:justify-center sm:p-4"
+      className="fixed inset-0 z-10 flex bg-[rgba(31,29,24,0.46)] min-[400px]:items-center min-[400px]:justify-center min-[400px]:p-4"
       onClick={onClose}
     >
       <div
@@ -48,14 +57,14 @@ export function Modal({ label, title = label, onClose, children, className = '' 
         aria-label={label}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`h-full w-full max-h-full animate-sheet-in overflow-y-auto rounded-none bg-white px-6 pb-6 pt-0 shadow-xl outline-none motion-reduce:animate-none [&_h2]:hidden sm:h-auto sm:animate-none sm:rounded-frame sm:border sm:border-ink-frame sm:p-6 sm:[&_h2]:block ${className}`}
+        className={`h-full w-full max-h-full animate-sheet-in overflow-y-auto rounded-none bg-white px-6 pb-6 pt-0 shadow-[0_30px_70px_-20px_rgba(20,18,14,0.60)] outline-none motion-reduce:animate-none [&_h2]:hidden min-[400px]:h-auto min-[400px]:animate-none min-[400px]:rounded-frame min-[400px]:border min-[400px]:border-ink-frame min-[400px]:p-6 min-[400px]:[_h2]:block ${className}`}
       >
         {/* Mobile-only sheet header: a back/close affordance (desktop uses the
             scrim backdrop-click + Escape, so it is hidden at lg:).
             ponytail: we add only the ‹ close control and keep each editor's
             in-body <h2> title + its existing bottom actions — folding actions
             into this header bar is deferred polish, not needed to ship mobile. */}
-        <div className="sticky top-0 z-10 -mx-6 mb-4 flex items-center border-b border-edge bg-white px-4 py-2 sm:hidden">
+        <div className="sticky top-0 z-10 -mx-6 mb-4 flex items-center border-b border-edge-150 bg-white px-4 py-2 min-[400px]:hidden">
           <button
             type="button"
             onClick={onClose}
@@ -65,6 +74,7 @@ export function Modal({ label, title = label, onClose, children, className = '' 
             ‹
           </button>
           <span className="font-serif text-xl font-semibold text-ink">{title}</span>
+          <div className="ml-auto">{mobileAction}</div>
         </div>
         {children}
       </div>

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { setupTrip, E2E_LINK } from './helpers'
+import { addActivity, setupTrip, E2E_LINK } from './helpers'
 
 async function openLocalBoard(page: Page) {
   await page.route('**/api/auth', (route) => route.fulfill({ status: 503 }))
@@ -51,9 +51,9 @@ test('drag a card to another day column', async ({ page }) => {
   const secondColumn = columns.nth(1)
 
   // Add one card to the first day.
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await addActivity(firstColumn)
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Museum')
+  await editor.getByLabel('Title').fill('Museum')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Museum')
@@ -67,7 +67,7 @@ test('drag a card to another day column', async ({ page }) => {
   await expect(firstColumn.getByTestId('card-title')).toHaveCount(0)
 })
 
-test('dragged card follows the cursor and highlights the target day', async ({ page }) => {
+test('dragged card previews its timing and highlights the target day', async ({ page }) => {
   await openLocalBoard(page)
 
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
@@ -76,9 +76,9 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
   const firstColumn = columns.nth(0)
   const secondColumn = columns.nth(1)
 
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await addActivity(firstColumn)
   const editor = page.getByRole('dialog', { name: 'Card editor' })
-  await editor.getByLabel('Card title').fill('Museum')
+  await editor.getByLabel('Title').fill('Museum')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   // Begin a drag and pause with the pointer over the second column — without
@@ -99,9 +99,11 @@ test('dragged card follows the cursor and highlights the target day', async ({ p
   await page.mouse.move(tx, ty, { steps: 15 })
   await page.waitForTimeout(150)
 
-  // The source stays mounted but invisible while one timing hint follows the cursor.
-  await expect(page.getByTestId('card-title').filter({ hasText: 'Museum' })).toHaveCount(0)
-  await expect(page.locator('[data-testid="event-timing-hint"]:visible')).toHaveCount(1)
+  // The source stays mounted but invisible while one live card preview marks its placement.
+  await expect(
+    page.locator('[data-testid="card-title"]:visible').filter({ hasText: 'Museum' }),
+  ).toHaveCount(1)
+  await expect(page.locator('[data-testid="drag-preview-card"]:visible')).toHaveCount(1)
   await expect(secondColumn).toHaveAttribute('data-drag-over', '')
 
   await page.mouse.up()
@@ -120,9 +122,9 @@ test('dropping an untimed card within a day assigns its timeline time', async ({
   const firstColumn = page.locator('[data-testid="day-column"]').first()
 
   for (const title of ['First', 'Second', 'Third']) {
-    await firstColumn.getByRole('button', { name: /Add card/ }).click()
+    await addActivity(firstColumn)
     const editor = page.getByRole('dialog', { name: 'Card editor' })
-    await editor.getByLabel('Card title').fill(title)
+    await editor.getByLabel('Title').fill(title)
     await editor.getByRole('button', { name: 'Save card' }).click()
   }
 

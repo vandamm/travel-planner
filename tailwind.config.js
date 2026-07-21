@@ -14,6 +14,7 @@ export default {
           frame: '#26231d',
           600: '#5b554a',
           500: '#8f8775',
+          450: '#9a917f',
           400: '#a8a08d',
           300: '#b3aa96',
           200: '#c2bba8',
@@ -27,8 +28,11 @@ export default {
         edge: {
           DEFAULT: '#ddd6c7',
           100: '#e6dfce',
+          150: '#e6e1d5',
           200: '#ece6d8',
+          250: '#d8d0c0',
           300: '#cfc9bb',
+          350: '#c9c1b1',
         },
         // City hues (day-header colours).
         city: {

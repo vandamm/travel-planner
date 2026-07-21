@@ -17,13 +17,20 @@ const stay = (over: Partial<Accommodation> = {}): Accommodation => ({
 })
 
 describe('AccommodationLane', () => {
-  it('stacks the trailing stay control below the 17rem grid on phones', () => {
+  it('uses the same flexible full-width tracks as the day columns', () => {
     render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
 
-    expect(screen.getByTestId('accommodation-lane').parentElement).toHaveClass(
-      'flex-col',
-      'sm:flex-row',
-    )
+    expect(screen.getByTestId('accommodation-lane')).toHaveStyle({
+      gridTemplateColumns: 'repeat(5, minmax(17rem, 1fr))',
+      minWidth: '1416px',
+    })
+  })
+
+  it('keeps uncovered-gap creation without a separate trailing stay action', () => {
+    render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
+
+    expect(screen.getByTestId('add-stay-gap')).toHaveAttribute('data-gap-start', '2027-05-01')
+    expect(screen.queryByTestId('add-stay')).not.toBeInTheDocument()
   })
 
   it('renders a bar spanning the covered columns, colored by its city', () => {
@@ -35,7 +42,7 @@ describe('AccommodationLane', () => {
 
     const bar = screen.getByTestId('accommodation-bar')
     expect(bar).toHaveTextContent('Hotel Roma')
-    expect(bar).toHaveStyle({ backgroundColor: '#ef4444' })
+    expect(bar).toHaveStyle({ backgroundColor: 'color-mix(in srgb, #ef4444 18%, white)' })
   })
 
   it('skips stays that fall outside the visible days', () => {
@@ -108,11 +115,11 @@ describe('AccommodationLane', () => {
     // The half-day inset is applied so the bars meet at the middle of the shared day.
     expect(cellA.querySelector('div')).toHaveAttribute(
       'style',
-      expect.stringContaining('margin-right: calc(8.875rem);'),
+      expect.stringContaining('margin-right: calc(16.6667% + 2.3333px);'),
     )
     expect(cellB.querySelector('div')).toHaveAttribute(
       'style',
-      expect.stringContaining('margin-left: calc(8.875rem);'),
+      expect.stringContaining('margin-left: calc(16.6667% + 2.3333px);'),
     )
   })
 
@@ -121,5 +128,17 @@ describe('AccommodationLane', () => {
       <AccommodationLane days={[]} accommodations={[stay()]} cityById={cityById} />,
     )
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders no stay creation action when every day is covered', () => {
+    render(
+      <AccommodationLane
+        days={days}
+        accommodations={[stay({ startNight: '2027-05-01', endNight: '2027-05-05' })]}
+        cityById={cityById}
+      />,
+    )
+    expect(screen.queryByTestId('add-stay-gap')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add stay' })).not.toBeInTheDocument()
   })
 })

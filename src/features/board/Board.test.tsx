@@ -43,6 +43,7 @@ describe('Board', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-03' }))
     expect(screen.getAllByTestId('day-column')).toHaveLength(3)
+    expect(screen.getByTestId('board')).toHaveClass('min-w-full')
   })
 
   it('colors a day header from its covering accommodation', () => {
@@ -81,7 +82,7 @@ describe('Board', () => {
     expect(screen.getByTestId('accommodation-cell')).toHaveStyle({ gridColumn: '1 / span 2' })
   })
 
-  it('overrides a day’s city from its header, then reverts to Auto', () => {
+  it('overrides a day’s city from its header, then reverts to Auto', async () => {
     renderBoard(<Board />)
     act(() => {
       setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' })
@@ -99,17 +100,14 @@ describe('Board', () => {
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
 
     // Choose Florence via the header picker → recolors the day.
-    const select = within(column).getByTestId('city-override')
-    act(() => {
-      fireEvent.change(select, { target: { value: 'florence' } })
-    })
+    fireEvent.click(within(column).getByRole('button', { name: 'Choose city' }))
+    fireEvent.click(screen.getByRole('button', { name: /Florence/ }))
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#3b82f6' })
     expect(within(column).queryByTestId('override-indicator')).not.toBeInTheDocument()
 
     // Auto clears the override → back to the accommodation's Rome.
-    act(() => {
-      fireEvent.change(within(column).getByTestId('city-override'), { target: { value: '' } })
-    })
+    fireEvent.click(within(column).getByRole('button', { name: 'Choose city' }))
+    fireEvent.click(screen.getByRole('button', { name: /Auto/ }))
     expect(within(column).getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
   })
 
@@ -164,11 +162,11 @@ describe('Board', () => {
     expect(JSON.stringify(listAccommodations(doc))).toBe(accommodationsBefore)
   })
 
-  it('opens the accommodation editor from the Add stay button', () => {
+  it('has no toolbar or trailing Add stay button on desktop', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-02' }))
-    act(() => screen.getByRole('button', { name: 'Add stay' }).click())
-    expect(screen.getByRole('dialog', { name: 'Accommodation editor' })).toBeInTheDocument()
+    expect(within(screen.getByTestId('board-toolbar')).queryByRole('button', { name: 'Add stay' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-stay')).not.toBeInTheDocument()
   })
 
   it('opens the editor when the Add stay nonce bumps, not on mount, and re-opens on repeat', () => {
@@ -195,15 +193,16 @@ describe('Board', () => {
     expect(dialog()).toBeInTheDocument()
   })
 
-  it('tints the toolbar buttons with ink/edge tokens, not slate', () => {
+  it('puts controls inside the board toolbar instead of a separate Board heading', () => {
     renderBoard(<Board />)
     act(() => setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' }))
-    expect(screen.getByRole('button', { name: 'Undo' }).querySelector('svg')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Redo' }).querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByTestId('board-frame')).toContainElement(screen.getByTestId('board-toolbar'))
+    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeInTheDocument()
     const toggle = screen.getByRole('button', { name: 'Toggle time direction' })
-    expect(toggle).toHaveClass('border-edge-300', 'text-ink-600', 'hover:bg-surface-chip')
+    expect(toggle).toHaveClass('border-edge-350', 'text-ink-600')
     expect(toggle.className).not.toMatch(/slate-/)
-    expect(screen.getByRole('heading', { name: 'Board' }).className).not.toMatch(/slate-/)
   })
 
   it('reverses every card in every day when the direction is toggled', () => {

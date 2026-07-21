@@ -17,6 +17,7 @@ import {
 import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import type { Accommodation } from '../../data/schema'
+import { CityPicker } from '../cities/CityPicker'
 
 export interface AccommodationEditorProps {
   /** The stay being edited; omit for create mode. */
@@ -76,13 +77,23 @@ export function AccommodationEditor({
       label="Accommodation editor"
       title={isEdit ? 'Edit stay' : 'Add stay'}
       onClose={onClose}
-      className="flex w-full flex-col gap-4 sm:max-w-md"
+      mobileAction={
+        <button
+          type="submit"
+          form="accommodation-editor-form"
+          disabled={invalid}
+          className="button-label text-ink disabled:opacity-40"
+        >
+          Save
+        </button>
+      }
+      className="flex w-full flex-col gap-4 min-[400px]:max-w-md"
     >
       <h2 className="font-serif text-xl font-semibold text-ink">
         {isEdit ? 'Edit stay' : 'Add stay'}
       </h2>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form id="accommodation-editor-form" onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className={sectionLabel}>Accommodation label</span>
           <input
@@ -95,21 +106,15 @@ export function AccommodationEditor({
           />
         </label>
 
-        <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className={sectionLabel}>City</span>
-          <select
-            value={cityId}
-            onChange={(e) => setCityId(e.target.value)}
-            className={fieldInput}
-          >
-            <option value="">No city</option>
-            {cities.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <CityPicker
+            label="City"
+            value={cityId || undefined}
+            cities={cities}
+            onChange={(id) => setCityId(typeof id === 'string' ? id : '')}
+          />
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <span className={sectionLabel}>Nights (first → last)</span>
@@ -125,12 +130,12 @@ export function AccommodationEditor({
           />
         </div>
 
-        <div className="mt-1 flex items-center justify-between gap-2">
+        <div className="mt-1 flex items-center justify-between gap-2 max-[399px]:flex-col">
           {isEdit ? (
             <button
               type="button"
               onClick={onDelete}
-              className="rounded-card border border-transit-border px-4 py-2 text-sm font-semibold text-city-vermilion hover:bg-transit-bg"
+              className="rounded-card border border-transit-border px-4 py-2 text-sm font-semibold text-city-vermilion hover:bg-transit-bg max-[399px]:mx-auto"
             >
               Delete stay
             </button>
@@ -138,7 +143,7 @@ export function AccommodationEditor({
             <span />
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 max-[399px]:hidden">
             <button
               type="button"
               onClick={onClose}

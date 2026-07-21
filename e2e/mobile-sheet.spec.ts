@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setupTrip, E2E_LINK } from './helpers'
+import { addActivity, setupTrip, E2E_LINK } from './helpers'
 
 // The shared Modal is a full-screen slide-up sheet on phones (base classes) and
 // the Phase-2 centered scrim card on desktop (`lg:`). The switch is pure CSS at
@@ -11,7 +11,7 @@ async function openCardEditor(page: import('@playwright/test').Page) {
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Japan 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
   const firstColumn = page.locator('[data-testid="day-column"]').first()
-  await firstColumn.getByRole('button', { name: /Add card/ }).click()
+  await addActivity(firstColumn)
   return page.getByRole('dialog', { name: 'Card editor' })
 }
 

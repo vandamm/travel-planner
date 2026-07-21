@@ -41,7 +41,13 @@ export function CityModal({ onClose }: CityModalProps) {
   }
 
   return (
-    <Modal label="Cities & colours" onClose={onClose} className="flex w-full flex-col sm:max-w-md">
+    <Modal
+      label="Cities & colours"
+      title="Cities & colours"
+      onClose={onClose}
+      mobileAction={<button type="button" onClick={onClose} className="button-label text-ink">Done</button>}
+      className="flex w-full flex-col min-[400px]:max-w-md"
+    >
       <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Cities &amp; colours</h2>
 
       {cities.length > 0 && (
@@ -118,7 +124,7 @@ export function CityModal({ onClose }: CityModalProps) {
         </p>
       </div>
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex justify-end max-[399px]:hidden">
         <button
           type="button"
           onClick={onClose}

@@ -5,8 +5,7 @@
 // back to the shared full-screen `Modal` sheet instead of anchoring — reuse, not
 // a second sheet implementation.
 //
-// ponytail: justified by two real consumers (DatePicker, TimePicker); `children`
-// is a render-prop so a consumer can `close()` after committing a value. No
+// `children` is a render-prop so a consumer can `close()` after committing a value. No
 // controlled-open / placement props "for later" — add them when a consumer needs one.
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -119,7 +118,7 @@ export function Popover({
             role="dialog"
             aria-label={label}
             tabIndex={-1}
-            className="fixed z-20 animate-popover-in rounded-frame border border-ink-frame bg-white p-3 shadow-xl outline-none motion-reduce:animate-none"
+            className="fixed z-20 animate-popover-in rounded-frame border border-ink-frame bg-white p-3 shadow-[0_18px_44px_-28px_rgba(38,35,29,0.40)] outline-none motion-reduce:animate-none"
             style={{
               left: pos?.left ?? 0,
               top: pos?.top ?? 0,

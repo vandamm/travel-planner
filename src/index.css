@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Safari zooms the page when a focused form field is smaller than 16px. Keep
+   textual controls at that threshold on phone/tablet widths, including sheets. */
+@media (max-width: 1023px) {
+  input:not([type='color']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 @layer base {
   body {
     @apply m-0 font-sans text-ink antialiased;
@@ -19,7 +29,15 @@
 
   button,
   a,
-  input {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3157d5] focus-visible:ring-offset-2;
+  input,
+  textarea,
+  select {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-vermilion focus-visible:ring-offset-2;
+  }
+}
+
+@layer components {
+  .button-label {
+    @apply text-[13px] font-semibold tracking-[0.02em];
   }
 }

@@ -33,6 +33,7 @@ describe('Popover', () => {
     await user.click(trigger)
     const dialog = screen.getByRole('dialog', { name: 'Test picker' })
     expect(dialog).toBeInTheDocument()
+    expect(dialog).toHaveClass('shadow-[0_18px_44px_-28px_rgba(38,35,29,0.40)]')
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
   })
 
