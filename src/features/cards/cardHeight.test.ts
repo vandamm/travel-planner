@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { Card } from '../../data/schema'
 import {
   cardHeightPx,
+  hoursToMinutes,
+  MIN_CARD_MINUTES,
+  minutesToHours,
   noonFraction,
   PX_PER_HOUR,
   resolvedDurationHours,
+  SNAP_MINUTES,
 } from './cardHeight'
 
 const card = (over: Partial<Card>): Card => ({
@@ -41,10 +45,22 @@ describe('cardHeightPx — duration', () => {
     )
   })
 
-  it('floors legacy custom durations below one hour', () => {
-    const legacy = card({ duration: 'custom', durationHours: 0.5 })
-    expect(resolvedDurationHours(legacy, START, END)).toBe(1)
-    expect(cardHeightPx(legacy, START, END)).toBe(PX_PER_HOUR)
+  it('keeps a quarter-hour custom duration', () => {
+    const quarterHour = card({ duration: 'custom', durationHours: 0.25 })
+    expect(resolvedDurationHours(quarterHour, START, END)).toBe(0.25)
+    expect(cardHeightPx(quarterHour, START, END)).toBe(15)
+  })
+
+  it('keeps a legacy non-quarter custom duration for rendering', () => {
+    const legacy = card({ duration: 'custom', durationHours: 1.1 })
+    expect(resolvedDurationHours(legacy, START, END)).toBe(1.1)
+  })
+
+  it('uses shared quarter-hour minute conversions', () => {
+    expect(SNAP_MINUTES).toBe(15)
+    expect(MIN_CARD_MINUTES).toBe(15)
+    expect(hoursToMinutes(0.25)).toBe(15)
+    expect(minutesToHours(15)).toBe(0.25)
   })
 })
 

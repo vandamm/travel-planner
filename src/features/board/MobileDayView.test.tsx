@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
 import { MobileDayView } from './MobileDayView'
 import { clampDayIndex } from './mobileDayViewMath'
@@ -168,5 +168,18 @@ describe('MobileDayView', () => {
     })
     const [active] = screen.getAllByTestId('mobile-day-dot')
     expect(active).toHaveStyle({ backgroundColor: '#5f6f44' })
+  })
+
+  it('forwards the visible day through the shared Swap day action', async () => {
+    const user = userEvent.setup()
+    const onSwapDay = vi.fn()
+    renderView({ onSwapDay })
+
+    await user.click(screen.getByRole('button', { name: 'Swap day' }))
+    expect(onSwapDay).toHaveBeenCalledWith('2027-05-01')
+
+    await user.click(screen.getByRole('button', { name: 'Next day' }))
+    await user.click(screen.getByRole('button', { name: 'Swap day' }))
+    expect(onSwapDay).toHaveBeenLastCalledWith('2027-05-02')
   })
 })

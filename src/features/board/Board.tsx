@@ -12,18 +12,20 @@ import {
   listCities,
   listDayOverrides,
   setDayCityOverride,
+  swapActivityDays,
 } from '../../data/doc'
 import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
 import { generateDays, toDayKey } from '../../data/days'
 import { COLUMN_STRIDE_PX, rangeLabel, showRightFade, todayIndex } from './multiWeekNav'
-import type { Accommodation, Card } from '../../data/schema'
+import type { Accommodation, Card, City } from '../../data/schema'
 import { AccommodationEditor } from '../accommodation/AccommodationEditor'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
 import { CardEditor } from '../cards/CardEditor'
 import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
+import { DaySwapModal } from './DaySwapModal'
 import { MobileDayView } from './MobileDayView'
 import { BoardToolbar } from './BoardToolbar'
 import { BoardEmptyState } from './BoardEmptyState'
@@ -32,7 +34,9 @@ import { useUndoManager } from './undoManager'
 import { COLUMN_GAP_REM, useColumnsThatFit, useViewport } from './useViewport'
 
 /** Which card the editor is open on: a new card on a day, or an existing card. */
-type EditorState = { mode: 'create'; dayKey: string; startTime?: string } | { mode: 'edit'; card: Card }
+type EditorState =
+  | { mode: 'create'; dayKey: string; startTime?: string }
+  | { mode: 'edit'; card: Card }
 
 /** Which stay the accommodation editor is open on: a new one (optionally seeded
  * with a first night), or an existing one. */
@@ -65,9 +69,10 @@ export function Board({
   const columns = useColumnsThatFit()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [accEditor, setAccEditor] = useState<AccEditorState | null>(null)
+  const [swapSourceDayKey, setSwapSourceDayKey] = useState<string | null>(null)
   // Render the completed atomic drag transaction immediately; the normal doc
   // subscription still handles edits made through every other path.
-  const [, rerenderAfterDrop] = useState(0)
+  const [, rerenderAfterTimelineChange] = useState(0)
   // Desktop multi-week affordances (§9): a right-edge fade + a visible date-range
   // label, both derived from the scroll container's metrics by the pure helpers.
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -88,6 +93,13 @@ export function Board({
   const cityById = new Map(cities.map((c) => [c.id, c]))
   const wordmark = trip.title.trim() || 'Travel Planner'
   const meta = `${days.length} ${days.length === 1 ? 'day' : 'days'} · ${cities.length} ${cities.length === 1 ? 'city' : 'cities'}`
+  const cityByDay = new Map<string, City | undefined>(
+    days.map((day) => {
+      const cityId = resolveDayCity(day.key, accommodations, overrides)
+      return [day.key, cityId ? cityById.get(cityId) : undefined]
+    }),
+  )
+  const swapSourceDay = days.find((day) => day.key === swapSourceDayKey)
 
   const cardsByDay = new Map<string, Card[]>()
   for (const card of listCards(doc)) {
@@ -157,14 +169,38 @@ export function Board({
       {viewport === 'desktop' && days.length > 0 && (
         <div className="flex items-center justify-end gap-2 px-4 py-2">
           {todayIdx >= 0 && (
-            <button type="button" aria-label="Jump to today" onClick={jumpToToday} className="button-label rounded-card border border-edge-350 px-3 py-2 text-ink-600">
+            <button
+              type="button"
+              aria-label="Jump to today"
+              onClick={jumpToToday}
+              className="button-label rounded-card border border-edge-350 px-3 py-2 text-ink-600"
+            >
               Today
             </button>
           )}
           <div data-testid="range-stepper" className="flex items-center gap-1">
-            <button type="button" aria-label="Previous days" onClick={() => pageBy(-1)} className="h-7 w-7 rounded-card border border-edge-350 text-ink-600">‹</button>
-            <span data-testid="visible-range" className="min-w-[7rem] text-center text-sm font-medium text-ink-600">{rangeText}</span>
-            <button type="button" aria-label="Next days" onClick={() => pageBy(1)} className="h-7 w-7 rounded-card border border-edge-350 text-ink-600">›</button>
+            <button
+              type="button"
+              aria-label="Previous days"
+              onClick={() => pageBy(-1)}
+              className="h-7 w-7 rounded-card border border-edge-350 text-ink-600"
+            >
+              ‹
+            </button>
+            <span
+              data-testid="visible-range"
+              className="min-w-[7rem] text-center text-sm font-medium text-ink-600"
+            >
+              {rangeText}
+            </span>
+            <button
+              type="button"
+              aria-label="Next days"
+              onClick={() => pageBy(1)}
+              className="h-7 w-7 rounded-card border border-edge-350 text-ink-600"
+            >
+              ›
+            </button>
           </div>
         </div>
       )}
@@ -180,7 +216,7 @@ export function Board({
             direction={direction}
             dayStart={trip.dayStart}
             dayEnd={trip.dayEnd}
-            onDrop={() => rerenderAfterDrop((version) => version + 1)}
+            onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
           >
             <MobileDayView
               days={days}
@@ -196,6 +232,7 @@ export function Board({
               onAddCard={(dayKey, startTime) => setEditor({ mode: 'create', dayKey, startTime })}
               onEditCard={(card) => setEditor({ mode: 'edit', card })}
               onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
+              onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
               onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
               onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
               onOpenCities={onOpenCities}
@@ -225,7 +262,7 @@ export function Board({
               direction={direction}
               dayStart={trip.dayStart}
               dayEnd={trip.dayEnd}
-              onDrop={() => rerenderAfterDrop((version) => version + 1)}
+              onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
             >
               <div data-testid="board" className="flex" style={{ gap: COLUMN_GAP_REM }}>
                 {days.map((day) => {
@@ -242,7 +279,10 @@ export function Board({
                       cities={cities}
                       overrideCityId={overrides[day.key]}
                       onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
-                      onAddCard={(dayKey, startTime) => setEditor({ mode: 'create', dayKey, startTime })}
+                      onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
+                      onAddCard={(dayKey, startTime) =>
+                        setEditor({ mode: 'create', dayKey, startTime })
+                      }
                       onEditCard={(card) => setEditor({ mode: 'edit', card })}
                     />
                   )
@@ -277,6 +317,19 @@ export function Board({
           defaultStartNight={createStartNight}
           defaultEndNight={createStartNight}
           onClose={() => setAccEditor(null)}
+        />
+      )}
+
+      {swapSourceDay && (
+        <DaySwapModal
+          sourceDay={swapSourceDay}
+          days={days}
+          cityByDay={cityByDay}
+          onClose={() => setSwapSourceDayKey(null)}
+          onConfirm={(targetDayKey) => {
+            swapActivityDays(doc, swapSourceDay.key, targetDayKey)
+            setSwapSourceDayKey(null)
+          }}
         />
       )}
     </section>

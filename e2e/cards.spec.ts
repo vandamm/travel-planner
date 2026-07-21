@@ -17,10 +17,13 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit Colosseum')
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h 00m')
 
   // Edit the card.
-  await firstColumn.getByRole('button', { name: 'Edit Visit Colosseum' }).click()
+  await firstColumn
+    .getByTestId('card')
+    .getByRole('button', { name: 'Edit Visit Colosseum', exact: true })
+    .click()
   const editAgain = page.getByRole('dialog', { name: 'Card editor' })
   await expect(editAgain.getByLabel('Title')).toHaveValue('Visit Colosseum')
   await editAgain.getByLabel('Title').fill('Visit the Forum')
@@ -29,8 +32,14 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit the Forum')
 
   // Delete the card.
-  await firstColumn.getByRole('button', { name: 'Edit Visit the Forum' }).click()
-  await page.getByRole('dialog', { name: 'Card editor' }).getByRole('button', { name: 'Delete card' }).click()
+  await firstColumn
+    .getByTestId('card')
+    .getByRole('button', { name: 'Edit Visit the Forum', exact: true })
+    .click()
+  await page
+    .getByRole('dialog', { name: 'Card editor' })
+    .getByRole('button', { name: 'Delete card' })
+    .click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveCount(0)
 })

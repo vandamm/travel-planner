@@ -7,7 +7,7 @@
 // Layout (all top-level containers on one shared `Y.Doc`):
 //   trip            Y.Map  — title / startDate / endDate (plain values)
 //   cities          Y.Map<Y.Map>  — id → { id, name, color }
-//   dayOverrides    Y.Map  — 'YYYY-MM-DD' → cityId (manual per-day city)
+//   dayOverrides    Y.Map  — 'YYYY-MM-DD' → cityId | null (manual per-day city)
 //   cards           Y.Map<Y.Map>  — id → Card fields
 //   accommodations  Y.Map<Y.Map>  — id → Accommodation fields
 //
@@ -16,7 +16,18 @@
 // clobbering one another — the whole point of using a CRDT.
 
 import * as Y from 'yjs'
-import type { Accommodation, Card, CardCategory, CardDuration, City, Trip } from './schema'
+import type {
+  Accommodation,
+  Card,
+  CardCategory,
+  CardDuration,
+  City,
+  DayCityOverride,
+  DayCityOverrides,
+  Trip,
+} from './schema'
+import { isValidCustomDurationHours } from '../features/cards/cardHeight'
+import { resolveDayCity } from './cityResolution'
 
 const TRIP = 'trip'
 const CITIES = 'cities'
@@ -220,7 +231,7 @@ function nextOrder(doc: Y.Doc, dayKey: string): number {
 }
 
 function validCustomDurationHours(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 1
+  return isValidCustomDurationHours(value)
     ? value
     : DEFAULT_CUSTOM_DURATION_HOURS
 }
@@ -252,11 +263,12 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
 export function updateCard(doc: Y.Doc, id: string, patch: Partial<Omit<Card, 'id'>>): void {
   const m = entityMap(doc, CARDS).get(id)
   if (!m) return
+  const updatesDuration = 'duration' in patch || 'durationHours' in patch
   doc.transact(() => {
     patchYMap(m, patch)
-    if (m.get('duration') === 'custom') {
+    if (updatesDuration && m.get('duration') === 'custom') {
       m.set('durationHours', validCustomDurationHours(m.get('durationHours')))
-    } else {
+    } else if (updatesDuration) {
       m.delete('durationHours')
     }
   })
@@ -317,20 +329,50 @@ export function removeCard(doc: Y.Doc, id: string): void {
 
 // --- Per-day city overrides ------------------------------------------------
 
-export function setDayCityOverride(doc: Y.Doc, dayKey: string, cityId: string | null): void {
+export function setDayCityOverride(
+  doc: Y.Doc,
+  dayKey: string,
+  cityId: DayCityOverride | undefined,
+): void {
   const m = doc.getMap(DAY_OVERRIDES)
   doc.transact(() => {
-    if (cityId === null) m.delete(dayKey)
+    if (cityId === undefined) m.delete(dayKey)
     else m.set(dayKey, cityId)
   })
 }
 
-export function getDayOverride(doc: Y.Doc, dayKey: string): string | undefined {
-  return doc.getMap(DAY_OVERRIDES).get(dayKey) as string | undefined
+export function getDayOverride(doc: Y.Doc, dayKey: string): DayCityOverride | undefined {
+  return doc.getMap(DAY_OVERRIDES).get(dayKey) as DayCityOverride | undefined
 }
 
-export function listDayOverrides(doc: Y.Doc): Record<string, string> {
-  return doc.getMap(DAY_OVERRIDES).toJSON() as Record<string, string>
+export function listDayOverrides(doc: Y.Doc): DayCityOverrides {
+  return doc.getMap(DAY_OVERRIDES).toJSON() as DayCityOverrides
+}
+
+/**
+ * Exchange every activity assigned to two dates and pin each date to the
+ * other's currently displayed city. Accommodations remain untouched.
+ */
+export function swapActivityDays(doc: Y.Doc, firstDayKey: string, secondDayKey: string): void {
+  if (firstDayKey === secondDayKey) return
+
+  // Resolve before writing overrides: resolution depends on the pre-swap state.
+  const accommodations = listAccommodations(doc)
+  const overrides = listDayOverrides(doc)
+  const firstCityId = resolveDayCity(firstDayKey, accommodations, overrides)
+  const secondCityId = resolveDayCity(secondDayKey, accommodations, overrides)
+  const cards = entityMap(doc, CARDS)
+  const dayOverrides = doc.getMap(DAY_OVERRIDES)
+
+  doc.transact(() => {
+    for (const card of cards.values()) {
+      const dayKey = card.get('dayKey')
+      if (dayKey === firstDayKey) card.set('dayKey', secondDayKey)
+      else if (dayKey === secondDayKey) card.set('dayKey', firstDayKey)
+    }
+    dayOverrides.set(firstDayKey, secondCityId ?? null)
+    dayOverrides.set(secondDayKey, firstCityId ?? null)
+  })
 }
 
 // --- Accommodations --------------------------------------------------------

@@ -9,7 +9,14 @@
 import { format, parseISO } from 'date-fns'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { resolveDayCity } from '../../data/cityResolution'
-import type { Accommodation, Card, City, Day } from '../../data/schema'
+import type {
+  Accommodation,
+  Card,
+  City,
+  Day,
+  DayCityOverride,
+  DayCityOverrides,
+} from '../../data/schema'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
 import { DayColumn } from './DayColumn'
 import { CityPicker } from '../cities/CityPicker'
@@ -26,7 +33,7 @@ export interface MobileDayViewProps {
   cardsByDay: Map<string, Card[]>
   accommodations: Accommodation[]
   /** Per-day city overrides (day key → city id). */
-  overrides: Record<string, string>
+  overrides: DayCityOverrides
   /** City lookup for coloring the day header. */
   cityById: Map<string, City>
   /** All cities, forwarded to each day's override picker. */
@@ -41,8 +48,9 @@ export interface MobileDayViewProps {
   onEditCard?: (card: Card) => void
   onEditAccommodation?: (accommodation: Accommodation) => void
   onAddStay?: (startNight?: string) => void
-  /** Set or clear a day's manual city override (`null` = Auto). */
-  onSetCity?: (dayKey: string, cityId: string | null) => void
+  /** Set, explicitly clear, or return a day's city to Auto. */
+  onSetCity?: (dayKey: string, cityId: DayCityOverride | undefined) => void
+  onSwapDay?: (dayKey: string) => void
   onOpenCities?: () => void
 }
 
@@ -62,6 +70,7 @@ export function MobileDayView({
   onEditAccommodation,
   onAddStay,
   onSetCity,
+  onSwapDay,
   onOpenCities,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
@@ -141,7 +150,10 @@ export function MobileDayView({
         >
           ‹
         </button>
-        <span data-testid="mobile-day-position" className="sr-only">{firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of {days.length}</span>
+        <span data-testid="mobile-day-position" className="sr-only">
+          {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of{' '}
+          {days.length}
+        </span>
         <button
           type="button"
           aria-label="Next day"
@@ -155,12 +167,37 @@ export function MobileDayView({
 
       <div className="mb-2 flex items-center justify-between border-b border-edge-150 pb-2">
         <div>
-          <p className="font-serif text-lg font-semibold text-ink">{format(parseISO(activeDay.key), 'EEE, d MMM')}</p>
+          <p className="font-serif text-lg font-semibold text-ink">
+            {format(parseISO(activeDay.key), 'EEE, d MMM')}
+          </p>
           <p className="text-xs text-ink-500">Swipe or use arrows to change day</p>
         </div>
         <div className="flex items-center gap-1">
-          <CityPicker label="Choose city" value={overrides[activeDay.key]} resolvedCityId={activeCity?.id} cities={cities ?? []} onChange={(id) => onSetCity?.(activeDay.key, id)} />
-          <button type="button" aria-label="Add city" onClick={onOpenCities} className="h-7 w-7 rounded-full border border-edge-350 text-ink-600">+</button>
+          {onSwapDay && (
+            <button
+              type="button"
+              onClick={() => onSwapDay(activeDay.key)}
+              className="text-[11px] font-semibold text-ink-400 underline decoration-edge-300 underline-offset-2"
+            >
+              Swap day
+            </button>
+          )}
+          <CityPicker
+            label="Choose city"
+            value={overrides[activeDay.key]}
+            resolvedCityId={activeCity?.id}
+            cities={cities ?? []}
+            includeNoCity
+            onChange={(id) => onSetCity?.(activeDay.key, id)}
+          />
+          <button
+            type="button"
+            aria-label="Add city"
+            onClick={onOpenCities}
+            className="h-7 w-7 rounded-full border border-edge-350 text-ink-600"
+          >
+            +
+          </button>
         </div>
       </div>
 
@@ -219,6 +256,7 @@ export function MobileDayView({
                 cities={cities}
                 overrideCityId={overrides[day.key]}
                 onSetCity={onSetCity}
+                onSwapDay={onSwapDay}
                 onAddCard={onAddCard}
                 onEditCard={onEditCard}
                 showHeader={false}

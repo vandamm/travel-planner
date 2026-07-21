@@ -77,8 +77,8 @@ describe('tripDocumentSchema', () => {
     expect(bad.success).toBe(false)
   })
 
-  it('requires at least one hour for custom cards', () => {
-    for (const durationHours of [0.5, 0, -1]) {
+  it('accepts quarter-hour custom cards and rejects sub-minimum values', () => {
+    for (const durationHours of [0.2, 0, -1]) {
       const result = tripDocumentSchema.safeParse({
         ...VALID,
         cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours }],
@@ -89,7 +89,16 @@ describe('tripDocumentSchema', () => {
     expect(
       tripDocumentSchema.safeParse({
         ...VALID,
-        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 1.5 }],
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'X', order: 0, duration: 'custom', durationHours: 0.25 }],
+      }).success,
+    ).toBe(true)
+  })
+
+  it('accepts legacy non-quarter custom durations for document round-trips', () => {
+    expect(
+      tripDocumentSchema.safeParse({
+        ...VALID,
+        cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Legacy', order: 0, duration: 'custom', durationHours: 1.1 }],
       }).success,
     ).toBe(true)
   })
@@ -193,6 +202,17 @@ describe('tripDocumentSchema', () => {
     })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error.issues[0].path).toEqual(['dayOverrides', '2027-05-02'])
+  })
+
+  it('accepts a null dayOverride without looking up a city', () => {
+    const result = tripDocumentSchema.safeParse({
+      ...VALID,
+      cities: [],
+      accommodations: [],
+      dayOverrides: { '2027-05-02': null },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.dayOverrides).toEqual({ '2027-05-02': null })
   })
 
   it('rejects a card link with a non-http(s) scheme', () => {

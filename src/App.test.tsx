@@ -47,7 +47,7 @@ describe('App (with a room slug path)', () => {
     expect(screen.getByTestId('sync-status')).toHaveTextContent('Local')
   })
 
-  it('keeps the board mounted while connecting, then shows a missing trip response', async () => {
+  it('shows loading instead of flashing the trip shell before a missing response', async () => {
     vi.stubEnv('MODE', 'production')
     const doc = new Y.Doc()
     let emitStatus!: (status: provider.SyncStatus) => void
@@ -65,10 +65,42 @@ describe('App (with a room slug path)', () => {
     } as unknown as provider.RoomConnection)
 
     render(<App />)
-    expect(screen.getByTestId('app-seal')).toBeInTheDocument()
+    expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(screen.queryByTestId('app-seal')).not.toBeInTheDocument()
 
     act(() => emitStatus('missing'))
-    expect(await screen.findByRole('heading', { name: "This trip doesn't exist." })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: "This trip doesn't exist." }),
+    ).toBeInTheDocument()
+    spy.mockRestore()
+  })
+
+  it('keeps the app shell mounted after the initial connection resolves', async () => {
+    vi.stubEnv('MODE', 'production')
+    const doc = new Y.Doc()
+    let emitStatus!: (status: provider.SyncStatus) => void
+    const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
+      doc,
+      whenLocalLoaded: Promise.resolve(),
+      getStatus: () => 'connecting',
+      onStatus: (callback: (status: provider.SyncStatus) => void) => {
+        emitStatus = callback
+        return () => undefined
+      },
+      getPresences: () => [],
+      onPresences: () => () => undefined,
+      destroy: () => undefined,
+    } as unknown as provider.RoomConnection)
+
+    render(<App />)
+    expect(screen.getByText('Loading')).toBeInTheDocument()
+
+    act(() => emitStatus('synced'))
+    const appShell = await screen.findByTestId('app-seal').then((seal) => seal.closest('main'))
+
+    act(() => emitStatus('connecting'))
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument()
+    expect(screen.getByTestId('app-seal').closest('main')).toBe(appShell)
     spy.mockRestore()
   })
 
@@ -184,9 +216,7 @@ describe('App without a room slug', () => {
 
     expect(await screen.findByText('5–9 Apr')).toBeInTheDocument()
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining(`validTo=${nextYear}-12-31`),
-      ),
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`validTo=${nextYear}-12-31`)),
     )
   })
 
@@ -263,12 +293,14 @@ describe('App without a room slug', () => {
       }),
     )
     const [, createInit] = fetchMock.mock.calls.at(-1)!
-    expect(JSON.parse(createInit?.body as string)).toEqual(expect.objectContaining({
-      room: 'japan-2028',
-      title: 'Japan Spring 2028',
-      startDate: '2028-03-10',
-      endDate: '2028-03-24',
-    }))
+    expect(JSON.parse(createInit?.body as string)).toEqual(
+      expect.objectContaining({
+        room: 'japan-2028',
+        title: 'Japan Spring 2028',
+        startDate: '2028-03-10',
+        endDate: '2028-03-24',
+      }),
+    )
   })
 
   it('links trip markings on the calendar to their boards', async () => {

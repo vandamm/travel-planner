@@ -34,7 +34,9 @@ export function exportTrip(doc: Y.Doc): TripDocument {
     .slice()
     .sort((a, b) => a.dayKey.localeCompare(b.dayKey) || a.order - b.order || byId(a, b))
   const dayOverrides = Object.fromEntries(
-    Object.entries(listDayOverrides(doc)).filter(([, cityId]) => cityIds.has(cityId)),
+    Object.entries(listDayOverrides(doc)).filter(
+      ([, cityId]) => cityId === null || cityIds.has(cityId),
+    ),
   )
 
   return tripDocumentSchema.parse({

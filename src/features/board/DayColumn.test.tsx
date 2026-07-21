@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
-import { DragOverDayContext } from './dragOverDayContext'
+import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
 
 const day: Day = { key: '2027-05-01', index: 0 }
 const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
@@ -85,7 +85,7 @@ describe('DayColumn', () => {
   it('shows the time on time-bound cards', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const dinner = screen.getByText('Dinner').closest('[data-testid="card"]') as HTMLElement
-    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h')
+    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h 00m')
   })
 
   it('marks every timed card involved in an overlap', () => {
@@ -165,7 +165,10 @@ describe('DayColumn', () => {
     expect(li('Dinner')).toHaveStyle({ height: '120px' })
     expect(li('Breakfast')).toHaveStyle({ height: '60px' })
     expect(li('Stroll')).toHaveStyle({ height: '60px' })
-    expect(screen.getByText('Dinner').closest('[data-testid="card"]')).toHaveClass('h-full', 'overflow-hidden')
+    expect(screen.getByText('Dinner').closest('[data-testid="card"]')).toHaveClass(
+      'h-full',
+      'overflow-hidden',
+    )
   })
 
   it('offsets timed cards from the configured day start', () => {
@@ -191,11 +194,17 @@ describe('DayColumn', () => {
     expect(screen.getByText('Late start').closest('li')).toHaveStyle({ marginTop: '180px' })
   })
 
-  it('offers an Auto + per-city override control, defaulting to Auto', () => {
+  it('offers Auto, No city, and per-city overrides, defaulting to Auto', () => {
     render(
       <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
     )
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('Rome')
+    const picker = screen.getByRole('button', { name: 'Choose city' })
+    expect(picker).toHaveTextContent('Rome')
+    fireEvent.click(picker)
+    expect(screen.getByRole('button', { name: /Auto/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /No city/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Rome/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Florence/ })).toBeInTheDocument()
   })
 
   it('reflects an existing manual override without an extra marker', () => {
@@ -213,7 +222,7 @@ describe('DayColumn', () => {
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
-  it('calls onSetCity with a city id when one is chosen, and null for Auto', () => {
+  it('calls onSetCity with a city id, null for No city, and undefined for Auto', () => {
     const onSetCity = vi.fn()
     render(
       <DayColumn
@@ -229,8 +238,26 @@ describe('DayColumn', () => {
     fireEvent.click(screen.getByRole('button', { name: /Florence/ }))
     expect(onSetCity).toHaveBeenCalledWith('2027-05-01', 'florence')
     fireEvent.click(screen.getByRole('button', { name: 'Choose city' }))
-    fireEvent.click(screen.getByRole('button', { name: /Auto/ }))
+    fireEvent.click(screen.getByRole('button', { name: /No city/ }))
     expect(onSetCity).toHaveBeenCalledWith('2027-05-01', null)
+    fireEvent.click(screen.getByRole('button', { name: 'Choose city' }))
+    fireEvent.click(screen.getByRole('button', { name: /Auto/ }))
+    expect(onSetCity).toHaveBeenCalledWith('2027-05-01', undefined)
+  })
+
+  it('reflects an explicit no-city override', () => {
+    render(
+      <DayColumn day={day} cards={[]} direction="down" cities={[rome]} overrideCityId={null} />,
+    )
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('No city')
+  })
+
+  it('opens the day swap workflow from the header action', () => {
+    const onSwapDay = vi.fn()
+    render(<DayColumn day={day} city={rome} cards={[]} direction="down" onSwapDay={onSwapDay} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Swap day' }))
+    expect(onSwapDay).toHaveBeenCalledOnce()
+    expect(onSwapDay).toHaveBeenCalledWith(day.key)
   })
 
   it('omits the override control when there are no cities to choose from', () => {
@@ -273,6 +300,21 @@ describe('DayColumn', () => {
     const column = screen.getByTestId('day-column')
     expect(column).toHaveAttribute('data-drag-over', '')
     expect(column).toHaveClass('border-sky-400', 'ring-2', 'ring-sky-300')
+  })
+
+  it('renders the active drag preview inside its current target day', () => {
+    render(
+      <DragPreviewContext.Provider
+        value={{ card: cards[1], dayKey: day.key, startTime: '10:15', durationHours: 1 }}
+      >
+        <DayColumn day={day} city={rome} cards={cards} direction="down" />
+      </DragPreviewContext.Provider>,
+    )
+
+    const preview = within(screen.getByTestId('day-body')).getByTestId('drag-preview-card')
+    expect(preview).toHaveTextContent('Breakfast')
+    expect(within(preview).getByTestId('event-timing-start')).toHaveTextContent('10:15')
+    expect(within(preview).getByTestId('event-timing-end')).toHaveTextContent('11:15')
   })
 
   it('anchors the NOON divider at noon’s fraction — top when down, bottom when up', () => {

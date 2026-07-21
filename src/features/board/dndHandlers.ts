@@ -1,16 +1,14 @@
 import type * as Y from 'yjs'
-import { getCard, getTrip, listCards, updateCardSchedules } from '../../data/doc'
+import { getCard, getTrip, updateCardSchedules } from '../../data/doc'
 import type { Card } from '../../data/schema'
+import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
 import {
-  clockMinutes,
-  clockString,
-  PX_PER_HOUR,
-  resolvedDurationHours,
-} from '../cards/cardHeight'
-import { isTimed } from '../cards/cardSort'
+  planTimelineSchedule,
+  TIMELINE_SNAP_MINUTES,
+  type TimelineEditKind,
+} from './timelineSchedule'
 import type { TimeDirection } from './timeDirection'
 
-const SNAP_MINUTES = 30
 export const DAY_DROPPABLE_PREFIX = 'day:'
 
 export function dayDroppableId(dayKey: string): string {
@@ -25,7 +23,11 @@ export function dayKeyFromDroppableId(id: string): string {
   return id.slice(DAY_DROPPABLE_PREFIX.length)
 }
 
-export function timelineDropOffset(droppedTop: number, timelineTop: number, scrollTop: number): number {
+export function timelineDropOffset(
+  droppedTop: number,
+  timelineTop: number,
+  scrollTop: number,
+): number {
   return droppedTop - timelineTop + scrollTop
 }
 
@@ -38,14 +40,15 @@ export function dropTimeForOffset(
 ): string {
   const first = clockMinutes(dayStart)
   const end = clockMinutes(dayEnd)
-  const earliest = Math.ceil(first / SNAP_MINUTES) * SNAP_MINUTES
-  const latest = Math.floor((end - durationHours * 60) / SNAP_MINUTES) * SNAP_MINUTES
+  const earliest = Math.ceil(first / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
+  const latest =
+    Math.floor((end - durationHours * 60) / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   if (latest < earliest) return clockString(first)
   const raw =
     direction === 'down'
       ? first + (offsetPx / PX_PER_HOUR) * 60
       : end - durationHours * 60 - (offsetPx / PX_PER_HOUR) * 60
-  const snapped = Math.round(raw / SNAP_MINUTES) * SNAP_MINUTES
+  const snapped = Math.round(raw / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   return clockString(Math.min(Math.max(snapped, earliest), latest))
 }
 
@@ -56,84 +59,85 @@ export interface CardDrop {
   offsetPx: number
 }
 
-interface PushResult {
-  pushed: Map<string, number>
-  end: number
+export interface CardDropPlanInput {
+  card: Card
+  targetDayKey: string
+  offsetPx: number
+  dayStart: string
+  dayEnd: string
+  direction: TimeDirection
 }
 
-function pushCollisions(
-  cards: Card[],
-  desiredStart: number,
-  activeDurationMinutes: number,
-  dayStart: string,
-  dayEnd: string,
-): PushResult {
-  const pushed = new Map<string, number>()
-  let cursor = desiredStart + activeDurationMinutes
-  const firstCollision = cards.findIndex((card) => {
-    const start = clockMinutes(card.startTime!)
-    const end = start + resolvedDurationHours(card, dayStart, dayEnd) * 60
-    return end > desiredStart
+export interface CardDropPlan {
+  dayKey: string
+  startTime: string
+  durationHours: number
+}
+
+function moveEditKind(
+  currentStart: number,
+  requestedStart: number,
+  direction: TimeDirection,
+): TimelineEditKind {
+  const movedTowardTop =
+    direction === 'down' ? requestedStart < currentStart : requestedStart > currentStart
+  return movedTowardTop ? 'move-top' : 'move-bottom'
+}
+
+export function planCardDrop({
+  card,
+  targetDayKey,
+  offsetPx,
+  dayStart,
+  dayEnd,
+  direction,
+}: CardDropPlanInput): CardDropPlan {
+  const durationHours = resolvedDurationHours(card, dayStart, dayEnd)
+  const requested = clockMinutes(
+    dropTimeForOffset(offsetPx, durationHours, dayStart, dayEnd, direction),
+  )
+  const currentStart = card.startTime ? clockMinutes(card.startTime) : requested
+  const result = planTimelineSchedule({
+    active: { id: card.id, start: currentStart, duration: durationHours * 60 },
+    requested: { start: requested, duration: durationHours * 60 },
+    dayStart: clockMinutes(dayStart),
+    dayEnd: clockMinutes(dayEnd),
+    edit: moveEditKind(currentStart, requested, direction),
+    direction,
   })
 
-  if (firstCollision < 0) return { pushed, end: cursor }
-
-  for (const card of cards.slice(firstCollision)) {
-    const start = clockMinutes(card.startTime!)
-    if (start >= cursor) break
-    pushed.set(card.id, cursor)
-    cursor += resolvedDurationHours(card, dayStart, dayEnd) * 60
+  return {
+    dayKey: targetDayKey,
+    startTime: clockString(result.activeStart),
+    durationHours: result.activeDuration / 60,
   }
-  return { pushed, end: cursor }
 }
 
-/** Schedule a dropped card and push its collision chain later on the timeline. */
+export function commitCardDropPlan(doc: Y.Doc, activeId: string, plan: CardDropPlan): boolean {
+  if (!getCard(doc, activeId)) return false
+  updateCardSchedules(doc, [{ id: activeId, dayKey: plan.dayKey, startTime: plan.startTime }])
+  return true
+}
+
+/** Schedule only the dropped card; overlaps are valid timeline state. */
 export function applyCardDrop(
   doc: Y.Doc,
   { activeId, targetDayKey, offsetPx }: CardDrop,
   direction: TimeDirection = 'down',
-): void {
+): CardDropPlan | null {
   const active = getCard(doc, activeId)
-  if (!active) return
+  if (!active) return null
 
   const { dayStart, dayEnd } = getTrip(doc)
-  const activeDuration = resolvedDurationHours(active, dayStart, dayEnd)
-  const requested = clockMinutes(
-    dropTimeForOffset(offsetPx, activeDuration, dayStart, dayEnd, direction),
-  )
-  const first = Math.ceil(clockMinutes(dayStart) / SNAP_MINUTES) * SNAP_MINUTES
-  const last = clockMinutes(dayEnd)
-  const targetCards = listCards(doc)
-    .filter((card) => card.id !== activeId && card.dayKey === targetDayKey && isTimed(card))
-    .sort(
-      (a, b) =>
-        clockMinutes(a.startTime!) - clockMinutes(b.startTime!) ||
-        a.order - b.order ||
-        a.id.localeCompare(b.id),
-    )
+  const plan = planCardDrop({
+    card: active,
+    targetDayKey,
+    offsetPx,
+    dayStart,
+    dayEnd,
+    direction,
+  })
 
-  let start = requested
-  let result = pushCollisions(targetCards, start, activeDuration * 60, dayStart, dayEnd)
-  for (
-    let guard = 0;
-    result.end > last && start > first && guard <= targetCards.length;
-    guard += 1
-  ) {
-    const overflow = result.end - last
-    start = Math.max(first, Math.floor((start - overflow) / SNAP_MINUTES) * SNAP_MINUTES)
-    result = pushCollisions(targetCards, start, activeDuration * 60, dayStart, dayEnd)
-  }
-
-  // If even the earliest packing cannot fit, keep the requested drop and
-  // preserve the existing schedule. Overlap is visible and editable; a time
-  // outside the configured day is not.
-  if (result.end > last) {
-    start = requested
-    result = { pushed: new Map(), end: requested + activeDuration * 60 }
-  }
-
-  updateCardSchedules(doc, [
-    { id: activeId, dayKey: targetDayKey, startTime: clockString(start) },
-    ...[...result.pushed].map(([id, minutes]) => ({ id, startTime: clockString(minutes) })),
-  ])
+  commitCardDropPlan(doc, activeId, plan)
+  return plan
 }

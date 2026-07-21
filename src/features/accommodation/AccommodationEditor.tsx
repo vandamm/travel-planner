@@ -77,7 +77,16 @@ export function AccommodationEditor({
       label="Accommodation editor"
       title={isEdit ? 'Edit stay' : 'Add stay'}
       onClose={onClose}
-      mobileAction={<button type="submit" form="accommodation-editor-form" disabled={invalid} className="button-label text-ink disabled:opacity-40">Save</button>}
+      mobileAction={
+        <button
+          type="submit"
+          form="accommodation-editor-form"
+          disabled={invalid}
+          className="button-label text-ink disabled:opacity-40"
+        >
+          Save
+        </button>
+      }
       className="flex w-full flex-col gap-4 min-[400px]:max-w-md"
     >
       <h2 className="font-serif text-xl font-semibold text-ink">
@@ -103,7 +112,7 @@ export function AccommodationEditor({
             label="City"
             value={cityId || undefined}
             cities={cities}
-            onChange={(id) => setCityId(id ?? '')}
+            onChange={(id) => setCityId(typeof id === 'string' ? id : '')}
           />
         </div>
 

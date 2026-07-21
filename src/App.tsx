@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from './components/Modal'
 import { useRoom } from './data/RoomContext'
 import { RoomProvider } from './data/RoomProvider'
@@ -30,7 +30,11 @@ function MobileMenu({
   const item =
     'w-full rounded-card border border-edge-300 bg-white px-4 py-3 text-left font-sans text-base font-medium text-ink-600 hover:bg-surface-chip'
   return (
-    <Modal label="Menu" onClose={onClose} className="flex w-full flex-col gap-3 min-[400px]:max-w-xs">
+    <Modal
+      label="Menu"
+      onClose={onClose}
+      className="flex w-full flex-col gap-3 min-[400px]:max-w-xs"
+    >
       <h2 className="font-serif text-xl font-semibold text-ink">Menu</h2>
       <button type="button" className={item} onClick={onOpenTrip}>
         <span aria-hidden>✎</span> Trip setup
@@ -44,16 +48,25 @@ function MobileMenu({
       <button type="button" className={item} onClick={onOpenShare}>
         <span aria-hidden>↗</span> Share
       </button>
-      <button type="button" className={item} onClick={() => void navigator.clipboard?.writeText(location.href)}>
+      <button
+        type="button"
+        className={item}
+        onClick={() => void navigator.clipboard?.writeText(location.href)}
+      >
         <span aria-hidden>⧉</span> Copy trip link
       </button>
-      <p role="status" className="px-1 text-xs text-ink-500">{status === 'synced' ? 'Live' : status}</p>
+      <p role="status" className="px-1 text-xs text-ink-500">
+        {status === 'synced' ? 'Live' : status}
+      </p>
     </Modal>
   )
 }
 
 function AppShell() {
   const { status } = useRoom()
+  const [initialConnectionResolved, setInitialConnectionResolved] = useState(
+    status !== 'connecting',
+  )
   const [tripOpen, setTripOpen] = useState(false)
   const [citiesOpen, setCitiesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -62,6 +75,20 @@ function AppShell() {
   const [addStayNonce, setAddStayNonce] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
 
+  useEffect(() => {
+    if (status !== 'connecting') setInitialConnectionResolved(true)
+  }, [status])
+
+  if (status === 'connecting' && !initialConnectionResolved) {
+    return (
+      <main
+        role="status"
+        className="flex min-h-screen items-center justify-center bg-surface text-ink-500"
+      >
+        Loading
+      </main>
+    )
+  }
   if (status === 'missing') return <MissingTrip />
 
   return (

@@ -17,6 +17,16 @@
     @apply m-0 font-sans text-ink antialiased;
   }
 
+  body.cursor-grabbing,
+  body.cursor-grabbing * {
+    cursor: grabbing !important;
+  }
+
+  body.cursor-row-resize,
+  body.cursor-row-resize * {
+    cursor: row-resize !important;
+  }
+
   button,
   a,
   input,

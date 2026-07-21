@@ -10,6 +10,7 @@
 
 import { isValid, parseISO } from 'date-fns'
 import { z } from 'zod'
+import { MIN_CARD_MINUTES, minutesToHours } from '../features/cards/cardHeight'
 
 /**
  * ISO-8601 date-only, 'YYYY-MM-DD'. The regex only checks shape, so a real
@@ -96,7 +97,13 @@ const cardBaseSchema = z.object({
 export const cardSchema = z.discriminatedUnion('duration', [
   cardBaseSchema.extend({ duration: z.literal('day') }).strict(),
   cardBaseSchema.extend({ duration: z.literal('half') }).strict(),
-  cardBaseSchema.extend({ duration: z.literal('custom'), durationHours: z.number().min(1) }).strict(),
+  cardBaseSchema.extend({
+    duration: z.literal('custom'),
+    // Existing synced documents may predate quarter-hour snapping. Accept their
+    // positive values for read/export compatibility; all new doc/editor writes
+    // still pass through the stricter cardHeight predicate.
+    durationHours: z.number().min(minutesToHours(MIN_CARD_MINUTES)),
+  }).strict(),
 ])
 
 // Entities are keyed by `id` on apply (into `Y.Map`s), so a duplicate id would
@@ -112,8 +119,8 @@ export const tripDocumentSchema = z
     cities: z.array(citySchema).refine(uniqueIds, DUPLICATE_ID).default([]),
     accommodations: z.array(accommodationSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
     cards: z.array(cardSchema).refine(uniqueIds, DUPLICATE_ID).default([]),
-    // dayKey → cityId.
-    dayOverrides: z.record(z.string(), z.string()).default({}),
+    // dayKey → cityId | null. Missing key = Auto; null = explicit No city.
+    dayOverrides: z.record(z.string(), z.string().nullable()).default({}),
   })
   // Referential integrity: every accommodation/override cityId must name a city
   // in `cities`. `removeCity` cascades to prevent dangling references (see
@@ -131,7 +138,7 @@ export const tripDocumentSchema = z
       }
     })
     for (const [dayKey, cityId] of Object.entries(document.dayOverrides)) {
-      if (!cityIds.has(cityId)) {
+      if (cityId !== null && !cityIds.has(cityId)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['dayOverrides', dayKey],

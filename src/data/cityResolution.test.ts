@@ -55,6 +55,11 @@ describe('resolveDayCity', () => {
     expect(resolveDayCity('2027-05-02', accs, { '2027-05-02': 'florence' })).toBe('florence')
   })
 
+  it('lets an explicit no-city override block accommodation inheritance', () => {
+    const accs = [stay({ cityId: 'rome' })]
+    expect(resolveDayCity('2027-05-02', accs, { '2027-05-02': null })).toBeUndefined()
+  })
+
   it('applies an override even on a day with no accommodation', () => {
     expect(resolveDayCity('2027-05-09', [], { '2027-05-09': 'venice' })).toBe('venice')
   })

@@ -17,7 +17,7 @@ test('setting a card start through the wheel shows its start and duration', asyn
   await pickTime(editor, 'Start time', '10:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h 00m')
 })
 
 test('clearing a card start time in the wheel untimes the card', async ({ page }) => {
@@ -30,16 +30,22 @@ test('clearing a card start time in the wheel untimes the card', async ({ page }
   await editor.getByLabel('Title').fill('Loose plan')
   await pickTime(editor, 'Start time', '09:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('09:00 · 1h')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('09:00 · 1h 00m')
 
   // Reopen, clear the start time in the wheel, save → the card is untimed.
-  await firstColumn.getByRole('button', { name: 'Edit Loose plan' }).click()
+  await firstColumn
+    .getByTestId('card')
+    .getByRole('button', { name: 'Edit Loose plan', exact: true })
+    .click()
   const reopen = page.getByRole('dialog', { name: 'Card editor' })
   await reopen.getByRole('button', { name: 'Start time' }).click()
-  await reopen.getByRole('dialog', { name: 'Start time' }).getByRole('button', { name: 'Clear' }).click()
+  await reopen
+    .getByRole('dialog', { name: 'Start time' })
+    .getByRole('button', { name: 'Clear' })
+    .click()
   await reopen.getByRole('button', { name: 'Save card' }).click()
 
-  await expect(firstColumn.getByTestId('card-time')).toHaveCount(0)
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('1h 00m')
 })
 
 test('setting the trip day window through the wheel updates the field', async ({ page }) => {
@@ -74,9 +80,7 @@ test.describe('mobile time picker', () => {
           selected.boundingBox(),
         ])
         if (!listBox || !selectedBox) return Number.POSITIVE_INFINITY
-        return Math.abs(
-          listBox.y + listBox.height / 2 - (selectedBox.y + selectedBox.height / 2),
-        )
+        return Math.abs(listBox.y + listBox.height / 2 - (selectedBox.y + selectedBox.height / 2))
       })
       .toBeLessThanOrEqual(1)
   })
