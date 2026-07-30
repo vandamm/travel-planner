@@ -8,8 +8,8 @@ test('day-column labels render the approved uppercase weekday and date', async (
   const labels = page.getByTestId('day-label')
   await expect(labels).toHaveCount(3)
 
-  await expect(labels.nth(0)).toHaveText('SAT · 01 MAY')
-  await expect(labels.nth(2)).toHaveText('MON · 03 MAY')
+  await expect(labels.nth(0)).toHaveText('SAT · 01.05')
+  await expect(labels.nth(2)).toHaveText('MON · 03.05')
 })
 
 test('document language is de so Firefox hints native pickers to dd.mm/24h', async ({ page }) => {

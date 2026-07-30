@@ -45,6 +45,19 @@ export default {
         transit: { DEFAULT: '#a8392b', bg: '#f7e6e2', border: '#e7c3bb' },
         outdoor: { DEFAULT: '#4f5e38', bg: '#edf1e1', border: '#d2dcbb' },
         indoor: { DEFAULT: '#34465a', bg: '#e6ecf2', border: '#cfd9e4' },
+        category: {
+          transit: '#c0392b',
+          indoor: '#35618e',
+          outdoor: '#5a8a3c',
+        },
+        hour: {
+          rule: '#e2dbcb',
+          text: '#b7ad98',
+        },
+        free: {
+          hover: '#fbeee9',
+          border: '#e6c2b8',
+        },
       },
       borderRadius: {
         frame: '5px',

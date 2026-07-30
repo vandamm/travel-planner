@@ -17,15 +17,11 @@ function MobileMenu({
   onOpenTrip,
   onOpenCities,
   onAddStay,
-  onOpenShare,
-  status,
 }: {
   onClose: () => void
   onOpenTrip: () => void
   onOpenCities: () => void
   onAddStay: () => void
-  onOpenShare: () => void
-  status: string
 }) {
   const item =
     'w-full rounded-card border border-edge-300 bg-white px-4 py-3 text-left font-sans text-base font-medium text-ink-600 hover:bg-surface-chip'
@@ -45,19 +41,6 @@ function MobileMenu({
       <button type="button" className={item} onClick={onAddStay}>
         <span aria-hidden>＋</span> Add stay
       </button>
-      <button type="button" className={item} onClick={onOpenShare}>
-        <span aria-hidden>↗</span> Share
-      </button>
-      <button
-        type="button"
-        className={item}
-        onClick={() => void navigator.clipboard?.writeText(location.href)}
-      >
-        <span aria-hidden>⧉</span> Copy trip link
-      </button>
-      <p role="status" className="px-1 text-xs text-ink-500">
-        {status === 'synced' ? 'Live' : status}
-      </p>
     </Modal>
   )
 }
@@ -115,11 +98,6 @@ function AppShell() {
             setMenuOpen(false)
             setAddStayNonce((n) => n + 1)
           }}
-          onOpenShare={() => {
-            setMenuOpen(false)
-            setShareOpen(true)
-          }}
-          status={status}
         />
       )}
       {tripOpen && <TripModal onClose={() => setTripOpen(false)} />}

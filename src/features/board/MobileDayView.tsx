@@ -138,17 +138,17 @@ export function MobileDayView({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      <div className="mb-2 flex items-center justify-center gap-5">
+      <div className="mb-2 flex items-center justify-between border-b border-edge-150 py-2">
         <button
           type="button"
           aria-label="Previous day"
           disabled={atFirst}
           onClick={() => go(-1)}
-          className="h-8 w-8 rounded-card border border-edge-350 text-lg text-ink-600 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-card px-2 py-1 text-xs font-semibold text-city-vermilion disabled:cursor-not-allowed disabled:opacity-40"
         >
-          ‹
+          ‹ Prev
         </button>
-        <span data-testid="mobile-day-position" className="sr-only">
+        <span data-testid="mobile-day-position" className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-500">
           {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of{' '}
           {days.length}
         </span>
@@ -157,9 +157,9 @@ export function MobileDayView({
           aria-label="Next day"
           disabled={atLast}
           onClick={() => go(1)}
-          className="h-8 w-8 rounded-card border border-edge-350 text-lg text-ink-600 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-card px-2 py-1 text-xs font-semibold text-city-vermilion disabled:cursor-not-allowed disabled:opacity-40"
         >
-          ›
+          Next ›
         </button>
       </div>
 
@@ -258,6 +258,7 @@ export function MobileDayView({
                 onAddCard={onAddCard}
                 onEditCard={onEditCard}
                 showHeader={false}
+                hourRail="left"
               />
             )
           })}

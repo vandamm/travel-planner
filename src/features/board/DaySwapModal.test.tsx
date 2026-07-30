@@ -43,9 +43,11 @@ describe('DaySwapModal', () => {
       '2027-05-03',
     ])
     expect(within(dialog).getByTestId('swap-source')).toHaveTextContent('01.05')
+    expect(within(dialog).getByTestId('swap-source')).toHaveTextContent('This day')
     expect(within(dialog).getByTestId('swap-source')).toHaveTextContent('Rome')
     expect(within(dialog).getByTestId('swap-target')).toHaveTextContent('02.05')
     expect(within(dialog).getByTestId('swap-target')).toHaveTextContent('Florence')
+    expect(within(dialog).getByTestId('swap-target')).toHaveTextContent('Swap with')
   })
 
   it('updates the preview and confirms the selected cityless date once', () => {

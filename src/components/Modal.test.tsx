@@ -29,6 +29,7 @@ describe('Modal', () => {
     )
     const dialog = screen.getByRole('dialog', { name: 'Editor' })
     expect(dialog.parentElement).toHaveClass('bg-[rgba(31,29,24,0.46)]')
+    expect(dialog.parentElement).toHaveClass('z-40')
     expect(dialog).toHaveClass('shadow-[0_30px_70px_-20px_rgba(20,18,14,0.60)]')
     expect(screen.getByRole('button', { name: 'Save' }).parentElement).toHaveClass('ml-auto')
   })

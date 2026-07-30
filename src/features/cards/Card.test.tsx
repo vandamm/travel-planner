@@ -24,10 +24,9 @@ describe('Card', () => {
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
   })
 
-  it('shows the start time and duration without an end time', () => {
+  it('shows the full timed span and a compact duration', () => {
     render(<Card card={{ ...base, startTime: '10:00', duration: 'custom', durationHours: 2 }} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 2h 00m')
-    expect(screen.getByTestId('card-time')).not.toHaveTextContent('–')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 – 12:00 · 2h')
   })
 
   it('keeps card content visible while previewing a live start, end, and duration', () => {
@@ -47,11 +46,13 @@ describe('Card', () => {
     expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:15')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('12:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:15 · 1h 45m')
-    expect(screen.getByTestId('card-time')).not.toHaveTextContent('12:00')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:15 – 12:00 · 1h 45m')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
-    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-category-corner')).toHaveAttribute(
+      'data-category',
+      'indoor',
+    )
     expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
   })
 
@@ -75,16 +76,19 @@ describe('Card', () => {
     expect(screen.getByTestId('card-title')).toHaveClass('min-w-0', 'break-words')
   })
 
-  it('puts category beside the title in a wrapping header, above time and conflict', () => {
+  it('renders category as a folded corner while preserving the overlap badge', () => {
     render(<Card card={{ ...base, category: 'outdoor' }} conflict />)
 
     const header = screen.getByTestId('card-title-row')
-    const category = screen.getByTestId('card-category')
-    expect(header).toHaveClass('flex', 'flex-wrap')
+    const category = screen.getByTestId('card-category-corner')
+    expect(header).toHaveClass('pr-5')
     expect(header).toContainElement(screen.getByTestId('card-title'))
-    expect(header).toContainElement(category)
+    expect(header).not.toContainElement(category)
+    expect(category).toHaveAttribute('data-category', 'outdoor')
+    expect(screen.getByTestId('card-category-icon')).toBeInTheDocument()
+    expect(screen.queryByTestId('card-category')).not.toBeInTheDocument()
     expect(screen.getByTestId('card-time').previousElementSibling).toBe(header)
-    expect(screen.getByTestId('card-conflict').parentElement).not.toContainElement(category)
+    expect(screen.getByTestId('card-conflict')).toBeInTheDocument()
   })
 
   it('uses the card surface as the drag activator without a separate handle', () => {
@@ -126,7 +130,10 @@ describe('Card', () => {
     expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
-    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-category-corner')).toHaveAttribute(
+      'data-category',
+      'indoor',
+    )
     expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
   })
@@ -221,10 +228,13 @@ describe('Card', () => {
     expect(document.body).toHaveClass('cursor-row-resize')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:00')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 · 1h 00m')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 – 11:00 · 1h')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
-    expect(screen.getByTestId('card-category')).toHaveTextContent('indoor')
+    expect(screen.getByTestId('card-category-corner')).toHaveAttribute(
+      'data-category',
+      'indoor',
+    )
     expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
     expect(screen.getByTestId('card-conflict')).toHaveTextContent('Overlap')
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
@@ -246,7 +256,7 @@ describe('Card', () => {
     expect(sortable.style.marginTop).toBe('225px')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('09:45')
     expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 · 1h 15m')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 – 11:00 · 1h 15m')
     pointerWindow('pointerUp', 85)
     expect(document.body).not.toHaveClass('cursor-row-resize')
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
@@ -316,7 +326,7 @@ describe('Card', () => {
 
   it('shows the default duration when the card is untimed', () => {
     render(<Card card={base} />)
-    expect(screen.getByTestId('card-time')).toHaveTextContent('1h 00m')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('1h')
   })
 
   it('renders an optional note', () => {
@@ -346,25 +356,26 @@ describe('Card', () => {
   })
 
   it.each(['indoor', 'outdoor', 'transit'] as const)(
-    'renders a %s category chip reflecting the card category',
+    'renders a %s folded corner reflecting the card category',
     (category) => {
       render(<Card card={{ ...base, category }} />)
-      const chip = screen.getByTestId('card-category')
-      expect(chip).toHaveTextContent(category)
+      const corner = screen.getByTestId('card-category-corner')
+      expect(corner).toHaveAttribute('data-category', category)
+      expect(screen.getByTestId('card-category-icon')).toBeInTheDocument()
       expect(screen.getByTestId('card')).toHaveAttribute('data-category', category)
     },
   )
 
-  it('shows the transit chip for a legacy transport card', () => {
+  it('shows the transit corner for a legacy transport card', () => {
     render(<Card card={{ ...base, transport: true }} />)
-    const chip = screen.getByTestId('card-category')
-    expect(chip).toHaveTextContent('transit')
+    const corner = screen.getByTestId('card-category-corner')
+    expect(corner).toHaveAttribute('data-category', 'transit')
     expect(screen.getByTestId('card')).toHaveAttribute('data-category', 'transit')
   })
 
-  it('omits the category chip for an uncategorised card', () => {
+  it('omits the category corner for an uncategorised card', () => {
     render(<Card card={base} />)
-    expect(screen.queryByTestId('card-category')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card-category-corner')).not.toBeInTheDocument()
     expect(screen.getByTestId('card')).not.toHaveAttribute('data-category')
   })
 

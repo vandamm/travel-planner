@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { slugFromName } from '../../data/slug'
+import { DatePicker } from '../pickers/DatePicker'
 import { TRIP_COLORS } from './yearCalendar'
 
 const workerBase = () => (import.meta.env.VITE_WORKER_URL ?? '').replace(/\/+$/, '')
@@ -92,7 +93,17 @@ export function NewTripModal({
         <fieldset>
           <legend className="sr-only">Trip dates</legend>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block min-w-0 text-sm font-semibold">
+            <DatePicker
+              label="Trip dates"
+              placeholder="Choose start and end dates"
+              range={{ start: startDate, end: endDate }}
+              onRangeChange={(range) => {
+                setStartDate(range.start ?? '')
+                setEndDate(range.end ?? '')
+              }}
+              triggerClassName="col-span-2 w-full rounded-card border border-edge bg-white px-3 py-2 text-left text-sm font-normal text-ink"
+            />
+            <label className="sr-only">
               Start
               <input
                 aria-label="Start date"
@@ -103,7 +114,7 @@ export function NewTripModal({
                 className="mt-2 w-full min-w-0 rounded-card border border-edge px-3 py-2 font-normal"
               />
             </label>
-            <label className="block min-w-0 text-sm font-semibold">
+            <label className="sr-only">
               End
               <input
                 aria-label="End date"

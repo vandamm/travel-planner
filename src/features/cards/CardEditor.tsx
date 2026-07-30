@@ -49,6 +49,9 @@ export function CardEditor({ card, dayKey, defaultStartTime, onClose }: CardEdit
   const [note, setNote] = useState(card?.note ?? '')
   const [link, setLink] = useState(card?.link ?? '')
   const [startTime, setStartTime] = useState(card?.startTime ?? defaultStartTime ?? '')
+  const [hasStartTime, setHasStartTime] = useState(
+    Boolean(card?.startTime || defaultStartTime),
+  )
   // Legacy `transport: true` is derived to `'transit'` so an old card pre-selects it.
   const [category, setCategory] = useState<CardCategory | undefined>(
     card ? cardCategory(card) : undefined,
@@ -61,7 +64,7 @@ export function CardEditor({ card, dayKey, defaultStartTime, onClose }: CardEdit
     const trimmedTitle = title.trim()
     if (!trimmedTitle) return
 
-    const start = clean(startTime)
+    const start = hasStartTime ? clean(startTime) : undefined
     const customHours = duration === 'custom' ? durationHours : undefined
     if (customHours !== undefined && !isValidCustomDurationHours(customHours)) return
 
@@ -116,7 +119,7 @@ export function CardEditor({ card, dayKey, defaultStartTime, onClose }: CardEdit
 
       <form id="card-editor-form" onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className={sectionLabel}>Title</span>
+          <span className={sectionLabel}>Card title</span>
           <input
             type="text"
             autoFocus
@@ -128,7 +131,7 @@ export function CardEditor({ card, dayKey, defaultStartTime, onClose }: CardEdit
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className={sectionLabel}>Description</span>
+          <span className={sectionLabel}>Note</span>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -213,17 +216,32 @@ export function CardEditor({ card, dayKey, defaultStartTime, onClose }: CardEdit
           </div>
         </div>
 
-        <div className="flex items-end gap-2">
-          <label className="flex flex-1 flex-col gap-1.5">
-            <span className={sectionLabel}>Start time</span>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-sm font-semibold text-ink-600">
             <input
-              type="time"
-              step={900}
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className={`${fieldInput} text-center font-serif`}
+              type="checkbox"
+              aria-label="Schedule activity"
+              checked={hasStartTime}
+              onChange={(event) => {
+                setHasStartTime(event.target.checked)
+                if (!event.target.checked) setStartTime('')
+              }}
+              className="h-4 w-4 accent-city-vermilion"
             />
+            <span aria-hidden>Set a start time</span>
           </label>
+          {hasStartTime && (
+            <label className="flex flex-col gap-1.5">
+              <span className={sectionLabel}>Start time</span>
+              <input
+                type="time"
+                step={900}
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className={`${fieldInput} text-center font-serif`}
+              />
+            </label>
+          )}
         </div>
 
         <div className="mt-1 flex items-center justify-between gap-2 max-[399px]:flex-col">

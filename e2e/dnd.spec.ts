@@ -137,5 +137,5 @@ test('dropping an untimed card within a day assigns its timeline time', async ({
   await dragSurfaceOnto(page, surface, thirdCard)
 
   const firstCard = firstColumn.locator('[data-testid="card"]', { hasText: 'First' })
-  await expect(firstCard.getByTestId('card-time')).toHaveText(/08:(00|30) · 1h/)
+  await expect(firstCard.getByTestId('card-time')).toHaveText(/08:(00|30) – 09:(00|30) · 1h/)
 })

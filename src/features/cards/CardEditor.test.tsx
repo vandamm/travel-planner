@@ -100,7 +100,7 @@ function rows() {
 describe('CardEditor — create', () => {
   it('adds a card with a title to the target day', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Museum' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Museum' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     expect(rows().some((r) => r.includes('Museum'))).toBe(true)
@@ -108,7 +108,7 @@ describe('CardEditor — create', () => {
 
   it('does not add a card with a blank title', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '   ' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: '   ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     expect(screen.queryAllByTestId('dump-row')).toHaveLength(0)
@@ -118,14 +118,16 @@ describe('CardEditor — create', () => {
     renderInRoom(<CreateHarness />)
     const save = screen.getByRole('button', { name: 'Save card' })
     expect(save).toBeDisabled()
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: ' Museum ' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: ' Museum ' } })
     expect(save).toBeEnabled()
   })
 
   it('captures a note and quarter-hour start through a native time input', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Train' } })
-    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'platform 4' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Train' } })
+    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'platform 4' } })
+    expect(screen.queryByLabelText('Start time')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Schedule activity'))
     const start = screen.getByLabelText('Start time')
     expect(start).toHaveAttribute('type', 'time')
     expect(start).toHaveAttribute('step', '900')
@@ -141,7 +143,7 @@ describe('CardEditor — create', () => {
 
   it('stores a link entered in the link field', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Booking' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Booking' } })
     fireEvent.change(screen.getByLabelText('Link'), { target: { value: 'https://example.com' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
@@ -151,7 +153,7 @@ describe('CardEditor — create', () => {
 
   it('keeps the start time optional', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Loose end' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Loose end' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Loose end')) ?? ''
@@ -161,7 +163,7 @@ describe('CardEditor — create', () => {
 
   it('saves the category chosen from the Type control', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Flight' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Flight' } })
     fireEvent.click(screen.getByRole('button', { name: 'Transit' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
@@ -171,7 +173,7 @@ describe('CardEditor — create', () => {
 
   it('toggles a Type segment off when reclicked, storing no category', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Park' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Park' } })
     const outdoor = screen.getByRole('button', { name: 'Outdoor' })
     fireEvent.click(outdoor)
     expect(outdoor).toHaveAttribute('aria-pressed', 'true')
@@ -185,7 +187,7 @@ describe('CardEditor — create', () => {
 
   it('stores a day duration chosen from the Duration control', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'All day' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'All day' } })
     fireEvent.click(screen.getByRole('button', { name: 'Day' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
@@ -201,7 +203,7 @@ describe('CardEditor — create', () => {
     expect(durationHours).toHaveAttribute('step', '0.25')
     expect(within(duration).getByText('h')).toBeInTheDocument()
     expect(duration).toHaveClass('items-center')
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Plain' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Plain' } })
     fireEvent.change(durationHours, { target: { value: '0.25' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
@@ -212,7 +214,7 @@ describe('CardEditor — create', () => {
 
   it('keeps an activity untimed when Start time is blank', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Wander' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Wander' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Wander')) ?? ''
@@ -221,7 +223,7 @@ describe('CardEditor — create', () => {
 
   it('closes after saving', () => {
     renderInRoom(<CreateHarness />)
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Museum' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Museum' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
     expect(screen.queryByRole('button', { name: 'Save card' })).not.toBeInTheDocument()
   })
@@ -239,9 +241,9 @@ describe('CardEditor — create', () => {
 describe('CardEditor — edit', () => {
   it('pre-fills the form from the card and updates it', async () => {
     renderInRoom(<EditHarness />)
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Old title'))
+    await waitFor(() => expect(screen.getByLabelText('Card title')).toHaveValue('Old title'))
 
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New title' } })
+    fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'New title' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     await waitFor(() => expect(rows().some((r) => r.includes('New title'))).toBe(true))
@@ -268,6 +270,7 @@ describe('CardEditor — edit', () => {
 
   it('untimes the card when the native start time is cleared', async () => {
     renderInRoom(<EditHarness />)
+    expect(screen.getByLabelText('Schedule activity')).toBeChecked()
     await waitFor(() => expect(screen.getByLabelText('Start time')).toHaveValue('09:00'))
 
     fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '' } })

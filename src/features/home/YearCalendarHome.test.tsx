@@ -55,4 +55,22 @@ it('does not offer trip creation on a trip date', () => {
   )
 
   expect(screen.queryByRole('button', { name: 'Plan trip starting 3 January 2026' })).not.toBeInTheDocument()
+  const tripDate = screen.getByRole('link', { name: /Rome on 3 January/ })
+  expect(tripDate).toHaveClass('border-b-2')
+  expect(tripDate).not.toHaveClass('text-white')
+})
+
+it('uses the compact handoff month treatment', () => {
+  render(
+    <Month
+      year={2026}
+      month={0}
+      trips={[]}
+      holidays={[]}
+      publicHolidays={[]}
+    />,
+  )
+
+  expect(screen.getByTestId('calendar-month')).toHaveClass('border-t', 'border-edge-300')
+  expect(screen.getByTestId('calendar-month')).not.toHaveClass('rounded-2xl')
 })

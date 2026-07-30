@@ -44,7 +44,7 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   expect(fullBox).not.toBeNull()
   expect(fullBody).not.toBeNull()
   // 15h window → 900px vs the 60px default block.
-  expect(fullBox!.height).toBe(defaultBox!.height * 15)
+  expect(fullBox!.height + 4).toBe((defaultBox!.height + 4) * 15)
   expect(fullBox!.y).toBeGreaterThan(fullBody!.y)
   expect(fullBody!.y + fullBody!.height).toBeGreaterThan(fullBox!.y + fullBox!.height)
 })

@@ -6,6 +6,7 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { format, isWeekend, parseISO } from 'date-fns'
+import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day, DayCityOverride } from '../../data/schema'
 import { NO_CITY_COLOR } from '../cities/colors'
 import { CityPicker } from '../cities/CityPicker'
@@ -20,8 +21,8 @@ import {
 } from '../cards/cardHeight'
 import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
-import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
-import { freeTimelineSlots } from './timelineSlots'
+import { orderCardsForDirection, type TimeDirection } from './timeDirection'
+import { formatFreeDuration, freeTimelineSlots } from './timelineSlots'
 import { COLUMN_WIDTH_REM } from './useViewport'
 
 export interface DayColumnProps {
@@ -48,6 +49,53 @@ export interface DayColumnProps {
   onEditCard?: (card: CardType) => void
   /** The mobile view supplies its own compact day header. */
   showHeader?: boolean
+  /** Numeric hour rail shown in the desktop gutter or at mobile screen-left. */
+  hourRail?: 'left' | 'right'
+}
+
+function HourRail({
+  side,
+  dayStart,
+  dayEnd,
+  direction,
+}: {
+  side: 'left' | 'right'
+  dayStart: string
+  dayEnd: string
+  direction: TimeDirection
+}) {
+  const start = clockMinutes(dayStart)
+  const end = clockMinutes(dayEnd)
+  const firstHour = Math.ceil(start / 60)
+  const hours = Array.from(
+    { length: Math.max(0, Math.ceil(end / 60) - firstHour) },
+    (_, index) => firstHour + index,
+  ).filter((hour) => hour % 2 === 0 && hour * 60 < end)
+
+  return (
+    <ol
+      data-testid="hour-rail"
+      aria-hidden
+      className={`pointer-events-none absolute top-0 z-20 h-full w-[14px] ${side === 'right' ? '-right-[14px]' : '-left-7'}`}
+    >
+      {hours.map((hour) => {
+        const minute = hour * 60
+        const offset = direction === 'up' ? end - minute : minute - start
+        return (
+          <li
+            key={hour}
+            data-testid="hour-mark"
+            style={{ top: (offset / 60) * PX_PER_HOUR }}
+            className="absolute inset-x-0 flex -translate-y-1/2 items-center gap-px font-sans text-[10px] font-semibold leading-none text-hour-text"
+          >
+            <span className="h-px flex-1 bg-hour-rule" />
+            <span>{hour}</span>
+            <span className="h-px flex-1 bg-hour-rule" />
+          </li>
+        )
+      })}
+    </ol>
+  )
 }
 
 function cardGapPx(
@@ -106,14 +154,14 @@ export function DayColumn({
   onAddCard,
   onEditCard,
   showHeader = true,
+  hourRail,
 }: DayColumnProps) {
   const ordered = orderCardsForDirection(cards, direction)
   const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd)
   const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
-  const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
   const cardCursor = { current: 0 }
   const weekday = format(parseISO(day.key), 'EEE').toUpperCase()
-  const dateLabel = format(parseISO(day.key), 'dd MMM').toUpperCase()
+  const dateLabel = formatDay(day.key)
   const weekend = isWeekend(parseISO(day.key))
 
   const timelineHeight = windowHeightPx(dayStart, dayEnd)
@@ -156,17 +204,19 @@ export function DayColumn({
               {onSwapDay && (
                 <button
                   type="button"
+                  aria-label="Swap day"
+                  title="Swap day"
                   onClick={() => onSwapDay(day.key)}
-                  className="text-[10px] font-semibold text-ink-400 underline decoration-edge-300 underline-offset-2 hover:text-ink-600"
+                  className="grid h-6 w-6 place-items-center text-base text-ink-200 hover:text-ink-600"
                 >
-                  Swap day
+                  <span aria-hidden>⇄</span>
                 </button>
               )}
             </div>
             <div className="flex items-center gap-1">
               <span
                 data-testid="city-name"
-                className="font-serif text-lg font-bold leading-tight text-ink"
+                className="font-serif text-[19px] font-bold leading-tight text-ink"
               >
                 {city ? city.name : <span className="text-ink-300">No city</span>}
               </span>
@@ -186,7 +236,7 @@ export function DayColumn({
           <div
             data-testid="city-band"
             style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
-            className="h-[3px] w-full"
+            className="h-1 w-full rounded-[2px]"
           />
         </header>
       )}
@@ -196,28 +246,20 @@ export function DayColumn({
         style={{ height: timelineHeight + TIMELINE_VERTICAL_PADDING_PX * 2 }}
         className="relative px-3"
       >
-        {/* Labels occupy the reserved outer padding, outside the activity track. */}
-        <ol
-          data-testid="scale"
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 inset-y-0 flex flex-col justify-between"
-        >
-          {scale.map((label) => (
-            <li
-              key={label}
-              data-testid="scale-label"
-              className="text-center text-[10px] font-semibold uppercase tracking-wide text-ink-300"
-            >
-              {label}
-            </li>
-          ))}
-        </ol>
         <div
           ref={setNodeRef}
           data-testid="timeline-track"
           style={{ top: TIMELINE_VERTICAL_PADDING_PX, height: timelineHeight }}
-          className="absolute left-3 right-3"
+          className={`absolute right-3 ${hourRail === 'left' ? 'left-7' : 'left-3'}`}
         >
+          {hourRail && (
+            <HourRail
+              side={hourRail}
+              dayStart={dayStart}
+              dayEnd={dayEnd}
+              direction={direction}
+            />
+          )}
           {freeSlots.map((slot) => {
             const start = clockMinutes(slot.startTime)
             const end = clockMinutes(slot.endTime)
@@ -232,9 +274,14 @@ export function DayColumn({
                 aria-label={`Add activity from ${slot.startTime} to ${slot.endTime}`}
                 onClick={() => onAddCard?.(day.key, slot.startTime)}
                 style={{ top: (offset / 60) * PX_PER_HOUR, height }}
-                className="absolute inset-x-0 z-0 flex items-center justify-center overflow-hidden rounded-card border border-dashed border-edge-300 bg-white/80 px-2 font-serif text-sm italic text-ink-400 hover:border-ink-300 hover:bg-surface-chip focus-visible:z-20"
+                className="group absolute inset-x-0 z-0 flex cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-card border border-dashed border-edge-300 bg-white/80 px-2 text-ink-400 hover:border-solid hover:border-free-border hover:bg-free-hover focus-visible:z-20 focus-visible:border-solid focus-visible:border-free-border focus-visible:bg-free-hover"
               >
-                {height >= 36 && <span>+ add activity</span>}
+                <span className="font-serif text-[12.5px] italic">
+                  {formatFreeDuration(slot.startTime, slot.endTime)}
+                </span>
+                <span className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-city-vermilion opacity-70 group-hover:opacity-100 group-focus-visible:opacity-100">
+                  ＋ add activity
+                </span>
               </button>
             )
           })}

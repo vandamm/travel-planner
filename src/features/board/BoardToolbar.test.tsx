@@ -39,9 +39,14 @@ describe('BoardToolbar', () => {
     await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
     await user.click(screen.getByRole('button', { name: 'Cities & colours' }))
     expect(actions.onOpenCities).toHaveBeenCalledOnce()
-    expect(screen.getByText('Live')).toBeInTheDocument()
+    expect(screen.getByText('Synced')).toBeInTheDocument()
+    expect(screen.getByTestId('app-seal')).toHaveClass('h-[34px]', 'w-[34px]')
+    expect(screen.getByTestId('app-title-block')).toContainElement(screen.getByTestId('app-meta'))
+    expect(document.querySelector('[data-presence-avatar]')).toHaveClass('rounded-full')
     await user.click(screen.getByRole('button', { name: 'Collaborators' }))
     expect(actions.onOpenShare).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: 'Share trip' }))
+    expect(actions.onOpenShare).toHaveBeenCalledTimes(2)
   })
 
   it('keeps a fixed-width sync status immediately before stable right controls', () => {

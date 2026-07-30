@@ -6,6 +6,15 @@ export interface TimelineSlot {
   endTime: string
 }
 
+/** Human-readable duration for the resting free-time target label. */
+export function formatFreeDuration(startTime: string, endTime: string): string {
+  const minutes = clockMinutes(endTime) - clockMinutes(startTime)
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  if (remainder === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} free`
+  return `${hours}h ${remainder}m free`
+}
+
 /** Free portions of the configured day after all timed activities are merged. */
 export function freeTimelineSlots(cards: Card[], dayStart: string, dayEnd: string): TimelineSlot[] {
   const start = clockMinutes(dayStart)

@@ -47,7 +47,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-10 flex bg-[rgba(31,29,24,0.46)] min-[400px]:items-center min-[400px]:justify-center min-[400px]:p-4"
+      className="fixed inset-0 z-40 flex bg-[rgba(31,29,24,0.46)] min-[400px]:items-center min-[400px]:justify-center min-[400px]:p-4"
       onClick={onClose}
     >
       <div

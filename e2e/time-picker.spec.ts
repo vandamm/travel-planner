@@ -15,7 +15,7 @@ test('setting a card start through the native input shows its start and duration
   await pickTime(editor, 'Start time', '10:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
 
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h 00m')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 – 11:00 · 1h')
 })
 
 test('clearing a native card start time untimes the card', async ({ page }) => {
@@ -28,7 +28,7 @@ test('clearing a native card start time untimes the card', async ({ page }) => {
   await editor.getByLabel('Title').fill('Loose plan')
   await pickTime(editor, 'Start time', '09:00')
   await editor.getByRole('button', { name: 'Save card' }).click()
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('09:00 · 1h 00m')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('09:00 – 10:00 · 1h')
 
   // Reopen, clear the start time, save → the card is untimed.
   await firstColumn
@@ -39,7 +39,7 @@ test('clearing a native card start time untimes the card', async ({ page }) => {
   await reopen.getByLabel('Start time').fill('')
   await reopen.getByRole('button', { name: 'Save card' }).click()
 
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('1h 00m')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('1h')
 })
 
 test('native trip day-window inputs update valid values and reject inverted windows', async ({ page }) => {

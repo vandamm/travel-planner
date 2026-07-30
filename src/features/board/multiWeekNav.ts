@@ -60,3 +60,13 @@ export function rangeLabel(
   const start = formatDay(days[range.first].key)
   return range.first === range.last ? start : `${start} – ${formatDay(days[range.last].key)}`
 }
+
+/** The compact second-row summary used above the desktop timeline. */
+export function rangeSummary(
+  days: Day[],
+  metrics: Pick<HScrollMetrics, 'clientWidth' | 'scrollLeft'>,
+): string {
+  const range = visibleRange(days.length, metrics)
+  if (!range) return ''
+  return `Showing ${rangeLabel(days, metrics)} · days ${range.first + 1}–${range.last + 1} of ${days.length}`
+}

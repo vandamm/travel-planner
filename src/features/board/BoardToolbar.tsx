@@ -23,7 +23,7 @@ export interface BoardToolbarProps {
 const statusText: Record<SyncStatus, string> = {
   local: 'Local',
   connecting: 'Connecting…',
-  synced: 'Live',
+  synced: 'Synced',
   error: 'Offline',
   missing: 'Missing',
 }
@@ -52,47 +52,51 @@ export function BoardToolbar({
       <div
         data-testid="app-seal"
         aria-hidden
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] bg-city-vermilion font-serif text-lg font-semibold italic leading-none text-white"
+        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[2px] bg-city-vermilion font-serif text-lg font-semibold italic leading-none text-white"
       >
         I
       </div>
-      <h1 className="truncate font-serif text-[18px] font-semibold leading-none text-ink min-[400px]:text-2xl">
-        {title}
-      </h1>
-      <Popover
-        label="Edit trip"
-        trigger="✎"
-        triggerAriaLabel="Edit trip menu"
-        triggerClassName="flex h-7 w-7 shrink-0 items-center justify-center rounded-card border border-edge-350 text-sm text-ink-600 hover:bg-surface-chip"
-      >
-        {(close) => (
-          <div className="flex min-w-44 flex-col gap-1">
-            <button
-              type="button"
-              className="rounded-card px-3 py-2 text-left text-sm font-medium text-ink-600 hover:bg-surface-chip"
-              onClick={() => {
-                close()
-                onOpenTrip()
-              }}
-            >
-              Trip details
-            </button>
-            <button
-              type="button"
-              className="rounded-card px-3 py-2 text-left text-sm font-medium text-ink-600 hover:bg-surface-chip"
-              onClick={() => {
-                close()
-                onOpenCities()
-              }}
-            >
-              Cities &amp; colours
-            </button>
-          </div>
-        )}
-      </Popover>
-      <span data-testid="app-meta" className="hidden border-l border-edge-150 pl-3 text-xs text-ink-500 min-[400px]:block">
-        {meta}
-      </span>
+      <div data-testid="app-title-block" className="min-w-0 flex-1 min-[400px]:flex-none">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h1 className="truncate font-serif text-[18px] font-semibold leading-none text-ink min-[400px]:text-[21px]">
+            {title}
+          </h1>
+          <Popover
+            label="Edit trip"
+            trigger="✎"
+            triggerAriaLabel="Edit trip menu"
+            triggerClassName="flex h-6 w-6 shrink-0 items-center justify-center text-sm text-ink-500 hover:text-ink"
+          >
+            {(close) => (
+              <div className="flex min-w-44 flex-col gap-1">
+                <button
+                  type="button"
+                  className="rounded-card px-3 py-2 text-left text-sm font-medium text-ink-600 hover:bg-surface-chip"
+                  onClick={() => {
+                    close()
+                    onOpenTrip()
+                  }}
+                >
+                  Trip details
+                </button>
+                <button
+                  type="button"
+                  className="rounded-card px-3 py-2 text-left text-sm font-medium text-ink-600 hover:bg-surface-chip"
+                  onClick={() => {
+                    close()
+                    onOpenCities()
+                  }}
+                >
+                  Cities &amp; colours
+                </button>
+              </div>
+            )}
+          </Popover>
+        </div>
+        <span data-testid="app-meta" className="hidden text-[11px] text-ink-500 min-[400px]:block">
+          {meta}
+        </span>
+      </div>
       <div
         data-testid="sync-container"
         className="ml-auto hidden w-24 shrink-0 justify-end min-[400px]:flex"
@@ -114,7 +118,7 @@ export function BoardToolbar({
               key={presence.userId}
               data-presence-avatar
               title={presence.name}
-              className="flex h-7 w-7 items-center justify-center rounded-[2px] border-2 border-white text-xs font-bold text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white"
               style={{ backgroundColor: presence.color }}
             >
               {presence.name.slice(0, 1).toUpperCase()}
@@ -132,6 +136,14 @@ export function BoardToolbar({
             {direction === 'down' ? '↓' : '↑'}
           </button>
         </div>
+        <button
+          type="button"
+          aria-label="Share trip"
+          onClick={onOpenShare}
+          className="flex h-8 items-center justify-center rounded-card border border-edge-350 px-2 text-xs font-semibold text-ink-600 min-[400px]:hidden"
+        >
+          Share
+        </button>
         <button type="button" aria-label="Menu" onClick={onOpenMenu} className="flex h-8 w-8 items-center justify-center rounded-card border border-edge-350 text-xl text-ink-600 min-[400px]:hidden">
           ≡
         </button>

@@ -63,6 +63,9 @@ describe('MobileDayView', () => {
     expect(currentDay()).toBe('2027-05-01')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Arrive')
     expect(screen.getByTestId('mobile-day-position')).toHaveTextContent('Day 1 of 3')
+    expect(screen.getByTestId('mobile-day-position')).not.toHaveClass('sr-only')
+    expect(screen.getByRole('button', { name: 'Previous day' })).toHaveTextContent('‹ Prev')
+    expect(screen.getByRole('button', { name: 'Next day' })).toHaveTextContent('Next ›')
   })
 
   it('keeps bottom safe-area padding in the inner mobile scroller', () => {

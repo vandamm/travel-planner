@@ -42,18 +42,6 @@ function titles() {
   return screen.getAllByTestId('card-title').map((n) => n.textContent)
 }
 
-function scaleLabels() {
-  return screen.getAllByTestId('scale-label').map((n) => n.textContent)
-}
-
-function hasSlateClass(el: Element) {
-  return [...el.classList].some((c) =>
-    ['text-slate-', 'bg-slate-', 'border-slate-', 'ring-slate-'].some((prefix) =>
-      c.startsWith(prefix),
-    ),
-  )
-}
-
 describe('DayColumn', () => {
   it('renders a color-coded, city-labeled header', () => {
     render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
@@ -76,25 +64,25 @@ describe('DayColumn', () => {
 
   it('labels the day with the approved uppercase weekday and date', () => {
     render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
-    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT · 01 MAY')
+    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT · 01.05')
   })
 
   it('lays out cards morning→evening with the down direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     expect(titles()).toEqual(['Stroll', 'Breakfast', 'Dinner'])
-    expect(scaleLabels()).toEqual(['Morning', 'Evening'])
+    expect(screen.queryByText('Morning')).not.toBeInTheDocument()
+    expect(screen.queryByText('Evening')).not.toBeInTheDocument()
   })
 
-  it('reverses both the cards and the time scale with the up direction', () => {
+  it('reverses the cards with the up direction', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="up" />)
     expect(titles()).toEqual(['Dinner', 'Breakfast', 'Stroll'])
-    expect(scaleLabels()).toEqual(['Evening', 'Morning'])
   })
 
   it('shows the time on time-bound cards', () => {
     render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
     const dinner = screen.getByText('Dinner').closest('[data-testid="card"]') as HTMLElement
-    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 · 2h 00m')
+    expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 – 21:00 · 2h')
   })
 
   it('marks every timed card involved in an overlap', () => {
@@ -148,15 +136,26 @@ describe('DayColumn', () => {
     })
   })
 
-  it('anchors the time scale above and below the full-width card list', () => {
-    render(<DayColumn day={day} cards={cards} direction="down" />)
-    expect(screen.getByTestId('scale')).toHaveClass('inset-x-0', 'justify-between')
-    expect(screen.getAllByTestId('scale-label')[0]).toHaveClass('text-center', 'text-[10px]')
-    for (const label of screen.getAllByTestId('scale-label')) {
-      expect(label).toHaveClass('text-ink-300')
-      expect(label).not.toHaveClass('rotate-180')
-      expect(hasSlateClass(label)).toBe(false)
-    }
+  it('renders a true-positioned numeric hour rail without word labels', () => {
+    render(
+      <DayColumn
+        {...({ hourRail: 'right' } as { hourRail: 'right' })}
+        day={day}
+        cards={cards}
+        direction="down"
+      />,
+    )
+    expect(screen.getAllByTestId('hour-mark').map((node) => node.textContent)).toEqual([
+      '6',
+      '8',
+      '10',
+      '12',
+      '14',
+      '16',
+      '18',
+      '20',
+    ])
+    expect(screen.queryByTestId('scale')).not.toBeInTheDocument()
     expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
     expect(screen.getByTestId('card-list')).toHaveClass('pointer-events-none')
     for (const card of screen.getAllByTestId('sortable-card')) {
@@ -177,8 +176,10 @@ describe('DayColumn', () => {
     expect(slots[0]).toHaveStyle({ top: '0px', height: '120px' })
     expect(slots[1]).toHaveStyle({ top: '180px', height: '600px' })
     for (const slot of slots) {
-      expect(slot).toHaveTextContent('+ add activity')
-      expect(slot).toHaveClass('flex', 'border-dashed')
+      expect(slot).toHaveTextContent(/hours? free/)
+      expect(slot).toHaveTextContent('＋ add activity')
+      expect(within(slot).getByText('＋ add activity')).not.toHaveClass('hidden')
+      expect(slot).toHaveClass('group', 'cursor-pointer', 'border-dashed')
       expect(slot).not.toHaveClass('opacity-0')
     }
 
@@ -194,7 +195,8 @@ describe('DayColumn', () => {
     expect(li('Breakfast')).toHaveStyle({ height: '60px' })
     expect(li('Stroll')).toHaveStyle({ height: '60px' })
     expect(screen.getByText('Dinner').closest('[data-testid="card"]')).toHaveClass(
-      'h-full',
+      'my-0.5',
+      'h-[calc(100%-4px)]',
       'overflow-hidden',
     )
   })
@@ -307,11 +309,11 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('day-label')).not.toHaveClass('text-city-vermilion')
   })
 
-  it('renders the city colour as a 3px header underline (not a top band)', () => {
+  it('renders the city colour as a 4px rounded header underline', () => {
     render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
     const band = screen.getByTestId('city-band')
     expect(band).toHaveStyle({ backgroundColor: '#ef4444' })
-    expect(band).toHaveClass('h-[3px]')
+    expect(band).toHaveClass('h-1', 'rounded-[2px]')
   })
 
   it('removes persistent column chrome, internal scrolling, and the noon divider', () => {

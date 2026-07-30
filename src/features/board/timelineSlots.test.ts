@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../../data/schema'
-import { freeTimelineSlots } from './timelineSlots'
+import { formatFreeDuration, freeTimelineSlots } from './timelineSlots'
 
 const card = (startTime: string, hours = 1): Card => ({
   id: startTime,
@@ -26,5 +26,15 @@ describe('freeTimelineSlots', () => {
       { startTime: '06:00', endTime: '08:00' },
       { startTime: '12:00', endTime: '14:00' },
     ])
+  })
+})
+
+describe('formatFreeDuration', () => {
+  it.each([
+    ['06:00', '10:00', '4 hours free'],
+    ['12:00', '17:15', '5h 15m free'],
+    ['20:00', '21:00', '1 hour free'],
+  ])('formats %s to %s as %s', (start, end, expected) => {
+    expect(formatFreeDuration(start, end)).toBe(expected)
   })
 })

@@ -90,7 +90,7 @@ test('whole-card drag shows live timing and permits an overlap without moving it
   await expect(preview).toHaveCount(1)
   await expect(preview.getByTestId('event-timing-start')).toHaveText('11:00')
   await expect(preview.getByTestId('event-timing-end')).toHaveText('12:00')
-  await expect(preview.getByTestId('card-time')).toHaveText('11:00 · 1h 00m')
+  await expect(preview.getByTestId('card-time')).toHaveText('11:00 – 12:00 · 1h')
   await expect(
     page.locator('[data-testid="card-title"]:visible').filter({ hasText: 'Museum' }),
   ).toHaveCount(1)
@@ -100,8 +100,8 @@ test('whole-card drag shows live timing and permits an overlap without moving it
 
   const movedMuseum = column.locator('[data-testid="card"]', { hasText: 'Museum' })
   const unchangedLunch = column.locator('[data-testid="card"]', { hasText: 'Lunch' })
-  await expect(movedMuseum.getByTestId('card-time')).toHaveText('11:00 · 1h 00m')
-  await expect(unchangedLunch.getByTestId('card-time')).toHaveText('11:00 · 1h 00m')
+  await expect(movedMuseum.getByTestId('card-time')).toHaveText('11:00 – 12:00 · 1h')
+  await expect(unchangedLunch.getByTestId('card-time')).toHaveText('11:00 – 12:00 · 1h')
   await expect(movedMuseum.getByTestId('card-conflict')).toHaveText('Overlap')
   await expect(unchangedLunch.getByTestId('card-conflict')).toHaveText('Overlap')
   await expect(board).toHaveJSProperty('scrollLeft', beforeScrollLeft)

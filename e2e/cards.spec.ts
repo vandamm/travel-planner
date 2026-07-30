@@ -18,11 +18,14 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit Colosseum')
-  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 · 1h 00m')
+  await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 – 11:00 · 1h')
   const titleRow = firstColumn.getByTestId('card-title-row')
-  await expect(titleRow).toHaveClass(/flex-wrap/)
   await expect(titleRow.getByTestId('card-title')).toHaveText('Visit Colosseum')
-  await expect(titleRow.getByTestId('card-category')).toHaveText('transit')
+  await expect(firstColumn.getByTestId('card-category-corner')).toHaveAttribute(
+    'data-category',
+    'transit',
+  )
+  await expect(firstColumn.getByTestId('card-category-icon')).toBeVisible()
 
   // The free-time target after a positioned card remains directly clickable.
   await firstColumn.getByTestId('timeline-slot').last().click()

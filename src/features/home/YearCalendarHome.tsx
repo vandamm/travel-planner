@@ -6,7 +6,6 @@ import {
   parsePublicHolidays,
   parseSchoolHolidays,
   publicHolidayOnDay,
-  ribbonEdges,
   schoolHolidayEdges,
   schoolHolidayOnDay,
   tripsOnDay,
@@ -47,17 +46,17 @@ export function Month({
 }) {
   const days = buildMonth(year, month)
   return (
-    <section className="rounded-2xl border border-[#dce4f4] bg-white p-4 shadow-[0_10px_30px_rgba(23,35,60,0.05)]">
-      <h2 className="mb-3 font-serif text-xl font-semibold text-[#17233c]">{MONTHS[month]}</h2>
+    <section data-testid="calendar-month" className="border-t border-edge-300 bg-transparent px-1 py-3">
+      <h2 className="mb-2 font-serif text-[17px] font-semibold text-ink">{MONTHS[month]}</h2>
       <div
-        className="grid grid-cols-7 gap-y-1 text-center text-[10px] font-bold uppercase tracking-[0.14em] text-[#7b879e]"
+        className="grid grid-cols-7 text-center text-[9px] font-bold uppercase tracking-[0.12em] text-ink-400"
         aria-hidden
       >
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
           <span key={index} className={index >= 5 ? 'text-city-vermilion/70' : undefined}>{day}</span>
         ))}
       </div>
-      <div className="mt-1 grid grid-cols-7 gap-y-1">
+      <div className="mt-1 grid grid-cols-7">
         {days.map((day, index) => {
           const matches = day.inMonth ? tripsOnDay(day.key, trips) : []
           const holiday = day.inMonth ? schoolHolidayOnDay(day.key, holidays) : undefined
@@ -67,11 +66,7 @@ export function Month({
           const trip = matches[0]
           const color = trip ? COLORS[trips.indexOf(trip) % COLORS.length] : undefined
           const isTripStart = trip?.startDate === day.key
-          const edges = trip
-            ? ribbonEdges(days, index, trip, trips)
-            : holiday
-              ? schoolHolidayEdges(days, index, holiday, holidays)
-              : null
+          const edges = holiday ? schoolHolidayEdges(days, index, holiday, holidays) : null
           const corners = edges
             ? edges.start && edges.end
               ? 'rounded-md'
@@ -81,9 +76,9 @@ export function Month({
                   ? 'rounded-r-md'
                   : 'rounded-none'
             : 'rounded-md'
-          const className = `relative flex h-8 items-center justify-center ${corners} text-xs ${
-            day.inMonth ? 'text-[#17233c]' : 'text-[#c7cfdd]'
-          } ${trip ? 'font-bold text-white' : `${publicHoliday ? 'bg-[#fff0ee]' : holiday ? 'bg-[#edf1e1]' : ''} ${isRedDay ? 'text-city-vermilion' : ''}`}`
+          const className = `relative flex h-7 items-center justify-center ${corners} text-[11px] ${
+            day.inMonth ? 'text-ink' : 'text-ink-200'
+          } ${trip ? 'border-b-2 font-bold' : `${publicHoliday ? 'bg-[#fff0ee]' : holiday ? 'bg-[#edf1e1]' : ''} ${isRedDay ? 'text-city-vermilion' : ''}`}`
           const dayTitle = publicHoliday
             ? `${publicHoliday.name} · Bavaria public holiday`
             : holiday
@@ -91,12 +86,7 @@ export function Month({
               : undefined
           const contents = trip ? (
             <>
-              <time dateTime={day.key}>{day.day}</time>
-              {isTripStart && (
-                <span className="absolute left-1 top-0 max-w-[calc(700%-0.5rem)] -translate-y-[85%] truncate rounded-full bg-[#17233c] px-2 py-0.5 text-[9px] font-bold text-white shadow-sm">
-                  {tripLabel(trip)}
-                </span>
-              )}
+              <time dateTime={day.key} title={isTripStart ? tripLabel(trip) : undefined}>{day.day}</time>
               {matches.length > 1 && (
                 <span className="absolute bottom-0.5 right-0.5 text-[8px]">
                   +{matches.length - 1}
@@ -113,7 +103,7 @@ export function Month({
               aria-label={`${tripLabel(trip)} on ${format(parseISO(day.key), 'd MMMM yyyy')}`}
               title={dayTitle}
               className={className}
-              style={{ backgroundColor: color }}
+              style={{ borderBottomColor: color }}
             >
               {contents}
             </a>

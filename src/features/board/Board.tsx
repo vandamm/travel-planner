@@ -18,7 +18,7 @@ import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
 import { generateDays, toDayKey } from '../../data/days'
-import { COLUMN_STRIDE_PX, rangeLabel, showRightFade, todayIndex } from './multiWeekNav'
+import { COLUMN_STRIDE_PX, rangeSummary, showRightFade, todayIndex } from './multiWeekNav'
 import type { Accommodation, Card, City } from '../../data/schema'
 import { AccommodationEditor } from '../accommodation/AccommodationEditor'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
@@ -116,7 +116,7 @@ export function Board({
     if (!el) return
     const update = () => {
       setShowFade(showRightFade(el))
-      setRangeText(rangeLabel(days, el))
+      setRangeText(rangeSummary(days, el))
     }
     update()
     window.addEventListener('resize', update)
@@ -166,40 +166,39 @@ export function Board({
         onToggleDirection={toggle}
       />
       {viewport === 'desktop' && days.length > 0 && (
-        <div className="flex items-center justify-end gap-2 px-4 py-2">
-          {todayIdx >= 0 && (
-            <button
-              type="button"
-              aria-label="Jump to today"
-              onClick={jumpToToday}
-              className="button-label rounded-card border border-edge-350 px-3 py-2 text-ink-600"
-            >
-              Today
-            </button>
-          )}
-          <div data-testid="range-stepper" className="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label="Previous days"
-              onClick={() => pageBy(-1)}
-              className="h-7 w-7 rounded-card border border-edge-350 text-ink-600"
-            >
-              ‹
-            </button>
-            <span
-              data-testid="visible-range"
-              className="min-w-[7rem] text-center text-sm font-medium text-ink-600"
-            >
-              {rangeText}
-            </span>
-            <button
-              type="button"
-              aria-label="Next days"
-              onClick={() => pageBy(1)}
-              className="h-7 w-7 rounded-card border border-edge-350 text-ink-600"
-            >
-              ›
-            </button>
+        <div className="flex items-center justify-between gap-2 border-b border-edge-150 px-5 py-2">
+          <span data-testid="visible-range" className="text-xs text-ink-500">
+            {rangeText}
+          </span>
+          <div className="flex items-center gap-2">
+            {todayIdx >= 0 && (
+              <button
+                type="button"
+                aria-label="Jump to today"
+                onClick={jumpToToday}
+                className="button-label rounded-card border border-edge-350 px-3 py-2 text-ink-600"
+              >
+                Today
+              </button>
+            )}
+            <div data-testid="range-stepper" className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Previous days"
+                onClick={() => pageBy(-1)}
+                className="h-7 w-7 rounded-card border border-edge-350 text-ink-600"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label="Next days"
+                onClick={() => pageBy(1)}
+                className="h-7 w-7 rounded-card border border-edge-350 text-ink-600"
+              >
+                ›
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -244,7 +243,7 @@ export function Board({
             data-testid="board-scroll"
             onScroll={(e) => {
               setShowFade(showRightFade(e.currentTarget))
-              setRangeText(rangeLabel(days, e.currentTarget))
+              setRangeText(rangeSummary(days, e.currentTarget))
             }}
             className="overflow-x-auto px-6 pb-4"
           >
@@ -263,7 +262,7 @@ export function Board({
               onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
             >
               <div data-testid="board" className="flex min-w-full" style={{ gap: COLUMN_GAP_REM }}>
-                {days.map((day) => {
+                {days.map((day, index) => {
                   const cityId = resolveDayCity(day.key, accommodations, overrides)
                   return (
                     <DayColumn
@@ -282,6 +281,7 @@ export function Board({
                         setEditor({ mode: 'create', dayKey, startTime })
                       }
                       onEditCard={(card) => setEditor({ mode: 'edit', card })}
+                      hourRail={index < days.length - 1 ? 'right' : undefined}
                     />
                   )
                 })}

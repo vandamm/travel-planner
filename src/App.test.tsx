@@ -142,6 +142,20 @@ describe('App (with a room slug path)', () => {
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
   })
+
+  it('keeps the mobile menu focused on trip setup, cities, and stays', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    const menu = screen.getByRole('dialog', { name: 'Menu' })
+    expect(menu).toHaveTextContent('Trip setup')
+    expect(menu).toHaveTextContent('Cities & colours')
+    expect(menu).toHaveTextContent('Add stay')
+    expect(menu).not.toHaveTextContent('Copy trip link')
+    expect(menu).not.toHaveTextContent('Share')
+    expect(menu.querySelector('[role="status"]')).not.toBeInTheDocument()
+  })
 })
 
 describe('App without a room slug', () => {
@@ -273,6 +287,7 @@ describe('App without a room slug', () => {
     const startDate = screen.getByLabelText('Start date')
     const endDate = screen.getByLabelText('End date')
     const dateGroup = screen.getByRole('group', { name: 'Trip dates' })
+    expect(screen.getByRole('button', { name: 'Trip dates' })).toBeInTheDocument()
     expect(dateGroup.firstElementChild).toHaveClass('sr-only')
     expect(dateGroup.children[1]).toHaveClass('grid-cols-2')
     expect(name).toBeRequired()
