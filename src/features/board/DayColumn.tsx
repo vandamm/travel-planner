@@ -21,8 +21,8 @@ import {
 } from '../cards/cardHeight'
 import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
-import { orderCardsForDirection, type TimeDirection } from './timeDirection'
-import { formatFreeDuration, freeTimelineSlots } from './timelineSlots'
+import type { TimeDirection } from './timeDirection'
+import { formatFreeDuration, freeTimelineSlots, layoutTimelineCards } from './timelineSlots'
 import { COLUMN_WIDTH_REM } from './useViewport'
 
 export interface DayColumnProps {
@@ -98,28 +98,6 @@ function HourRail({
   )
 }
 
-function cardGapPx(
-  card: CardType,
-  direction: TimeDirection,
-  dayStart: string,
-  dayEnd: string,
-  cursor: { current: number },
-): number {
-  const height = cardHeightPx(card, dayStart, dayEnd)
-  if (!card.startTime) {
-    cursor.current += height
-    return 0
-  }
-  const start = clockMinutes(card.startTime)
-  const top =
-    direction === 'up'
-      ? clockMinutes(dayEnd) - (start + resolvedDurationHours(card, dayStart, dayEnd) * 60)
-      : start - clockMinutes(dayStart)
-  const gap = Math.max((top / 60) * PX_PER_HOUR - cursor.current, 0)
-  cursor.current += gap + height
-  return gap
-}
-
 function overlappingCardIds(cards: CardType[], dayStart: string, dayEnd: string): Set<string> {
   const timed = cards.filter((card) => card.startTime)
   const conflicts = new Set<string>()
@@ -156,10 +134,9 @@ export function DayColumn({
   showHeader = true,
   hourRail,
 }: DayColumnProps) {
-  const ordered = orderCardsForDirection(cards, direction)
-  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd)
+  const placements = layoutTimelineCards(cards, dayStart, dayEnd, direction)
+  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd, direction)
   const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
-  const cardCursor = { current: 0 }
   const weekday = format(parseISO(day.key), 'EEE').toUpperCase()
   const dateLabel = formatDay(day.key)
   const weekend = isWeekend(parseISO(day.key))
@@ -244,13 +221,13 @@ export function DayColumn({
       <div
         data-testid="day-body"
         style={{ height: timelineHeight + TIMELINE_VERTICAL_PADDING_PX * 2 }}
-        className="relative px-3"
+        className="relative"
       >
         <div
           ref={setNodeRef}
           data-testid="timeline-track"
           style={{ top: TIMELINE_VERTICAL_PADDING_PX, height: timelineHeight }}
-          className={`absolute right-3 ${hourRail === 'left' ? 'left-7' : 'left-3'}`}
+          className={`absolute right-0 ${hourRail === 'left' ? 'left-7' : 'left-0'}`}
         >
           {hourRail && (
             <HourRail
@@ -279,7 +256,7 @@ export function DayColumn({
                 <span className="font-serif text-[12.5px] italic">
                   {formatFreeDuration(slot.startTime, slot.endTime)}
                 </span>
-                <span className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-city-vermilion opacity-70 group-hover:opacity-100 group-focus-visible:opacity-100">
+                <span className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-city-vermilion opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                   ＋ add activity
                 </span>
               </button>
@@ -290,8 +267,13 @@ export function DayColumn({
             data-testid="card-list"
             className="pointer-events-none relative z-10 flex flex-col pl-0"
           >
-            {ordered.map((c) => {
-              const gap = cardGapPx(c, direction, dayStart, dayEnd, cardCursor)
+            {placements.map((placement, index) => {
+              const previous = placements[index - 1]
+              const previousEnd = previous
+                ? previous.offsetMinutes + previous.durationMinutes
+                : 0
+              const gap = ((placement.offsetMinutes - previousEnd) / 60) * PX_PER_HOUR
+              const c = placement.card
               return (
                 <SortableCard
                   key={c.id}

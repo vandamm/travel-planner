@@ -166,7 +166,7 @@ export function Board({
         onToggleDirection={toggle}
       />
       {viewport === 'desktop' && days.length > 0 && (
-        <div className="flex items-center justify-between gap-2 border-b border-edge-150 px-5 py-2">
+        <div className="flex items-center justify-between gap-2 px-5 py-2">
           <span data-testid="visible-range" className="text-xs text-ink-500">
             {rangeText}
           </span>

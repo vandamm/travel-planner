@@ -162,6 +162,8 @@ describe('DayColumn', () => {
       expect(card).toHaveClass('pointer-events-auto')
     }
     expect(screen.getByTestId('card-list')).not.toHaveClass('gap-2')
+    expect(screen.getByTestId('timeline-track')).toHaveClass('left-0', 'right-0')
+    expect(screen.getByTestId('hour-rail')).toHaveClass('-right-[14px]', 'w-[14px]')
     const addCard = screen.getAllByTestId('timeline-slot')[0]
     expect(addCard).toHaveClass('border-edge-300', 'text-ink-400')
     expect(addCard.className).not.toMatch(/slate-/)
@@ -173,12 +175,16 @@ describe('DayColumn', () => {
 
     const slots = screen.getAllByTestId('timeline-slot')
     expect(slots).toHaveLength(2)
-    expect(slots[0]).toHaveStyle({ top: '0px', height: '120px' })
+    expect(slots[0]).toHaveStyle({ top: '60px', height: '60px' })
     expect(slots[1]).toHaveStyle({ top: '180px', height: '600px' })
     for (const slot of slots) {
       expect(slot).toHaveTextContent(/hours? free/)
       expect(slot).toHaveTextContent('＋ add activity')
-      expect(within(slot).getByText('＋ add activity')).not.toHaveClass('hidden')
+      expect(within(slot).getByText('＋ add activity')).toHaveClass(
+        'opacity-0',
+        'group-hover:opacity-100',
+        'group-focus-visible:opacity-100',
+      )
       expect(slot).toHaveClass('group', 'cursor-pointer', 'border-dashed')
       expect(slot).not.toHaveClass('opacity-0')
     }
@@ -196,6 +202,7 @@ describe('DayColumn', () => {
     expect(li('Stroll')).toHaveStyle({ height: '60px' })
     expect(screen.getByText('Dinner').closest('[data-testid="card"]')).toHaveClass(
       'my-0.5',
+      'w-full',
       'h-[calc(100%-4px)]',
       'overflow-hidden',
     )
