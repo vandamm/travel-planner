@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  COLUMN_GAP_PX,
   COLUMN_WIDTH_PX,
   columnsThatFit,
   DESKTOP_BREAKPOINT,
@@ -37,12 +38,13 @@ describe('columnsThatFit', () => {
     expect(columnsThatFit(375)).toBe(1)
   })
 
-  it('uses 272px / 17rem columns everywhere in fit calculations', () => {
-    expect(COLUMN_WIDTH_PX).toBe(272)
-    // 272 + 14 gap + 272 = 558, plus 32px container padding = 590.
-    expect(columnsThatFit(590)).toBe(2)
+  it('uses narrower columns and wider inter-day gutters in fit calculations', () => {
+    expect(COLUMN_WIDTH_PX).toBe(256)
+    expect(COLUMN_GAP_PX).toBe(20)
+    // 256 + 20 gap + 256 = 532, plus 32px container padding = 564.
+    expect(columnsThatFit(564)).toBe(2)
     // One pixel short of a clean two-column fit drops back to one.
-    expect(columnsThatFit(589)).toBe(1)
+    expect(columnsThatFit(563)).toBe(1)
     expect(columnsThatFit(900)).toBe(3)
   })
 })

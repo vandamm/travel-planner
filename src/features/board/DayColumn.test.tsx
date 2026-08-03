@@ -53,7 +53,7 @@ describe('DayColumn', () => {
     render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
 
     const column = screen.getByTestId('day-column')
-    expect(column).toHaveStyle({ flex: '1 0 17rem', minWidth: '17rem' })
+    expect(column).toHaveStyle({ flex: '1 0 16rem', minWidth: '16rem' })
     expect(column.style.width).toBe('')
   })
 
@@ -163,13 +163,13 @@ describe('DayColumn', () => {
     }
     expect(screen.getByTestId('card-list')).not.toHaveClass('gap-2')
     expect(screen.getByTestId('timeline-track')).toHaveClass('left-0', 'right-0')
-    expect(screen.getByTestId('hour-rail')).toHaveClass('-right-[14px]', 'w-[14px]')
+    expect(screen.getByTestId('hour-rail')).toHaveStyle({ right: '-20px', width: '20px' })
     const addCard = screen.getAllByTestId('timeline-slot')[0]
     expect(addCard).toHaveClass('border-edge-300', 'text-ink-400')
     expect(addCard.className).not.toMatch(/slate-/)
   })
 
-  it('shows visible add targets in every free timed interval', () => {
+  it('centers the free-time label and replaces it with the add action on hover', () => {
     const onAddCard = vi.fn()
     render(<DayColumn day={day} cards={cards} direction="down" onAddCard={onAddCard} />)
 
@@ -180,7 +180,16 @@ describe('DayColumn', () => {
     for (const slot of slots) {
       expect(slot).toHaveTextContent(/hours? free/)
       expect(slot).toHaveTextContent('＋ add activity')
+      expect(slot).toHaveClass('grid', 'place-items-center')
+      expect(within(slot).getByText(/hours? free/)).toHaveClass(
+        'col-start-1',
+        'row-start-1',
+        'group-hover:opacity-0',
+        'group-focus-visible:opacity-0',
+      )
       expect(within(slot).getByText('＋ add activity')).toHaveClass(
+        'col-start-1',
+        'row-start-1',
         'opacity-0',
         'group-hover:opacity-100',
         'group-focus-visible:opacity-100',

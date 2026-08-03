@@ -23,7 +23,7 @@ import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
 import type { TimeDirection } from './timeDirection'
 import { formatFreeDuration, freeTimelineSlots, layoutTimelineCards } from './timelineSlots'
-import { COLUMN_WIDTH_REM } from './useViewport'
+import { COLUMN_GAP_PX, COLUMN_WIDTH_REM } from './useViewport'
 
 export interface DayColumnProps {
   day: Day
@@ -76,7 +76,8 @@ function HourRail({
     <ol
       data-testid="hour-rail"
       aria-hidden
-      className={`pointer-events-none absolute top-0 z-20 h-full w-[14px] ${side === 'right' ? '-right-[14px]' : '-left-7'}`}
+      style={side === 'right' ? { right: -COLUMN_GAP_PX, width: COLUMN_GAP_PX } : undefined}
+      className={`pointer-events-none absolute top-0 z-20 h-full ${side === 'right' ? '' : '-left-7 w-[14px]'}`}
     >
       {hours.map((hour) => {
         const minute = hour * 60
@@ -251,12 +252,12 @@ export function DayColumn({
                 aria-label={`Add activity from ${slot.startTime} to ${slot.endTime}`}
                 onClick={() => onAddCard?.(day.key, slot.startTime)}
                 style={{ top: (offset / 60) * PX_PER_HOUR, height }}
-                className="group absolute inset-x-0 z-0 flex cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-card border border-dashed border-edge-300 bg-white/80 px-2 text-ink-400 hover:border-solid hover:border-free-border hover:bg-free-hover focus-visible:z-20 focus-visible:border-solid focus-visible:border-free-border focus-visible:bg-free-hover"
+                className="group absolute inset-x-0 z-0 grid cursor-pointer place-items-center overflow-hidden rounded-card border border-dashed border-edge-300 bg-white/80 px-2 text-ink-400 hover:border-solid hover:border-free-border hover:bg-free-hover focus-visible:z-20 focus-visible:border-solid focus-visible:border-free-border focus-visible:bg-free-hover"
               >
-                <span className="font-serif text-[12.5px] italic">
+                <span className="col-start-1 row-start-1 whitespace-nowrap font-serif text-[12.5px] italic leading-none transition-opacity group-hover:opacity-0 group-focus-visible:opacity-0">
                   {formatFreeDuration(slot.startTime, slot.endTime)}
                 </span>
-                <span className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-city-vermilion opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                <span className="col-start-1 row-start-1 whitespace-nowrap font-sans text-[10px] font-bold uppercase leading-none tracking-[0.08em] text-city-vermilion opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                   ＋ add activity
                 </span>
               </button>

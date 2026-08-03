@@ -19,14 +19,14 @@ export function selectViewport(width: number): Viewport {
 }
 
 /** Day-column geometry, shared by the board, stays lane, fit calculation, and scroll stride. */
-export const COLUMN_WIDTH_PX = 272
-export const COLUMN_GAP_PX = 14
+export const COLUMN_WIDTH_PX = 256
+export const COLUMN_GAP_PX = 20
 export const COLUMN_WIDTH_REM = `${COLUMN_WIDTH_PX / 16}rem`
 export const COLUMN_GAP_REM = `${COLUMN_GAP_PX / 16}rem`
 const CONTAINER_PADDING_PX = 16 // px-4 = 1rem each side
 
 /**
- * How many 17rem day columns fit a viewport of `width` px — at least one, so
+ * How many 16rem day columns fit a viewport of `width` px — at least one, so
  * the narrow pager always shows a day. Pure, so it can be unit-tested.
  */
 export function columnsThatFit(width: number): number {
@@ -60,7 +60,7 @@ export function useViewport(): Viewport {
 }
 
 /**
- * Track how many 17rem day columns fit the window, re-rendering whenever the
+ * Track how many 16rem day columns fit the window, re-rendering whenever the
  * count changes (resizes that don't change the count are skipped, since the
  * snapshot is the count). Falls back to one column during server rendering.
  */
