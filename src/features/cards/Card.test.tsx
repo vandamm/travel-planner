@@ -209,7 +209,6 @@ describe('Card', () => {
               link: 'https://example.com',
             }}
             conflict
-            direction="down"
             layoutStyle={{ height: 60, marginTop: 240 }}
           />
         </DndContext>

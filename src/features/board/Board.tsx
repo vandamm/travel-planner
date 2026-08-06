@@ -1,8 +1,7 @@
 // The board: a horizontally scrolling row of day columns. It owns all the doc
 // reads for the board view (trip → days, accommodations + overrides → each day's
 // resolved city, cities → colors, cards grouped by day) and renders a
-// presentational <DayColumn> per day. The morning↔evening direction toggle is a
-// per-user view preference (localStorage), so it lives here, not in the doc.
+// presentational <DayColumn> per day.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
@@ -29,7 +28,6 @@ import { DaySwapModal } from './DaySwapModal'
 import { MobileDayView } from './MobileDayView'
 import { BoardToolbar } from './BoardToolbar'
 import { BoardEmptyState } from './BoardEmptyState'
-import { useTimeDirection } from './useTimeDirection'
 import { useUndoManager } from './undoManager'
 import { COLUMN_GAP_REM, useColumnsThatFit, useViewport } from './useViewport'
 
@@ -63,7 +61,6 @@ export function Board({
 }: BoardProps) {
   const { doc, status, presences } = useRoom()
   useDocVersion(doc)
-  const { direction, toggle } = useTimeDirection()
   const { undo, redo, canUndo, canRedo } = useUndoManager(doc)
   const viewport = useViewport()
   const columns = useColumnsThatFit()
@@ -162,8 +159,6 @@ export function Board({
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
-        direction={direction}
-        onToggleDirection={toggle}
       />
       {viewport === 'desktop' && days.length > 0 && (
         <div className="flex items-center justify-between gap-2 px-5 py-2">
@@ -207,11 +202,10 @@ export function Board({
         <BoardEmptyState onOpenTrip={onOpenTrip} />
       ) : viewport === 'mobile' ? (
         // Below 640px: one day at a time, paged by swipe or the
-        // prev/next controls. Same cards/accommodation/direction logic as desktop.
+        // prev/next controls. Same cards/accommodation logic as desktop.
         <div className="min-h-0 flex-1">
           <BoardDnd
             doc={doc}
-            direction={direction}
             dayStart={trip.dayStart}
             dayEnd={trip.dayEnd}
             onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
@@ -223,7 +217,6 @@ export function Board({
               overrides={overrides}
               cityById={cityById}
               cities={cities}
-              direction={direction}
               dayStart={trip.dayStart}
               dayEnd={trip.dayEnd}
               columns={columns}
@@ -256,7 +249,6 @@ export function Board({
             />
             <BoardDnd
               doc={doc}
-              direction={direction}
               dayStart={trip.dayStart}
               dayEnd={trip.dayEnd}
               onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
@@ -270,7 +262,6 @@ export function Board({
                       day={day}
                       city={cityId ? cityById.get(cityId) : undefined}
                       cards={cardsByDay.get(day.key) ?? []}
-                      direction={direction}
                       dayStart={trip.dayStart}
                       dayEnd={trip.dayEnd}
                       cities={cities}

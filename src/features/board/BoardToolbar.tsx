@@ -1,7 +1,6 @@
 import type { Presence } from '../../data/RoomContext'
 import type { SyncStatus } from '../../data/provider'
 import { Popover } from '../../components/Popover'
-import type { TimeDirection } from './timeDirection'
 
 export interface BoardToolbarProps {
   title: string
@@ -16,8 +15,6 @@ export interface BoardToolbarProps {
   onRedo: () => void
   canUndo: boolean
   canRedo: boolean
-  direction: TimeDirection
-  onToggleDirection: () => void
 }
 
 const statusText: Record<SyncStatus, string> = {
@@ -41,8 +38,6 @@ export function BoardToolbar({
   onRedo,
   canUndo,
   canRedo,
-  direction,
-  onToggleDirection,
 }: BoardToolbarProps) {
   return (
     <header
@@ -131,9 +126,6 @@ export function BoardToolbar({
           </button>
           <button type="button" aria-label="Redo" disabled={!canRedo} onClick={onRedo} className="h-8 w-8 rounded-card border border-edge-350 text-ink-600 disabled:opacity-40">
             ↷
-          </button>
-          <button type="button" aria-label="Toggle time direction" aria-pressed={direction === 'up'} onClick={onToggleDirection} className="button-label rounded-card border border-edge-350 px-2 py-2 text-ink-600">
-            {direction === 'down' ? '↓' : '↑'}
           </button>
         </div>
         <button

@@ -1,5 +1,3 @@
-import type { TimeDirection } from './timeDirection'
-
 export const TIMELINE_SNAP_MINUTES = 15
 
 export interface ScheduleInterval {
@@ -8,7 +6,7 @@ export interface ScheduleInterval {
   duration: number
 }
 
-export type TimelineEditKind = 'move-top' | 'move-bottom' | 'resize-top' | 'resize-bottom'
+export type TimelineEditKind = 'move' | 'resize-start' | 'resize-end'
 
 export interface TimelineScheduleInput {
   active: ScheduleInterval
@@ -16,7 +14,6 @@ export interface TimelineScheduleInput {
   dayStart: number
   dayEnd: number
   edit: TimelineEditKind
-  direction: TimeDirection
 }
 
 export interface TimelineSchedulePlan {
@@ -34,14 +31,13 @@ function normalizeRequested({
   dayStart,
   dayEnd,
   edit,
-  direction,
 }: TimelineScheduleInput): Pick<TimelineSchedulePlan, 'activeStart' | 'activeDuration'> {
   const first = Math.ceil(dayStart / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   const last = Math.floor(dayEnd / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   const requestedStart = snap(requested.start)
   const requestedEnd = snap(requested.start + requested.duration)
 
-  if (edit === 'move-top' || edit === 'move-bottom') {
+  if (edit === 'move') {
     const activeDuration = Math.min(
       Math.max(requestedEnd - requestedStart, TIMELINE_SNAP_MINUTES),
       last - first,
@@ -50,10 +46,7 @@ function normalizeRequested({
     return { activeStart, activeDuration }
   }
 
-  const editsStart =
-    (edit === 'resize-top' && direction === 'down') ||
-    (edit === 'resize-bottom' && direction === 'up')
-  if (editsStart) {
+  if (edit === 'resize-start') {
     const fixedEnd = Math.min(
       Math.max(snap(active.start + active.duration), first + TIMELINE_SNAP_MINUTES),
       last,

@@ -44,13 +44,13 @@ function titles() {
 
 describe('DayColumn', () => {
   it('renders a color-coded, city-labeled header', () => {
-    render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
+    render(<DayColumn day={day} city={rome} cards={[]} />)
     expect(screen.getByTestId('city-name')).toHaveTextContent('Rome')
     expect(screen.getByTestId('city-band')).toHaveStyle({ backgroundColor: '#ef4444' })
   })
 
   it('fills available board width while keeping the multi-week minimum width', () => {
-    render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
+    render(<DayColumn day={day} city={rome} cards={[]} />)
 
     const column = screen.getByTestId('day-column')
     expect(column).toHaveStyle({ flex: '1 0 16rem', minWidth: '16rem' })
@@ -58,29 +58,24 @@ describe('DayColumn', () => {
   })
 
   it('shows a neutral header when no city is resolved', () => {
-    render(<DayColumn day={day} cards={[]} direction="down" />)
+    render(<DayColumn day={day} cards={[]} />)
     expect(screen.getByTestId('city-name')).toHaveTextContent('No city')
   })
 
   it('labels the day with the approved uppercase weekday and date', () => {
-    render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
+    render(<DayColumn day={day} city={rome} cards={[]} />)
     expect(screen.getByTestId('day-label')).toHaveTextContent('SAT · 01.05')
   })
 
-  it('lays out cards morning→evening with the down direction', () => {
-    render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
+  it('lays out cards morning→evening', () => {
+    render(<DayColumn day={day} city={rome} cards={cards} />)
     expect(titles()).toEqual(['Stroll', 'Breakfast', 'Dinner'])
     expect(screen.queryByText('Morning')).not.toBeInTheDocument()
     expect(screen.queryByText('Evening')).not.toBeInTheDocument()
   })
 
-  it('reverses the cards with the up direction', () => {
-    render(<DayColumn day={day} city={rome} cards={cards} direction="up" />)
-    expect(titles()).toEqual(['Dinner', 'Breakfast', 'Stroll'])
-  })
-
   it('shows the time on time-bound cards', () => {
-    render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
+    render(<DayColumn day={day} city={rome} cards={cards} />)
     const dinner = screen.getByText('Dinner').closest('[data-testid="card"]') as HTMLElement
     expect(within(dinner).getByTestId('card-time')).toHaveTextContent('19:00 – 21:00 · 2h')
   })
@@ -115,7 +110,7 @@ describe('DayColumn', () => {
         durationHours: 1,
       },
     ]
-    render(<DayColumn day={day} cards={overlapping} direction="down" />)
+    render(<DayColumn day={day} cards={overlapping} />)
     const card = (title: string) =>
       screen.getByText(title).closest('[data-testid="card"]') as HTMLElement
     expect(within(card('Tour')).getByText('Overlap')).toBeInTheDocument()
@@ -126,7 +121,7 @@ describe('DayColumn', () => {
   })
 
   it('pads the exact day-window track above and below the activity range', () => {
-    render(<DayColumn day={day} cards={[]} direction="down" dayStart="06:00" dayEnd="21:00" />)
+    render(<DayColumn day={day} cards={[]} dayStart="06:00" dayEnd="21:00" />)
     expect(screen.getByTestId('day-body')).toHaveStyle({
       height: `${900 + TIMELINE_VERTICAL_PADDING_PX * 2}px`,
     })
@@ -142,7 +137,6 @@ describe('DayColumn', () => {
         {...({ hourRail: 'right' } as { hourRail: 'right' })}
         day={day}
         cards={cards}
-        direction="down"
       />,
     )
     expect(screen.getAllByTestId('hour-mark').map((node) => node.textContent)).toEqual([
@@ -171,7 +165,7 @@ describe('DayColumn', () => {
 
   it('centers the free-time label and replaces it with the add action on hover', () => {
     const onAddCard = vi.fn()
-    render(<DayColumn day={day} cards={cards} direction="down" onAddCard={onAddCard} />)
+    render(<DayColumn day={day} cards={cards} onAddCard={onAddCard} />)
 
     const slots = screen.getAllByTestId('timeline-slot')
     expect(slots).toHaveLength(2)
@@ -204,7 +198,7 @@ describe('DayColumn', () => {
   })
 
   it('scales each card by its duration', () => {
-    render(<DayColumn day={day} cards={cards} direction="down" />)
+    render(<DayColumn day={day} cards={cards} />)
     const li = (title: string) => screen.getByText(title).closest('li') as HTMLElement
     expect(li('Dinner')).toHaveStyle({ height: '120px' })
     expect(li('Breakfast')).toHaveStyle({ height: '60px' })
@@ -232,7 +226,6 @@ describe('DayColumn', () => {
             durationHours: 1,
           },
         ]}
-        direction="down"
         dayStart="07:00"
         dayEnd="21:00"
       />,
@@ -242,7 +235,7 @@ describe('DayColumn', () => {
 
   it('offers Auto, No city, and per-city overrides, defaulting to Auto', () => {
     render(
-      <DayColumn day={day} city={rome} cards={[]} direction="down" cities={[rome, florence]} />,
+      <DayColumn day={day} city={rome} cards={[]} cities={[rome, florence]} />,
     )
     const picker = screen.getByRole('button', { name: 'Choose city' })
     expect(picker).toHaveTextContent('✎')
@@ -260,7 +253,6 @@ describe('DayColumn', () => {
         day={day}
         city={florence}
         cards={[]}
-        direction="down"
         cities={[rome, florence]}
         overrideCityId="florence"
       />,
@@ -276,7 +268,6 @@ describe('DayColumn', () => {
         day={day}
         city={rome}
         cards={[]}
-        direction="down"
         cities={[rome, florence]}
         onSetCity={onSetCity}
       />,
@@ -294,46 +285,46 @@ describe('DayColumn', () => {
 
   it('reflects an explicit no-city override', () => {
     render(
-      <DayColumn day={day} cards={[]} direction="down" cities={[rome]} overrideCityId={null} />,
+      <DayColumn day={day} cards={[]} cities={[rome]} overrideCityId={null} />,
     )
     expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
   })
 
   it('opens the day swap workflow from the header action', () => {
     const onSwapDay = vi.fn()
-    render(<DayColumn day={day} city={rome} cards={[]} direction="down" onSwapDay={onSwapDay} />)
+    render(<DayColumn day={day} city={rome} cards={[]} onSwapDay={onSwapDay} />)
     fireEvent.click(screen.getByRole('button', { name: 'Swap day' }))
     expect(onSwapDay).toHaveBeenCalledOnce()
     expect(onSwapDay).toHaveBeenCalledWith(day.key)
   })
 
   it('omits the override control when there are no cities to choose from', () => {
-    render(<DayColumn day={day} cards={[]} direction="down" cities={[]} />)
+    render(<DayColumn day={day} cards={[]} cities={[]} />)
     expect(screen.queryByRole('button', { name: 'Choose city' })).not.toBeInTheDocument()
   })
 
   it('flags weekends with a bold-vermilion weekday label, weekdays muted, no tint', () => {
-    const { rerender } = render(<DayColumn day={day} cards={[]} direction="down" />)
+    const { rerender } = render(<DayColumn day={day} cards={[]} />)
     // 2027-05-01 is a Saturday.
     expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
     expect(screen.getByTestId('day-label')).toHaveClass('text-city-vermilion')
 
     const monday: Day = { key: '2027-05-03', index: 2 }
-    rerender(<DayColumn day={monday} cards={[]} direction="down" />)
+    rerender(<DayColumn day={monday} cards={[]} />)
     expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
     expect(screen.getByTestId('day-label')).toHaveClass('text-ink-400')
     expect(screen.getByTestId('day-label')).not.toHaveClass('text-city-vermilion')
   })
 
   it('renders the city colour as a 4px rounded header underline', () => {
-    render(<DayColumn day={day} city={rome} cards={[]} direction="down" />)
+    render(<DayColumn day={day} city={rome} cards={[]} />)
     const band = screen.getByTestId('city-band')
     expect(band).toHaveStyle({ backgroundColor: '#ef4444' })
     expect(band).toHaveClass('h-1', 'rounded-[2px]')
   })
 
   it('removes persistent column chrome, internal scrolling, and the noon divider', () => {
-    render(<DayColumn day={day} city={rome} cards={cards} direction="down" />)
+    render(<DayColumn day={day} city={rome} cards={cards} />)
     const column = screen.getByTestId('day-column')
     expect(column.className).not.toMatch(/rounded|shadow|\bborder\b/)
     expect(screen.getByTestId('day-body')).not.toHaveClass('overflow-y-auto')
@@ -343,7 +334,7 @@ describe('DayColumn', () => {
   it('highlights the column when the drag context marks this day as the drop target', () => {
     render(
       <DragOverDayContext.Provider value={day.key}>
-        <DayColumn day={day} city={rome} cards={[]} direction="down" />
+        <DayColumn day={day} city={rome} cards={[]} />
       </DragOverDayContext.Provider>,
     )
     const column = screen.getByTestId('day-column')
@@ -356,7 +347,7 @@ describe('DayColumn', () => {
       <DragPreviewContext.Provider
         value={{ card: cards[1], dayKey: day.key, startTime: '10:15', durationHours: 1 }}
       >
-        <DayColumn day={day} city={rome} cards={cards} direction="down" />
+        <DayColumn day={day} city={rome} cards={cards} />
       </DragPreviewContext.Provider>,
     )
 

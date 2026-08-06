@@ -201,12 +201,9 @@ describe('Board', () => {
     expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Redo' })).toBeInTheDocument()
-    const toggle = screen.getByRole('button', { name: 'Toggle time direction' })
-    expect(toggle).toHaveClass('border-edge-350', 'text-ink-600')
-    expect(toggle.className).not.toMatch(/slate-/)
   })
 
-  it('reverses every card in every day when the direction is toggled', () => {
+  it('keeps the timeline direction fixed', () => {
     renderBoard(<Board />)
     act(() => {
       setTrip(doc, { startDate: '2027-05-01', endDate: '2027-05-01' })
@@ -216,8 +213,6 @@ describe('Board', () => {
 
     const titles = () => screen.getAllByTestId('card-title').map((n) => n.textContent)
     expect(titles()).toEqual(['Breakfast', 'Dinner'])
-
-    act(() => screen.getByRole('button', { name: 'Toggle time direction' }).click())
-    expect(titles()).toEqual(['Dinner', 'Breakfast'])
+    expect(screen.queryByRole('button', { name: 'Toggle time direction' })).not.toBeInTheDocument()
   })
 })

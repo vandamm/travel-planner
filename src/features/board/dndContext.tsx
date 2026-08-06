@@ -30,11 +30,9 @@ import {
   timelineDropOffset,
   type CardDropPlan,
 } from './dndHandlers'
-import type { TimeDirection } from './timeDirection'
 
 export interface BoardDndProps {
   doc: Y.Doc
-  direction: TimeDirection
   dayStart?: string
   dayEnd?: string
   onTimelineChange?: () => void
@@ -43,7 +41,6 @@ export interface BoardDndProps {
 
 export function BoardDnd({
   doc,
-  direction,
   dayStart = '06:00',
   dayEnd = '21:00',
   onTimelineChange,
@@ -73,16 +70,15 @@ export function BoardDnd({
           card,
           edge,
           deltaPx,
-          direction,
           dayStart,
           dayEnd,
         })
       },
       commit(cardId, edge, deltaPx) {
-        if (applyCardResize(doc, cardId, edge, deltaPx, direction)) onTimelineChange?.()
+        if (applyCardResize(doc, cardId, edge, deltaPx)) onTimelineChange?.()
       },
     }),
-    [dayEnd, dayStart, direction, doc, onTimelineChange],
+    [dayEnd, dayStart, doc, onTimelineChange],
   )
 
   function handleDragStart(event: DragStartEvent) {
@@ -129,7 +125,6 @@ export function BoardDnd({
       offsetPx: timelineDropOffset(droppedTop, timelineRect.top, 0),
       dayStart,
       dayEnd,
-      direction,
     })
   }
 

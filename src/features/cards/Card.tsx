@@ -19,7 +19,6 @@ import {
 } from 'react'
 import type { Card as CardType, CardCategory } from '../../data/schema'
 import { CardResizeContext, type CardResizeEdge, type CardResizePlan } from '../board/cardResize'
-import type { TimeDirection } from '../board/timeDirection'
 import { cardCategory } from './cardCategory'
 import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
 
@@ -42,7 +41,6 @@ export interface CardProps {
     start: ButtonHTMLAttributes<HTMLButtonElement>
     end: ButtonHTMLAttributes<HTMLButtonElement>
   }
-  direction?: TimeDirection
   dayStart?: string
   dayEnd?: string
   /** Ephemeral timing shown while this card is moved or resized. */
@@ -130,7 +128,6 @@ export function Card({
   onEdit,
   dragSurfaceProps,
   resizeHandleProps,
-  direction = 'down',
   dayStart = '06:00',
   dayEnd = '21:00',
   timingPreview,
@@ -164,8 +161,7 @@ export function Card({
   }
 
   function resizeHandle(edge: CardResizeEdge, props: ButtonHTMLAttributes<HTMLButtonElement>) {
-    const atTop =
-      (edge === 'start' && direction === 'down') || (edge === 'end' && direction === 'up')
+    const atTop = edge === 'start'
     return (
       <button
         {...props}
@@ -311,7 +307,6 @@ export interface SortableCardProps {
   onEdit?: (card: CardType) => void
   dayStart?: string
   dayEnd?: string
-  direction?: TimeDirection
   /** Layout for the sortable list item, including its preceding drop area. */
   layoutStyle?: CSSProperties
 }
@@ -326,7 +321,6 @@ export function SortableCard({
   onEdit,
   dayStart,
   dayEnd,
-  direction = 'down',
   layoutStyle,
 }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: card.id })
@@ -473,7 +467,6 @@ export function SortableCard({
           onEdit={onEdit}
           dayStart={dayStart}
           dayEnd={dayEnd}
-          direction={direction}
           dragSurfaceProps={{ ...attributes, ...listeners }}
           resizeHandleProps={resizeHandleProps}
         />
