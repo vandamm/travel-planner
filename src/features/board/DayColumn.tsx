@@ -9,19 +9,21 @@ import { format, isWeekend, parseISO } from 'date-fns'
 import { formatDay } from '../../data/dateFormat'
 import type { Card as CardType, City, Day, DayCityOverride } from '../../data/schema'
 import { NO_CITY_COLOR } from '../cities/colors'
+import { CityPicker } from '../cities/CityPicker'
 import { Card, SortableCard } from '../cards/Card'
 import {
   PX_PER_HOUR,
+  TIMELINE_VERTICAL_PADDING_PX,
   cardHeightPx,
   clockMinutes,
-  noonFraction,
   resolvedDurationHours,
   windowHeightPx,
 } from '../cards/cardHeight'
 import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
-import { TIME_SCALE, orderCardsForDirection, type TimeDirection } from './timeDirection'
-import { COLUMN_WIDTH_REM } from './useViewport'
+import type { TimeDirection } from './timeDirection'
+import { formatFreeDuration, freeTimelineSlots, layoutTimelineCards } from './timelineSlots'
+import { COLUMN_GAP_PX, COLUMN_WIDTH_REM } from './useViewport'
 
 export interface DayColumnProps {
   day: Day
@@ -42,33 +44,59 @@ export interface DayColumnProps {
   /** Open the two-day activity swap workflow from this day. */
   onSwapDay?: (dayKey: string) => void
   /** Open the editor to add a card to this day. */
-  onAddCard?: (dayKey: string) => void
+  onAddCard?: (dayKey: string, startTime?: string) => void
   /** Open the editor on an existing card. */
   onEditCard?: (card: CardType) => void
+  /** The mobile view supplies its own compact day header. */
+  showHeader?: boolean
+  /** Numeric hour rail shown in the desktop gutter or at mobile screen-left. */
+  hourRail?: 'left' | 'right'
 }
 
-const NO_CITY_OPTION = '__no-city__'
+function HourRail({
+  side,
+  dayStart,
+  dayEnd,
+  direction,
+}: {
+  side: 'left' | 'right'
+  dayStart: string
+  dayEnd: string
+  direction: TimeDirection
+}) {
+  const start = clockMinutes(dayStart)
+  const end = clockMinutes(dayEnd)
+  const firstHour = Math.ceil(start / 60)
+  const hours = Array.from(
+    { length: Math.max(0, Math.ceil(end / 60) - firstHour) },
+    (_, index) => firstHour + index,
+  ).filter((hour) => hour % 2 === 0 && hour * 60 < end)
 
-function cardGapPx(
-  card: CardType,
-  direction: TimeDirection,
-  dayStart: string,
-  dayEnd: string,
-  cursor: { current: number },
-): number {
-  const height = cardHeightPx(card, dayStart, dayEnd)
-  if (!card.startTime) {
-    cursor.current += height
-    return 0
-  }
-  const start = clockMinutes(card.startTime)
-  const top =
-    direction === 'up'
-      ? clockMinutes(dayEnd) - (start + resolvedDurationHours(card, dayStart, dayEnd) * 60)
-      : start - clockMinutes(dayStart)
-  const gap = Math.max((top / 60) * PX_PER_HOUR - cursor.current, 0)
-  cursor.current += gap + height
-  return gap
+  return (
+    <ol
+      data-testid="hour-rail"
+      aria-hidden
+      style={side === 'right' ? { right: -COLUMN_GAP_PX, width: COLUMN_GAP_PX } : undefined}
+      className={`pointer-events-none absolute top-0 z-20 h-full ${side === 'right' ? '' : '-left-7 w-[14px]'}`}
+    >
+      {hours.map((hour) => {
+        const minute = hour * 60
+        const offset = direction === 'up' ? end - minute : minute - start
+        return (
+          <li
+            key={hour}
+            data-testid="hour-mark"
+            style={{ top: (offset / 60) * PX_PER_HOUR }}
+            className="absolute inset-x-0 flex -translate-y-1/2 items-center gap-px font-sans text-[10px] font-semibold leading-none text-hour-text"
+          >
+            <span className="h-px flex-1 bg-hour-rule" />
+            <span>{hour}</span>
+            <span className="h-px flex-1 bg-hour-rule" />
+          </li>
+        )
+      })}
+    </ol>
+  )
 }
 
 function overlappingCardIds(cards: CardType[], dayStart: string, dayEnd: string): Set<string> {
@@ -104,22 +132,17 @@ export function DayColumn({
   onSwapDay,
   onAddCard,
   onEditCard,
+  showHeader = true,
+  hourRail,
 }: DayColumnProps) {
-  const ordered = orderCardsForDirection(cards, direction)
+  const placements = layoutTimelineCards(cards, dayStart, dayEnd, direction)
+  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd, direction)
   const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
-  const scale = direction === 'up' ? [...TIME_SCALE].reverse() : [...TIME_SCALE]
-  const cardCursor = { current: 0 }
-  const weekday = format(parseISO(day.key), 'EEE')
-  const dateLabel = formatDay(day.key) // day-first dd.MM for the EU audience
+  const weekday = format(parseISO(day.key), 'EEE').toUpperCase()
+  const dateLabel = formatDay(day.key)
   const weekend = isWeekend(parseISO(day.key))
 
-  // NOON hairline: a positional hint at noon's fraction of the day window.
-  // 'up' anchors it from the bottom (morning at the bottom).
-  const noonPx = noonFraction(dayStart, dayEnd) * windowHeightPx(dayStart, dayEnd)
-  const noonStyle =
-    direction === 'up'
-      ? { bottom: `${noonPx}px` }
-      : { top: `${noonPx}px` }
+  const timelineHeight = windowHeightPx(dayStart, dayEnd)
 
   // The column body is a drop target so cards can be dropped onto an empty day
   // (or its blank space), not only onto another card.
@@ -143,157 +166,150 @@ export function DayColumn({
       data-day={day.key}
       data-drag-over={dragOver ? '' : undefined}
       aria-label={`${weekday} ${dateLabel}${city ? ` — ${city.name}` : ''}`}
-      style={{ width: COLUMN_WIDTH_REM }}
-      className={`flex shrink-0 flex-col rounded-frame border bg-white shadow-sm ${dragOver ? 'border-sky-400 ring-2 ring-sky-300' : 'border-edge'}`}
+      style={{ flex: `1 0 ${COLUMN_WIDTH_REM}`, minWidth: COLUMN_WIDTH_REM }}
+      className={`flex shrink-0 flex-col bg-white ${dragOver ? 'ring-2 ring-sky-300' : ''}`}
     >
-      <header className="rounded-t-frame">
-        <div className="flex flex-col gap-0.5 px-3 pb-2 pt-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span
-              data-testid="day-label"
-              className={`text-[9.5px] font-extrabold uppercase tracking-[0.18em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
-            >
-              {weekday} · {dateLabel}
-            </span>
-            {onSwapDay && (
-              <button
-                type="button"
-                onClick={() => onSwapDay(day.key)}
-                className="text-[10px] font-semibold text-ink-400 underline decoration-edge-300 underline-offset-2 hover:text-ink-600"
+      {showHeader && (
+        <header>
+          <div className="flex flex-col gap-0.5 px-3 pb-2 pt-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                data-testid="day-label"
+                className={`text-[9.5px] font-extrabold uppercase tracking-[0.18em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
               >
-                Swap day
-              </button>
-            )}
-          </div>
-          <div className="flex items-center justify-between gap-1.5">
-            <span
-              data-testid="city-name"
-              className="font-serif text-lg font-bold leading-tight text-ink"
-            >
-              {city ? city.name : <span className="text-ink-300">No city</span>}
-            </span>
-            {cities.length > 0 && (
-              <select
-                data-testid="city-override"
-                aria-label={`City for ${weekday} ${dateLabel}`}
-                value={overrideCityId === null ? NO_CITY_OPTION : (overrideCityId ?? '')}
-                onChange={(e) => {
-                  const value = e.target.value
-                  onSetCity?.(
-                    day.key,
-                    value === '' ? undefined : value === NO_CITY_OPTION ? null : value,
-                  )
-                }}
-                className="max-w-[6rem] rounded-chip border border-edge bg-white px-1 py-0.5 text-xs text-ink-600"
-                style={
-                  overrideCityId && city
-                    ? { borderColor: city.color, color: city.color }
-                    : undefined
-                }
+                {weekday} · {dateLabel}
+              </span>
+              {onSwapDay && (
+                <button
+                  type="button"
+                  aria-label="Swap day"
+                  title="Swap day"
+                  onClick={() => onSwapDay(day.key)}
+                  className="grid h-6 w-6 place-items-center text-base text-ink-200 hover:text-ink-600"
+                >
+                  <span aria-hidden>⇄</span>
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <span
+                data-testid="city-name"
+                className="font-serif text-[19px] font-bold leading-tight text-ink"
               >
-                <option value="">Auto</option>
-                <option value={NO_CITY_OPTION}>No city</option>
-                {cities.map((c) => (
-                  <option key={c.id} value={c.id} style={{ color: c.color }}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
+                {city ? city.name : <span className="text-ink-300">No city</span>}
+              </span>
+              {cities.length > 0 && (
+                <CityPicker
+                  label="Choose city"
+                  value={overrideCityId}
+                  resolvedCityId={city?.id}
+                  cities={cities}
+                  includeNoCity
+                  bareEdit
+                  onChange={(cityId) => onSetCity?.(day.key, cityId)}
+                />
+              )}
+            </div>
           </div>
-        </div>
-        <div
-          data-testid="city-band"
-          style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
-          className="h-[3px] w-full"
-        />
-      </header>
+          <div
+            data-testid="city-band"
+            style={{ backgroundColor: city?.color ?? NO_CITY_COLOR }}
+            className="h-1 w-full rounded-[2px]"
+          />
+        </header>
+      )}
 
       <div
-        ref={setNodeRef}
         data-testid="day-body"
-        style={{ height: windowHeightPx(dayStart, dayEnd) }}
-        className="relative overflow-y-auto px-3"
+        style={{ height: timelineHeight + TIMELINE_VERTICAL_PADDING_PX * 2 }}
+        className="relative"
       >
-        {/* NOON hairline — a positional divider at noon's fraction of the day
-            window, respecting time-direction. Purely a visual hint. */}
         <div
-          data-testid="noon-divider"
-          aria-hidden
-          style={noonStyle}
-          className="pointer-events-none absolute left-3 right-3 flex items-center gap-2"
+          ref={setNodeRef}
+          data-testid="timeline-track"
+          style={{ top: TIMELINE_VERTICAL_PADDING_PX, height: timelineHeight }}
+          className={`absolute right-0 ${hourRail === 'left' ? 'left-7' : 'left-0'}`}
         >
-          <span className="h-px flex-1 bg-edge-100" />
-          <span className="font-sans text-[8px] font-bold uppercase tracking-[0.16em] text-ink-200">
-            NOON
-          </span>
-          <span className="h-px flex-1 bg-edge-100" />
-        </div>
-
-        {/* Continuous time scale anchored at the top and bottom of the card. */}
-        <ol
-          data-testid="scale"
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 inset-y-0 flex flex-col justify-between"
-        >
-          {scale.map((label) => (
-            <li
-              key={label}
-              data-testid="scale-label"
-              className="text-center text-[10px] font-semibold uppercase tracking-wide text-ink-300"
-            >
-              {label}
-            </li>
-          ))}
-        </ol>
-
-        <ol data-testid="card-list" className="relative flex flex-col pl-0">
-          {ordered.map((c) => {
-            const gap = cardGapPx(c, direction, dayStart, dayEnd, cardCursor)
-            return (
-              <SortableCard
-                key={c.id}
-                card={c}
-                conflict={conflicts.has(c.id)}
-                onEdit={onEditCard}
-                dayStart={dayStart}
-                dayEnd={dayEnd}
-                direction={direction}
-                layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
-              />
-            )
-          })}
-        </ol>
-
-        {dragPreview?.dayKey === day.key && (
-          <div
-            data-testid="drag-preview-card"
-            style={{
-              top: previewTopPx,
-              height: dragPreview.durationHours * PX_PER_HOUR,
-            }}
-            className="pointer-events-none absolute inset-x-3 z-20"
-          >
-            <Card
-              card={dragPreview.card}
+          {hourRail && (
+            <HourRail
+              side={hourRail}
               dayStart={dayStart}
               dayEnd={dayEnd}
-              timingPreview={dragPreview}
+              direction={direction}
             />
-          </div>
-        )}
+          )}
+          {freeSlots.map((slot) => {
+            const start = clockMinutes(slot.startTime)
+            const end = clockMinutes(slot.endTime)
+            const offset =
+              direction === 'up' ? clockMinutes(dayEnd) - end : start - clockMinutes(dayStart)
+            const height = ((end - start) / 60) * PX_PER_HOUR
+            return (
+              <button
+                key={`${slot.startTime}-${slot.endTime}`}
+                type="button"
+                data-testid="timeline-slot"
+                aria-label={`Add activity from ${slot.startTime} to ${slot.endTime}`}
+                onClick={() => onAddCard?.(day.key, slot.startTime)}
+                style={{ top: (offset / 60) * PX_PER_HOUR, height }}
+                className="group absolute inset-x-0 z-0 grid cursor-pointer place-items-center overflow-hidden rounded-card border border-dashed border-edge-300 bg-white/80 px-2 text-ink-400 hover:border-solid hover:border-free-border hover:bg-free-hover focus-visible:z-20 focus-visible:border-solid focus-visible:border-free-border focus-visible:bg-free-hover"
+              >
+                <span className="col-start-1 row-start-1 whitespace-nowrap font-serif text-[12.5px] italic leading-none transition-opacity group-hover:opacity-0 group-focus-visible:opacity-0">
+                  {formatFreeDuration(slot.startTime, slot.endTime)}
+                </span>
+                <span className="col-start-1 row-start-1 whitespace-nowrap font-sans text-[10px] font-bold uppercase leading-none tracking-[0.08em] text-city-vermilion opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  ＋ add activity
+                </span>
+              </button>
+            )
+          })}
+
+          <ol
+            data-testid="card-list"
+            className="pointer-events-none relative z-10 flex flex-col pl-0"
+          >
+            {placements.map((placement, index) => {
+              const previous = placements[index - 1]
+              const previousEnd = previous
+                ? previous.offsetMinutes + previous.durationMinutes
+                : 0
+              const gap = ((placement.offsetMinutes - previousEnd) / 60) * PX_PER_HOUR
+              const c = placement.card
+              return (
+                <SortableCard
+                  key={c.id}
+                  card={c}
+                  conflict={conflicts.has(c.id)}
+                  onEdit={onEditCard}
+                  dayStart={dayStart}
+                  dayEnd={dayEnd}
+                  direction={direction}
+                  layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
+                />
+              )
+            })}
+          </ol>
+
+          {dragPreview?.dayKey === day.key && (
+            <div
+              data-testid="drag-preview-card"
+              style={{
+                top: previewTopPx,
+                height: dragPreview.durationHours * PX_PER_HOUR,
+              }}
+              className="pointer-events-none absolute inset-x-0 z-20"
+            >
+              <Card
+                card={dragPreview.card}
+                dayStart={dayStart}
+                dayEnd={dayEnd}
+                timingPreview={dragPreview}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
-      <footer className="px-3 pb-3 pt-1">
-        <button
-          type="button"
-          aria-label={`Add card to ${weekday} ${dateLabel}`}
-          onClick={() => onAddCard?.(day.key)}
-          className="w-full rounded border border-dashed border-edge-300 px-2 py-1 text-xs font-medium text-ink-500 hover:border-ink-300 hover:text-ink-600"
-        >
-          + Add card
-        </button>
-      </footer>
     </section>
   )
 }

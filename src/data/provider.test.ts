@@ -7,6 +7,8 @@ describe('connectRoom (local-first, sync disabled)', () => {
     const conn = connectRoom({ roomId: 'local-test', workerUrl: '', enableSync: false })
     try {
       expect(conn.getStatus()).toBe('local')
+      expect(typeof conn.updatePresence).toBe('function')
+      expect(() => conn.updatePresence({ name: 'Anna' })).not.toThrow()
       addCity(conn.doc, { id: 'rome', name: 'Rome', color: '#ef4444' })
       expect(listCities(conn.doc).map((c) => c.name)).toEqual(['Rome'])
     } finally {

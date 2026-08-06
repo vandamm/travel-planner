@@ -2,13 +2,12 @@
 // scrim pop-over, opened from the header's `[✎ Trip]` button. Edits write
 // straight through the shared `setTrip` mutator — live, like every other edit —
 // so there is no Save/Cancel: a single ink `Done` (plus backdrop / Escape via
-// the shared `Modal`) closes it. Start date + day window use the custom
-// calendar / time-wheel pickers.
+// the shared `Modal`) closes it. Start date uses the custom calendar while the
+// day window uses native time inputs.
 
 import { useState } from 'react'
 import { Modal } from '../../components/Modal'
 import { DatePicker } from '../pickers/DatePicker'
-import { TimePicker } from '../pickers/TimePicker'
 import { getTrip, setTrip } from '../../data/doc'
 import { applyTrip } from '../../data/applyTrip'
 import { exportTripJSON } from '../../data/exportTrip'
@@ -45,6 +44,8 @@ export function TripModal({ onClose }: TripModalProps) {
   const [pasteText, setPasteText] = useState('')
   const [applyError, setApplyError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [dateError, setDateError] = useState<string | null>(null)
+  const [timeError, setTimeError] = useState<string | null>(null)
 
   // "Recent versions" — pre-write snapshots the Worker records on each AI write.
   const [versions, setVersions] = useState<VersionMeta[]>([])
@@ -54,6 +55,50 @@ export function TripModal({ onClose }: TripModalProps) {
     if (currentJson === null) return
     void navigator.clipboard?.writeText(currentJson)
     setCopied(true)
+  }
+
+  function setStartDate(startDate: string) {
+    if (trip.endDate && startDate > trip.endDate) {
+      setDateError('Start date must be on or before end date.')
+      return
+    }
+    setDateError(null)
+    setTrip(doc, { startDate })
+  }
+
+  function setEndDate(endDate: string) {
+    if (trip.startDate && endDate < trip.startDate) {
+      setDateError('End date must be on or after start date.')
+      return
+    }
+    setDateError(null)
+    setTrip(doc, { endDate })
+  }
+
+  function validDayTime(input: HTMLInputElement): string | null {
+    if (!input.value || !input.validity.valid) {
+      setTimeError('Enter a time in 15-minute increments.')
+      return null
+    }
+    return input.value
+  }
+
+  function setDayStart(dayStart: string) {
+    if (dayStart >= trip.dayEnd) {
+      setTimeError('Day end must be later than day start.')
+      return
+    }
+    setTimeError(null)
+    setTrip(doc, { dayStart })
+  }
+
+  function setDayEnd(dayEnd: string) {
+    if (dayEnd <= trip.dayStart) {
+      setTimeError('Day end must be later than day start.')
+      return
+    }
+    setTimeError(null)
+    setTrip(doc, { dayEnd })
   }
 
   // Full replace — a native confirm is enough of a guard for a personal planner.
@@ -114,10 +159,12 @@ export function TripModal({ onClose }: TripModalProps) {
   return (
     <Modal
       label="Trip details"
+      title="Trip details"
       onClose={onClose}
-      className="flex w-full flex-col gap-4 sm:max-w-md"
+      mobileAction={<button type="button" onClick={onClose} className="button-label text-ink">Done</button>}
+      className="flex w-full flex-col gap-4 min-[400px]:max-w-md"
     >
-      <div className="hidden items-center gap-3 border-b border-edge pb-3 sm:flex">
+      <div className="hidden items-center gap-3 border-b border-edge pb-3 min-[400px]:flex">
         {/* Vermilion seal — mirrors the header mark, per the mock. */}
         <div
           aria-hidden
@@ -146,7 +193,7 @@ export function TripModal({ onClose }: TripModalProps) {
           <DatePicker
             label="Start date"
             value={trip.startDate}
-            onSelect={(iso) => setTrip(doc, { startDate: iso })}
+            onSelect={setStartDate}
             placeholder="Pick a start date"
             triggerClassName={`${fieldInput} font-serif text-left`}
           />
@@ -157,12 +204,13 @@ export function TripModal({ onClose }: TripModalProps) {
           <DatePicker
             label="End date"
             value={trip.endDate}
-            onSelect={(iso) => setTrip(doc, { endDate: iso })}
+            onSelect={setEndDate}
             placeholder="Pick an end date"
             triggerClassName={`${fieldInput} font-serif text-left`}
           />
         </div>
       </div>
+      {dateError && <p role="alert" className="text-xs text-city-vermilion">{dateError}</p>}
 
       <label className="flex flex-col gap-1.5">
         <span className={sectionLabel}>Trip colour</span>
@@ -183,20 +231,37 @@ export function TripModal({ onClose }: TripModalProps) {
           </span>
         </span>
         <div className="flex items-center gap-2">
-          <TimePicker
-            label="Day start"
-            value={trip.dayStart}
-            onChange={(v) => setTrip(doc, { dayStart: v })}
-            triggerClassName={`${fieldInput} flex-1 text-center font-serif`}
-          />
+          <label className="flex flex-1">
+            <span className="sr-only">Day start</span>
+            <input
+              type="time"
+              required
+              step={900}
+              value={trip.dayStart}
+              onChange={(e) => {
+                const value = validDayTime(e.currentTarget)
+                if (value !== null) setDayStart(value)
+              }}
+              className={`${fieldInput} min-w-0 flex-1 text-center font-serif`}
+            />
+          </label>
           <span className="text-xs font-semibold text-ink-400">to</span>
-          <TimePicker
-            label="Day end"
-            value={trip.dayEnd}
-            onChange={(v) => setTrip(doc, { dayEnd: v })}
-            triggerClassName={`${fieldInput} flex-1 text-center font-serif`}
-          />
+          <label className="flex flex-1">
+            <span className="sr-only">Day end</span>
+            <input
+              type="time"
+              required
+              step={900}
+              value={trip.dayEnd}
+              onChange={(e) => {
+                const value = validDayTime(e.currentTarget)
+                if (value !== null) setDayEnd(value)
+              }}
+              className={`${fieldInput} min-w-0 flex-1 text-center font-serif`}
+            />
+          </label>
         </div>
+        {timeError && <p role="alert" className="text-xs text-city-vermilion">{timeError}</p>}
       </div>
 
       {/* Low-prominence: copy the board as JSON for an AI, or paste an AI's
@@ -299,7 +364,7 @@ export function TripModal({ onClose }: TripModalProps) {
         </div>
       </details>
 
-      <div className="mt-1 flex justify-end">
+      <div className="mt-1 flex justify-end max-[399px]:hidden">
         <button
           type="button"
           onClick={onClose}

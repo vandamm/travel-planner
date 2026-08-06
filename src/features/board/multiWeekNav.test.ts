@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateDays } from '../../data/days'
-import { COLUMN_STRIDE_PX, rangeLabel, showRightFade, todayIndex, visibleRange } from './multiWeekNav'
+import { COLUMN_STRIDE_PX, rangeLabel, rangeSummary, showRightFade, todayIndex, visibleRange } from './multiWeekNav'
 
 describe('showRightFade', () => {
   it('shows the fade when columns overflow and the left is in view', () => {
@@ -76,5 +76,19 @@ describe('rangeLabel', () => {
 
   it('renders a single date when only one column is visible', () => {
     expect(rangeLabel(days, { clientWidth: 100, scrollLeft: 0 })).toBe('01.05')
+  })
+})
+
+describe('rangeSummary', () => {
+  const days = generateDays('2027-05-01', '2027-05-14')
+
+  it('combines the visible date span and one-based day positions', () => {
+    expect(rangeSummary(days, { clientWidth: 1000, scrollLeft: 3 * COLUMN_STRIDE_PX })).toBe(
+      'Showing 04.05 – 06.05 · days 4–6 of 14',
+    )
+  })
+
+  it('is empty when there are no days', () => {
+    expect(rangeSummary([], { clientWidth: 1000, scrollLeft: 0 })).toBe('')
   })
 })

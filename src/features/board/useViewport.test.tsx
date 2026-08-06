@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  COLUMN_GAP_PX,
   COLUMN_WIDTH_PX,
   columnsThatFit,
   DESKTOP_BREAKPOINT,
@@ -18,14 +19,14 @@ function setWidth(width: number) {
 }
 
 describe('selectViewport', () => {
-  it('is mobile only below the compact 640px desktop breakpoint', () => {
+  it('is mobile only below the approved 400px desktop breakpoint', () => {
     expect(selectViewport(375)).toBe('mobile')
-    expect(selectViewport(639)).toBe('mobile')
+    expect(selectViewport(399)).toBe('mobile')
     expect(selectViewport(DESKTOP_BREAKPOINT - 1)).toBe('mobile')
   })
 
-  it('is desktop at and above the 640px breakpoint', () => {
-    expect(DESKTOP_BREAKPOINT).toBe(640)
+  it('is desktop at and above the 400px breakpoint', () => {
+    expect(DESKTOP_BREAKPOINT).toBe(400)
     expect(selectViewport(DESKTOP_BREAKPOINT)).toBe('desktop')
     expect(selectViewport(1440)).toBe('desktop')
   })
@@ -37,12 +38,13 @@ describe('columnsThatFit', () => {
     expect(columnsThatFit(375)).toBe(1)
   })
 
-  it('uses 272px / 17rem columns everywhere in fit calculations', () => {
-    expect(COLUMN_WIDTH_PX).toBe(272)
-    // 272 + 12 gap + 272 = 556, plus 32px container padding = 588.
-    expect(columnsThatFit(588)).toBe(2)
+  it('uses narrower columns and wider inter-day gutters in fit calculations', () => {
+    expect(COLUMN_WIDTH_PX).toBe(256)
+    expect(COLUMN_GAP_PX).toBe(20)
+    // 256 + 20 gap + 256 = 532, plus 32px container padding = 564.
+    expect(columnsThatFit(564)).toBe(2)
     // One pixel short of a clean two-column fit drops back to one.
-    expect(columnsThatFit(587)).toBe(1)
+    expect(columnsThatFit(563)).toBe(1)
     expect(columnsThatFit(900)).toBe(3)
   })
 })
@@ -62,7 +64,7 @@ describe('useViewport', () => {
     expect(result.current).toBe('desktop')
 
     act(() => {
-      setWidth(500)
+      setWidth(399)
       window.dispatchEvent(new Event('resize'))
     })
     expect(result.current).toBe('mobile')

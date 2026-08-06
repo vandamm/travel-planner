@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import * as provider from './provider'
@@ -28,6 +29,19 @@ function RoomProbe() {
   return (
     <div>
       <span data-testid="room">{roomId ?? '∅'}</span>
+    </div>
+  )
+}
+
+function PresenceProbe() {
+  const { myself, presences, setPresence } = useRoom()
+  return (
+    <div>
+      <span data-testid="myself">{myself?.name}</span>
+      <span data-testid="presence-count">{presences.length}</span>
+      <button type="button" onClick={() => setPresence({ name: 'Anna' })}>
+        Rename
+      </button>
     </div>
   )
 }
@@ -68,6 +82,7 @@ describe('RoomProvider', () => {
       onStatus: () => () => undefined,
       getPresences: () => [],
       onPresences: () => () => undefined,
+      updatePresence: () => undefined,
       destroy: () => undefined,
     })
     render(
@@ -76,6 +91,34 @@ describe('RoomProvider', () => {
       </RoomProvider>,
     )
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ enableSync: true }))
+    spy.mockRestore()
+  })
+
+  it('includes the current user once and publishes subsequent presence updates', async () => {
+    const user = userEvent.setup()
+    const updatePresence = vi.fn()
+    const doc = new Y.Doc()
+    const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
+      doc,
+      whenLocalLoaded: Promise.resolve(),
+      getStatus: () => 'local',
+      onStatus: () => () => undefined,
+      getPresences: () => [],
+      onPresences: () => () => undefined,
+      updatePresence,
+      destroy: () => undefined,
+    })
+    render(
+      <RoomProvider workerUrl="" roomId="rome-2027" enableSync={false}>
+        <PresenceProbe />
+      </RoomProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId('presence-count')).toHaveTextContent('1'))
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    expect(screen.getByTestId('myself')).toHaveTextContent('Anna')
+    expect(updatePresence).toHaveBeenCalledWith({ name: 'Anna' })
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ initialPresence: expect.any(Object) }))
     spy.mockRestore()
   })
 
@@ -93,6 +136,7 @@ describe('RoomProvider', () => {
       onStatus: () => () => undefined,
       getPresences: () => [],
       onPresences: () => () => undefined,
+      updatePresence: () => undefined,
       destroy: () => undefined,
     })
 

@@ -32,7 +32,10 @@ test('the front page shows the timeline and exposes the linked calendar', async 
   await expect(page.getByRole('region', { name: 'Board' })).toHaveCount(0)
 
   await page.getByRole('button', { name: /New trip/ }).click()
+  await page.getByLabel('Trip name').fill('Rome 2026')
   await page.getByLabel('Trip slug').fill('rome-2026')
+  await page.getByLabel('Start date').fill('2026-07-15')
+  await page.getByLabel('End date').fill('2026-07-22')
   await page.getByRole('button', { name: 'Create trip' }).click()
   await expect(page).toHaveURL(/\/rome-2026$/)
 })

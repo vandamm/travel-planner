@@ -8,6 +8,8 @@ import type { Card } from '../../data/schema'
 
 /** Pixels per hour of the time window — the timeline's vertical scale. */
 export const PX_PER_HOUR = 60
+/** Space reserved outside the activity track for the Morning/Evening labels. */
+export const TIMELINE_VERTICAL_PADDING_PX = 24
 /** Timeline and custom-duration granularity. */
 export const SNAP_MINUTES = 15
 /** Smallest permitted custom-card duration. */
@@ -57,18 +59,6 @@ function windowHours(dayStart: string, dayEnd: string): number {
 /** Body height (px) for the day window; never shorter than one default block. */
 export function windowHeightPx(dayStart: string, dayEnd: string): number {
   return windowHours(dayStart, dayEnd) * PX_PER_HOUR
-}
-
-/**
- * Fraction (0..1) of the day window at which noon (12:00) falls — drives the
- * board's positional NOON divider. Clamped to the window, so a window that never
- * reaches noon pins the divider to an edge rather than overflowing.
- */
-export function noonFraction(dayStart: string, dayEnd: string): number {
-  const start = clockMinutes(dayStart)
-  const span = clockMinutes(dayEnd) - start
-  if (span <= 0) return 0.5
-  return Math.min(1, Math.max(0, (clockMinutes('12:00') - start) / span))
 }
 
 /** Resolve a card duration to positive hours for layout, labels, and drag math. */

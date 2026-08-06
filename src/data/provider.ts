@@ -36,6 +36,8 @@ export interface ConnectOptions {
    * present. An empty worker URL uses same-origin `/api/auth`.
    */
   enableSync?: boolean
+  /** Presence published for this connection's current user. */
+  initialPresence?: Presence
 }
 
 export interface RoomConnection {
@@ -47,6 +49,8 @@ export interface RoomConnection {
   onStatus(cb: (status: SyncStatus) => void): () => void
   getPresences(): Presence[]
   onPresences(cb: (presences: Presence[]) => void): () => void
+  /** Publish a partial update for the current user. */
+  updatePresence(partial: Partial<Omit<Presence, 'userId'>>): void
   destroy(): void
 }
 
@@ -79,6 +83,7 @@ export function connectRoom(opts: ConnectOptions): RoomConnection {
 
   const cleanups: Array<() => void> = []
   let destroyed = false
+  let publishPresence: (partial: Partial<Omit<Presence, 'userId'>>) => void = () => {}
 
   // 1) Local-first persistence (browser only; in-memory elsewhere).
   let whenLocalLoaded: Promise<void> = Promise.resolve()
@@ -92,10 +97,19 @@ export function connectRoom(opts: ConnectOptions): RoomConnection {
   const wantSync = opts.enableSync ?? Boolean(opts.roomId)
   if (wantSync) {
     setStatus('connecting')
-    void setupLiveblocksSync(opts, doc, setStatus, setPresences, (teardown) => {
-      if (destroyed) teardown()
-      else cleanups.push(teardown)
-    }).catch(() => setStatus('error'))
+    void setupLiveblocksSync(
+      opts,
+      doc,
+      setStatus,
+      setPresences,
+      (publisher) => {
+        publishPresence = publisher
+      },
+      (teardown) => {
+        if (destroyed) teardown()
+        else cleanups.push(teardown)
+      },
+    ).catch(() => setStatus('error'))
   }
 
   return {
@@ -110,6 +124,9 @@ export function connectRoom(opts: ConnectOptions): RoomConnection {
     onPresences(cb) {
       presenceListeners.add(cb)
       return () => presenceListeners.delete(cb)
+    },
+    updatePresence(partial) {
+      publishPresence(partial)
     },
     destroy() {
       destroyed = true
@@ -130,6 +147,9 @@ async function setupLiveblocksSync(
   doc: Y.Doc,
   setStatus: (s: SyncStatus) => void,
   setPresences: (p: Presence[]) => void,
+  registerPresencePublisher: (
+    publisher: (partial: Partial<Omit<Presence, 'userId'>>) => void,
+  ) => void,
   registerTeardown: (teardown: () => void) => void,
 ): Promise<void> {
   const base = trimSlash(opts.workerUrl)
@@ -159,7 +179,14 @@ async function setupLiveblocksSync(
     },
   })
 
-  const { room, leave } = client.enterRoom(opts.roomId)
+  const { room, leave } = client.enterRoom(opts.roomId, {
+    initialPresence: (opts.initialPresence ?? {
+      userId: '',
+      name: '',
+      color: '',
+    }) as unknown as Record<string, string>,
+  })
+  registerPresencePublisher((partial) => room.updatePresence(partial))
   const provider = new LiveblocksYjsProvider(room, doc)
   const onProviderStatus = (s: unknown) => {
     if (!missing) setStatus(s === 'synchronized' ? 'synced' : 'connecting')

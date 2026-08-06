@@ -22,11 +22,27 @@ test('a long trip shows the right-edge fade, which clears when scrolled fully ri
 
 test('a short trip that fits shows no fade', async ({ page }) => {
   await page.goto(E2E_LINK)
-  // Three ~224px columns fit a desktop viewport with room to spare → no overflow.
+  // A short trip expands its equal columns to fill the desktop board.
   await setupTrip(page, { title: 'Weekend', startDate: '2027-05-01', endDate: '2027-05-03' })
 
-  await expect(page.getByTestId('board')).toBeVisible()
+  const board = page.getByTestId('board')
+  await expect(board).toBeVisible()
   await expect(page.getByTestId('board-fade')).toHaveCount(0)
+
+  const geometry = await board.evaluate((element) => {
+    const boardBox = element.getBoundingClientRect()
+    const columns = Array.from(element.querySelectorAll<HTMLElement>('[data-testid="day-column"]'))
+    return {
+      boardWidth: boardBox.width,
+      columnWidths: columns.map((column) => column.getBoundingClientRect().width),
+      occupiedWidth:
+        columns.at(-1)!.getBoundingClientRect().right - columns[0].getBoundingClientRect().left,
+    }
+  })
+  expect(geometry.columnWidths).toHaveLength(3)
+  expect(geometry.columnWidths[0]).toBeGreaterThan(272)
+  expect(Math.max(...geometry.columnWidths) - Math.min(...geometry.columnWidths)).toBeLessThan(0.1)
+  expect(geometry.occupiedWidth).toBeCloseTo(geometry.boardWidth, 0)
 })
 
 test('Jump to today brings today’s column into view', async ({ page }) => {

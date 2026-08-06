@@ -71,3 +71,17 @@ test('mobile swipes between days', async ({ page }) => {
   })
   await expect(position).toHaveText('Day 1 of 3')
 })
+
+test('mobile sheet inputs use a 16px font to prevent iOS focus zoom', async ({ page }) => {
+  await page.goto(E2E_LINK)
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page
+    .getByRole('dialog', { name: 'Menu' })
+    .getByRole('button', { name: 'Cities & colours' })
+    .click()
+
+  const fontSize = await page.getByLabel('New city name').evaluate((input) =>
+    Number.parseFloat(getComputedStyle(input).fontSize),
+  )
+  expect(fontSize).toBeGreaterThanOrEqual(16)
+})

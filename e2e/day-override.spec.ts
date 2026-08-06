@@ -35,17 +35,15 @@ test('per-day city override recolors the header and Auto reverts it', async ({ p
   const first = page.locator('[data-testid="day-column"]').nth(0)
   const band = first.getByTestId('city-band')
 
-  // Day 1 resolves to Rome via the stay — accommodation-resolved, no manual flag.
+  // Day 1 resolves to Rome via the stay.
   await expect(band).toHaveCSS('background-color', 'rgb(239, 68, 68)') // #ef4444
-  await expect(first.getByTestId('override-indicator')).toHaveCount(0)
-
-  // Pin Florence from the header → recolors and shows the manual flag.
-  await first.getByTestId('city-override').selectOption({ label: 'Florence' })
+  // Pin Florence from the header → recolors.
+  await first.getByRole('button', { name: 'Choose city' }).click()
+  await page.getByRole('button', { name: /Florence/ }).click()
   await expect(band).toHaveCSS('background-color', 'rgb(59, 130, 246)') // #3b82f6
-  await expect(first.getByTestId('override-indicator')).toBeVisible()
 
   // Auto clears the override → reverts to the accommodation-resolved Rome.
-  await first.getByTestId('city-override').selectOption({ label: 'Auto' })
+  await first.getByRole('button', { name: 'Choose city' }).click()
+  await page.getByRole('button', { name: /Auto/ }).click()
   await expect(band).toHaveCSS('background-color', 'rgb(239, 68, 68)')
-  await expect(first.getByTestId('override-indicator')).toHaveCount(0)
 })

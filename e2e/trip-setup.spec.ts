@@ -14,7 +14,8 @@ test('set up a trip and add a city', async ({ page }) => {
   await addCity(page, 'Florence')
 
   // Removing lives in the Cities modal.
-  await page.getByRole('button', { name: 'Cities' }).click()
+  await page.getByRole('button', { name: 'Edit trip menu' }).click()
+  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: 'Cities & colours' }).click()
   const dialog = page.getByRole('dialog', { name: 'Cities & colours' })
   await dialog.getByRole('button', { name: 'Remove Rome' }).click()
   await expect(dialog.getByLabel('Name for Rome')).toHaveCount(0)

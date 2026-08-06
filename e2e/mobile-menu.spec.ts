@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { setupTrip, E2E_LINK } from './helpers'
 
-// On a phone the crowded inline [✎ Trip]/[◉ Cities] header buttons collapse into
-// a ≡ menu (a shared-Modal sheet) that also carries "Add stay". On desktop the
-// inline buttons stay and there is no ≡.
+// The edit menu remains beside the title at every width. On a phone the separate
+// ≡ action sheet still carries the mobile Add stay action.
 
 test.describe('mobile: ≡ menu', () => {
   test.use({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true })
@@ -11,10 +10,9 @@ test.describe('mobile: ≡ menu', () => {
   test('collapses Trip/Cities/Add-stay into the ≡ menu', async ({ page }) => {
     await page.goto(E2E_LINK)
 
-    // Inline buttons are lg:-only → not in the mobile a11y tree; ≡ is present.
-    await expect(page.getByRole('button', { name: 'Trip' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Cities' })).toHaveCount(0)
-    const menuButton = page.getByRole('button', { name: 'Menu' })
+    await expect(page.getByRole('button', { name: 'Edit trip menu' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cities & colours' })).toHaveCount(0)
+    const menuButton = page.getByRole('button', { name: 'Menu', exact: true })
     await expect(menuButton).toBeVisible()
 
     // A trip so "Add stay" has sensible night defaults.
@@ -40,13 +38,16 @@ test.describe('mobile: ≡ menu', () => {
   })
 })
 
-test.describe('desktop: inline header buttons', () => {
+test.describe('desktop: consolidated edit menu', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('keeps inline Trip/Cities and has no ≡', async ({ page }) => {
+  test('keeps trip and city actions in one menu and has no ≡', async ({ page }) => {
     await page.goto(E2E_LINK)
-    await expect(page.getByRole('button', { name: 'Trip' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Cities' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Edit trip menu' }).click()
+    const editMenu = page.getByRole('dialog', { name: 'Edit trip' })
+    await expect(editMenu.getByRole('button', { name: 'Trip details' })).toBeVisible()
+    await expect(editMenu.getByRole('button', { name: 'Cities & colours' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add stay' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Menu', exact: true })).toHaveCount(0)
   })
 })

@@ -62,7 +62,7 @@ export function DaySwapModal({
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
         <div data-testid="swap-source" className="rounded-card border border-edge bg-surface p-3">
           <span className="block text-[10px] font-bold uppercase tracking-wide text-ink-400">
-            From
+            This day
           </span>
           <strong className="mt-1 block font-serif text-ink">{dayLabel(sourceDay)}</strong>
           <span className="text-sm text-ink-500">{cityLabel(cityByDay.get(sourceDay.key))}</span>
@@ -72,7 +72,7 @@ export function DaySwapModal({
         </span>
         <div data-testid="swap-target" className="rounded-card border border-edge bg-surface p-3">
           <span className="block text-[10px] font-bold uppercase tracking-wide text-ink-400">
-            With
+            Swap with
           </span>
           {targetDay && (
             <>

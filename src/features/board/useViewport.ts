@@ -1,4 +1,4 @@
-// Viewport breakpoint detection for the board. At 640px and above it shows the
+// Viewport breakpoint detection for the board. At 400px and above it shows the
 // multi-column day board; below it (a phone) it switches to the single-day
 // swipe view. Which view to show is a per-device rendering concern, not synced
 // state, so it lives here as a hook over `window.innerWidth` rather than in the doc.
@@ -11,7 +11,7 @@ export type Viewport = 'mobile' | 'desktop'
  * Widths below this (px) get the mobile single-day view; at or above it, the
  * desktop multi-column board. Larger phones, tablets, and desktops use the board.
  */
-export const DESKTOP_BREAKPOINT = 640
+export const DESKTOP_BREAKPOINT = 400
 
 /** Pure breakpoint decision, so it can be unit-tested without a DOM. */
 export function selectViewport(width: number): Viewport {
@@ -19,14 +19,14 @@ export function selectViewport(width: number): Viewport {
 }
 
 /** Day-column geometry, shared by the board, stays lane, fit calculation, and scroll stride. */
-export const COLUMN_WIDTH_PX = 272
-export const COLUMN_GAP_PX = 12
+export const COLUMN_WIDTH_PX = 256
+export const COLUMN_GAP_PX = 20
 export const COLUMN_WIDTH_REM = `${COLUMN_WIDTH_PX / 16}rem`
 export const COLUMN_GAP_REM = `${COLUMN_GAP_PX / 16}rem`
 const CONTAINER_PADDING_PX = 16 // px-4 = 1rem each side
 
 /**
- * How many 17rem day columns fit a viewport of `width` px — at least one, so
+ * How many 16rem day columns fit a viewport of `width` px — at least one, so
  * the narrow pager always shows a day. Pure, so it can be unit-tested.
  */
 export function columnsThatFit(width: number): number {
@@ -60,7 +60,7 @@ export function useViewport(): Viewport {
 }
 
 /**
- * Track how many 17rem day columns fit the window, re-rendering whenever the
+ * Track how many 16rem day columns fit the window, re-rendering whenever the
  * count changes (resizes that don't change the count are skipped, since the
  * snapshot is the count). Falls back to one column during server rendering.
  */

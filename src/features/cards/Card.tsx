@@ -23,11 +23,10 @@ import type { TimeDirection } from '../board/timeDirection'
 import { cardCategory } from './cardCategory'
 import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
 
-/** Chip-triad token classes (text / bg / border) per category. */
-const CATEGORY_CHIP: Record<CardCategory, string> = {
-  indoor: 'text-indoor bg-indoor-bg border-indoor-border',
-  outdoor: 'text-outdoor bg-outdoor-bg border-outdoor-border',
-  transit: 'text-transit bg-transit-bg border-transit-border',
+const CATEGORY_CORNER: Record<CardCategory, string> = {
+  indoor: 'border-t-category-indoor',
+  outdoor: 'border-t-category-outdoor',
+  transit: 'border-t-category-transit',
 }
 
 export interface CardProps {
@@ -79,7 +78,50 @@ function isSafeHref(link: string): boolean {
 
 function formatDuration(hours: number): string {
   const minutes = Math.round(hours * 60)
-  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
+  const wholeHours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  return remainder === 0 ? `${wholeHours}h` : `${wholeHours}h ${remainder}m`
+}
+
+function CategoryCorner({ category }: { category: CardCategory }) {
+  return (
+    <span
+      aria-hidden
+      data-testid="card-category-corner"
+      data-category={category}
+      className="pointer-events-none absolute right-0 top-0 h-6 w-6 overflow-hidden"
+    >
+      <span
+        className={`absolute right-0 top-0 h-0 w-0 border-l-[24px] border-t-[24px] border-l-transparent ${CATEGORY_CORNER[category]}`}
+      />
+      {category === 'transit' ? (
+        <svg
+          data-testid="card-category-icon"
+          viewBox="0 0 16 16"
+          className="absolute right-0.5 top-0.5 h-3 w-3 fill-none stroke-white stroke-[2.4]"
+        >
+          <path d="M3 8h9M8 4l4 4-4 4" />
+        </svg>
+      ) : category === 'indoor' ? (
+        <svg
+          data-testid="card-category-icon"
+          viewBox="0 0 16 16"
+          className="absolute right-0.5 top-0.5 h-3 w-3 fill-none stroke-white stroke-[2.4]"
+        >
+          <path d="M2.5 7.5 8 3l5.5 4.5M4.5 6.5V13h7V6.5" />
+        </svg>
+      ) : (
+        <svg
+          data-testid="card-category-icon"
+          viewBox="0 0 16 16"
+          className="absolute right-0.5 top-0.5 h-3 w-3 fill-none stroke-white stroke-[2.2]"
+        >
+          <circle cx="8" cy="8" r="2.5" />
+          <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" />
+        </svg>
+      )}
+    </span>
+  )
 }
 
 export function Card({
@@ -94,17 +136,21 @@ export function Card({
   timingPreview,
 }: CardProps) {
   const category = cardCategory(card)
-  const durationHours = timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
+  const durationHours =
+    timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
   const duration = formatDuration(durationHours)
   const previewEndTime = timingPreview?.startTime
     ? clockString(clockMinutes(timingPreview.startTime) + Math.round(durationHours * 60))
     : null
+  const endTime = card.startTime
+    ? clockString(clockMinutes(card.startTime) + Math.round(durationHours * 60))
+    : null
   const displayedTime = timingPreview
     ? timingPreview.startTime
-      ? `${timingPreview.startTime} · ${duration}`
+      ? `${timingPreview.startTime} – ${previewEndTime} · ${duration}`
       : duration
     : card.startTime
-      ? `${card.startTime} · ${duration}`
+      ? `${card.startTime} – ${endTime} · ${duration}`
       : duration
   const {
     className: dragClassName,
@@ -162,11 +208,12 @@ export function Card({
       data-category={category}
       aria-label={dragSurfaceProps ? `Move or edit ${card.title}` : undefined}
       onClick={editFromSurface}
-      className={`relative flex h-full flex-col gap-1.5 overflow-hidden rounded-card border px-2.5 py-2 text-sm text-ink shadow-sm ${timingPreview ? 'border-indoor-border bg-indoor-bg/40 shadow-none' : 'border-edge-100 bg-surface'} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
+      className={`relative my-0.5 flex h-[calc(100%-4px)] w-full flex-col gap-1.5 overflow-hidden rounded-card border px-[11px] py-[9px] text-sm text-ink shadow-sm min-[400px]:px-[13px] min-[400px]:py-[11px] ${timingPreview ? 'border-indoor-border bg-indoor-bg/40 shadow-none' : 'border-edge-100 bg-surface'} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
     >
       {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
       {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
-      <div className="flex items-baseline gap-1">
+      {category && <CategoryCorner category={category} />}
+      <div data-testid="card-title-row" className="flex min-w-0 items-center pr-5">
         <button
           type="button"
           aria-label={`Edit ${card.title}`}
@@ -175,24 +222,22 @@ export function Card({
             event.stopPropagation()
             onEdit?.(card)
           }}
-          className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left hover:text-ink"
+          className="min-w-0 max-w-full flex-none text-left hover:text-ink"
         >
           <span
             data-testid="card-title"
-            className="min-w-0 font-serif text-[15px] font-semibold leading-tight text-ink"
+            className="min-w-0 break-words font-serif text-[15px] font-semibold leading-tight text-ink"
           >
             {card.title}
           </span>
-          {
-            <span
-              data-testid="card-time"
-              className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
-            >
-              {displayedTime}
-            </span>
-          }
         </button>
       </div>
+      <span
+        data-testid="card-time"
+        className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
+      >
+        {displayedTime}
+      </span>
 
       {card.note && (
         <p
@@ -203,24 +248,14 @@ export function Card({
         </p>
       )}
 
-      {(category || conflict) && (
-        <div className="flex flex-wrap gap-1">
-          {category && (
-            <span
-              data-testid="card-category"
-              className={`inline-block rounded-chip border px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] ${CATEGORY_CHIP[category]}`}
-            >
-              {category}
-            </span>
-          )}
-          {conflict && (
-            <span
-              data-testid="card-conflict"
-              className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
-            >
-              Overlap
-            </span>
-          )}
+      {conflict && (
+        <div data-testid="card-badge-row" className="flex flex-wrap gap-1">
+          <span
+            data-testid="card-conflict"
+            className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
+          >
+            Overlap
+          </span>
         </div>
       )}
 
@@ -412,7 +447,12 @@ export function SortableCard({
   }
 
   return (
-    <li ref={setNodeRef} style={style} data-testid="sortable-card">
+    <li
+      ref={setNodeRef}
+      style={style}
+      data-testid="sortable-card"
+      className="pointer-events-auto"
+    >
       {isDragging || resizePreview ? (
         <Card
           card={card}

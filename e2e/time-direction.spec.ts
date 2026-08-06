@@ -49,9 +49,7 @@ test('toggling time direction reverses card order and persists across reload', a
 
   // The direction is a per-user preference (localStorage) and survives a reload.
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Toggle time direction' })).toHaveText(
-    'Evening → Morning',
-  )
+  await expect(page.getByRole('button', { name: 'Toggle time direction' })).toHaveText('↑')
 
   // After reload the persisted direction is applied to freshly rendered cards.
   await setUpTrip(page)

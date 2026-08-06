@@ -63,6 +63,9 @@ describe('MobileDayView', () => {
     expect(currentDay()).toBe('2027-05-01')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Arrive')
     expect(screen.getByTestId('mobile-day-position')).toHaveTextContent('Day 1 of 3')
+    expect(screen.getByTestId('mobile-day-position')).not.toHaveClass('sr-only')
+    expect(screen.getByRole('button', { name: 'Previous day' })).toHaveTextContent('‹ Prev')
+    expect(screen.getByRole('button', { name: 'Next day' })).toHaveTextContent('Next ›')
   })
 
   it('keeps bottom safe-area padding in the inner mobile scroller', () => {
@@ -168,6 +171,21 @@ describe('MobileDayView', () => {
     })
     const [active] = screen.getAllByTestId('mobile-day-dot')
     expect(active).toHaveStyle({ backgroundColor: '#5f6f44' })
+  })
+
+  it('puts a bare city edit icon beside the visible city name without an add-city button', () => {
+    renderView({
+      overrides: { '2027-05-01': 'kyoto' },
+      cities: [{ id: 'kyoto', name: 'Kyoto', color: '#5f6f44' }],
+      cityById: new Map<string, City>([
+        ['kyoto', { id: 'kyoto', name: 'Kyoto', color: '#5f6f44' }],
+      ]),
+    })
+    const cityRow = screen.getByTestId('mobile-city-row')
+    expect(cityRow).toHaveTextContent('Kyoto')
+    expect(cityRow).toContainElement(screen.getByRole('button', { name: 'Choose city' }))
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
+    expect(screen.queryByRole('button', { name: 'Add city' })).not.toBeInTheDocument()
   })
 
   it('forwards the visible day through the shared Swap day action', async () => {
