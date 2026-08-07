@@ -50,7 +50,7 @@ describe('App (with a room slug path)', () => {
     expect(screen.getByTestId('sync-status')).toHaveTextContent('Local')
   })
 
-  it('shows loading instead of flashing the trip shell before a missing response', async () => {
+  it('keeps the trip shell visible while background sync confirms a missing trip', async () => {
     vi.stubEnv('MODE', 'production')
     const doc = new Y.Doc()
     let emitStatus!: (status: provider.SyncStatus) => void
@@ -68,8 +68,9 @@ describe('App (with a room slug path)', () => {
     } as unknown as provider.RoomConnection)
 
     render(<App />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
-    expect(screen.queryByTestId('app-seal')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument()
+    expect(screen.getByTestId('app-seal')).toBeInTheDocument()
+    expect(screen.getByTestId('sync-status')).toHaveTextContent('Connecting…')
 
     act(() => emitStatus('missing'))
     expect(
@@ -78,7 +79,7 @@ describe('App (with a room slug path)', () => {
     spy.mockRestore()
   })
 
-  it('keeps the app shell mounted after the initial connection resolves', async () => {
+  it('keeps the app shell mounted when background sync reconnects', async () => {
     vi.stubEnv('MODE', 'production')
     const doc = new Y.Doc()
     let emitStatus!: (status: provider.SyncStatus) => void
@@ -96,10 +97,7 @@ describe('App (with a room slug path)', () => {
     } as unknown as provider.RoomConnection)
 
     render(<App />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
-
-    act(() => emitStatus('synced'))
-    const appShell = await screen.findByTestId('app-seal').then((seal) => seal.closest('main'))
+    const appShell = screen.getByTestId('app-seal').closest('main')
 
     act(() => emitStatus('connecting'))
     expect(screen.queryByText('Loading')).not.toBeInTheDocument()

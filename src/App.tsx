@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Modal } from './components/Modal'
 import { useRoom } from './data/RoomContext'
 import { RoomProvider } from './data/RoomProvider'
@@ -47,9 +47,6 @@ function MobileMenu({
 
 function AppShell() {
   const { status } = useRoom()
-  const [initialConnectionResolved, setInitialConnectionResolved] = useState(
-    status !== 'connecting',
-  )
   const [tripOpen, setTripOpen] = useState(false)
   const [citiesOpen, setCitiesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -58,20 +55,6 @@ function AppShell() {
   const [addStayNonce, setAddStayNonce] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
 
-  useEffect(() => {
-    if (status !== 'connecting') setInitialConnectionResolved(true)
-  }, [status])
-
-  if (status === 'connecting' && !initialConnectionResolved) {
-    return (
-      <main
-        role="status"
-        className="flex min-h-screen items-center justify-center bg-surface text-ink-500"
-      >
-        Loading
-      </main>
-    )
-  }
   if (status === 'missing') return <MissingTrip />
 
   return (
