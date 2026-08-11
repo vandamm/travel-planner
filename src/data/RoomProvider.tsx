@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as Y from "yjs"
 import { installDevBridge } from "./devBridge"
+import { isDocEmpty } from './doc'
 import { connectRoom, type RoomConnection, type SyncStatus } from './provider'
 import { RoomContext, type Presence as ContextPresence, type RoomContextValue } from './RoomContext'
 import { slugFromPath } from './slug'
@@ -89,6 +90,13 @@ export function RoomProvider({
     name: getUserName(),
     color: getUserColor(),
   }))
+  // A stored copy renders straight away — that is the point of local-first. But
+  // when local load leaves the doc empty (new device, cleared storage) we cannot
+  // yet tell a real trip from a 404, and an editable board would let stray edits
+  // merge into the trip still in flight. So gate that case on the first connect.
+  const [firstSyncResolved, setFirstSyncResolved] = useState(
+    (enableSync ?? autoSync) ? false : true,
+  )
   const initialPresenceRef = useRef<ContextPresence | null>(null)
   if (!initialPresenceRef.current) initialPresenceRef.current = myself
   const connectionRef = useRef<RoomConnection | null>(null)
@@ -125,6 +133,10 @@ export function RoomProvider({
     }
   }, [doc, roomId, workerBase, enableSync, autoSync])
 
+  useEffect(() => {
+    if (status !== 'connecting') setFirstSyncResolved(true)
+  }, [status])
+
   const visiblePresences = useMemo(
     () => [myself, ...presences.filter((presence) => presence.userId !== myself.userId)],
     [myself, presences],
@@ -148,7 +160,7 @@ export function RoomProvider({
 
   return (
     <RoomContext.Provider value={value}>
-      {!hasIndexedDb || loadedDoc === doc ? (
+      {(!hasIndexedDb || loadedDoc === doc) && (firstSyncResolved || !isDocEmpty(doc)) ? (
         children
       ) : (
         <main

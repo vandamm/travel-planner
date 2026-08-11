@@ -95,6 +95,17 @@ export function clearTrip(doc: Y.Doc): void {
   })
 }
 
+/**
+ * True when not one of the five containers holds anything — i.e. no trip has
+ * been loaded from local persistence or sync yet. Distinguishes "this device
+ * has no copy" from "loaded, and the trip really is empty".
+ */
+export function isDocEmpty(doc: Y.Doc): boolean {
+  return [TRIP, CITIES, DAY_OVERRIDES, CARDS, ACCOMMODATIONS].every(
+    (name) => doc.getMap(name).size === 0,
+  )
+}
+
 // --- Trip ------------------------------------------------------------------
 
 export function getTrip(doc: Y.Doc): Trip {
