@@ -4,9 +4,7 @@
 // dinner reservations) that carry a real `startTime`, and *untimed* ones that
 // the user arranges by hand. Manual `order` controls every card's slot, while
 // timed cards are sorted chronologically within their occupied slots. This
-// canonical (morning→evening) order is what the board shows in the default
-// direction; the per-user direction toggle (see `timeDirection.ts`) merely
-// reverses it.
+// canonical (morning→evening) order is what the board shows.
 
 import type { Card } from '../../data/schema'
 

@@ -2,7 +2,7 @@
 // with prev/next controls and left/right swipe to page between days. It reuses
 // the exact same building blocks as the desktop board — `resolveDayCity` for the
 // day's accommodation-driven city/color and `<DayColumn>` for the cards laid out
-// in the viewer's time direction — so the two views never drift. Purely
+// in chronological order — so the two views never drift. Purely
 // presentational: it receives the board's already-computed data as props and is
 // wrapped in <BoardDnd> by <Board> so within-day reordering still works.
 
@@ -22,7 +22,6 @@ import { DayColumn } from './DayColumn'
 import { CityPicker } from '../cities/CityPicker'
 import { clampDayIndex } from './mobileDayViewMath'
 import { dayDotColor } from './pagerDot'
-import type { TimeDirection } from './timeDirection'
 
 /** Minimum horizontal travel (px) for a touch gesture to count as a swipe. */
 const SWIPE_THRESHOLD = 40
@@ -38,7 +37,6 @@ export interface MobileDayViewProps {
   cityById: Map<string, City>
   /** All cities, forwarded to each day's override picker. */
   cities?: City[]
-  direction: TimeDirection
   /** Day timeline window 'HH:mm', forwarded to the day column. */
   dayStart?: string
   dayEnd?: string
@@ -60,7 +58,6 @@ export function MobileDayView({
   overrides,
   cityById,
   cities,
-  direction,
   dayStart,
   dayEnd,
   columns = 1,
@@ -248,7 +245,6 @@ export function MobileDayView({
                 day={day}
                 city={cityId ? cityById.get(cityId) : undefined}
                 cards={cardsByDay.get(day.key) ?? []}
-                direction={direction}
                 dayStart={dayStart}
                 dayEnd={dayEnd}
                 cities={cities}

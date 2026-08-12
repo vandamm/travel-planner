@@ -2,12 +2,7 @@ import type * as Y from 'yjs'
 import { getCard, getTrip, updateCardSchedules } from '../../data/doc'
 import type { Card } from '../../data/schema'
 import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
-import {
-  planTimelineSchedule,
-  TIMELINE_SNAP_MINUTES,
-  type TimelineEditKind,
-} from './timelineSchedule'
-import type { TimeDirection } from './timeDirection'
+import { planTimelineSchedule, TIMELINE_SNAP_MINUTES } from './timelineSchedule'
 
 export const DAY_DROPPABLE_PREFIX = 'day:'
 
@@ -36,7 +31,6 @@ export function dropTimeForOffset(
   durationHours: number,
   dayStart: string,
   dayEnd: string,
-  direction: TimeDirection,
 ): string {
   const first = clockMinutes(dayStart)
   const end = clockMinutes(dayEnd)
@@ -44,10 +38,7 @@ export function dropTimeForOffset(
   const latest =
     Math.floor((end - durationHours * 60) / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   if (latest < earliest) return clockString(first)
-  const raw =
-    direction === 'down'
-      ? first + (offsetPx / PX_PER_HOUR) * 60
-      : end - durationHours * 60 - (offsetPx / PX_PER_HOUR) * 60
+  const raw = first + (offsetPx / PX_PER_HOUR) * 60
   const snapped = Math.round(raw / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   return clockString(Math.min(Math.max(snapped, earliest), latest))
 }
@@ -65,7 +56,6 @@ export interface CardDropPlanInput {
   offsetPx: number
   dayStart: string
   dayEnd: string
-  direction: TimeDirection
 }
 
 export interface CardDropPlan {
@@ -74,36 +64,22 @@ export interface CardDropPlan {
   durationHours: number
 }
 
-function moveEditKind(
-  currentStart: number,
-  requestedStart: number,
-  direction: TimeDirection,
-): TimelineEditKind {
-  const movedTowardTop =
-    direction === 'down' ? requestedStart < currentStart : requestedStart > currentStart
-  return movedTowardTop ? 'move-top' : 'move-bottom'
-}
-
 export function planCardDrop({
   card,
   targetDayKey,
   offsetPx,
   dayStart,
   dayEnd,
-  direction,
 }: CardDropPlanInput): CardDropPlan {
   const durationHours = resolvedDurationHours(card, dayStart, dayEnd)
-  const requested = clockMinutes(
-    dropTimeForOffset(offsetPx, durationHours, dayStart, dayEnd, direction),
-  )
+  const requested = clockMinutes(dropTimeForOffset(offsetPx, durationHours, dayStart, dayEnd))
   const currentStart = card.startTime ? clockMinutes(card.startTime) : requested
   const result = planTimelineSchedule({
     active: { id: card.id, start: currentStart, duration: durationHours * 60 },
     requested: { start: requested, duration: durationHours * 60 },
     dayStart: clockMinutes(dayStart),
     dayEnd: clockMinutes(dayEnd),
-    edit: moveEditKind(currentStart, requested, direction),
-    direction,
+    edit: 'move',
   })
 
   return {
@@ -123,7 +99,6 @@ export function commitCardDropPlan(doc: Y.Doc, activeId: string, plan: CardDropP
 export function applyCardDrop(
   doc: Y.Doc,
   { activeId, targetDayKey, offsetPx }: CardDrop,
-  direction: TimeDirection = 'down',
 ): CardDropPlan | null {
   const active = getCard(doc, activeId)
   if (!active) return null
@@ -135,7 +110,6 @@ export function applyCardDrop(
     offsetPx,
     dayStart,
     dayEnd,
-    direction,
   })
 
   commitCardDropPlan(doc, activeId, plan)

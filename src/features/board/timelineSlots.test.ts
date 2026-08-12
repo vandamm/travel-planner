@@ -52,7 +52,7 @@ describe('layoutTimelineCards', () => {
     ]
 
     expect(
-      layoutTimelineCards(cards, '06:00', '18:00', 'down').map(({ card, offsetMinutes }) => ({
+      layoutTimelineCards(cards, '06:00', '18:00').map(({ card, offsetMinutes }) => ({
         id: card.id,
         offsetMinutes,
       })),

@@ -108,7 +108,8 @@ first:
 
 Time-bound cards (those with a `startTime`) sort by time; untimed cards keep a
 manual `order` within their day. The combined ordering lives in
-`src/features/cards/cardSort.ts`.
+`src/features/cards/cardSort.ts`. The timeline always runs morning→evening, top
+to bottom — there is no per-viewer direction toggle.
 
 A card may carry an optional `category?: 'indoor' | 'outdoor' | 'transit'`
 (drives the colour chip on the card and the Type segmented control in the
@@ -128,16 +129,10 @@ minutes) — see `src/features/board/dndHandlers.ts`.
 
 ## Synced vs. per-user state
 
-Not everything is on the doc. The **time-direction** view preference
-(morning→evening top-to-bottom vs. bottom-to-top) is a _local_ preference in
-`localStorage`, deliberately **not** synced — each person sees their own
-direction without affecting the other. It reverses the visual order of every card
-in every day. See `src/features/board/timeDirection.ts`.
+Not everything is on the doc. Rule of thumb: trip content is synced (doc);
+per-viewer display preferences are local (localStorage).
 
-Rule of thumb: trip content is synced (doc); per-viewer display preferences are
-local (localStorage).
-
-**Undo/redo** is likewise per-viewer and _in-memory only_ (not synced, not
+**Undo/redo** is per-viewer and _in-memory only_ (not synced, not
 durable). `src/features/board/undoManager.ts` (`createTripUndoManager` +
 `useUndoManager`, wired in `Board.tsx`) scopes a `Y.UndoManager` to the five
 top-level types and keeps the default `trackedOrigins` of `{null}` — so only the

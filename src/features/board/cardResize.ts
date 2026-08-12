@@ -3,8 +3,7 @@ import type * as Y from 'yjs'
 import { getCard, getTrip, updateCard, updateCardSchedules } from '../../data/doc'
 import type { Card } from '../../data/schema'
 import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
-import { planTimelineSchedule, type TimelineEditKind } from './timelineSchedule'
-import type { TimeDirection } from './timeDirection'
+import { planTimelineSchedule } from './timelineSchedule'
 
 export type CardResizeEdge = 'start' | 'end'
 
@@ -13,7 +12,6 @@ export interface CardResizeInput {
   edge: CardResizeEdge
   /** Vertical pointer/keyboard movement in display pixels. */
   deltaPx: number
-  direction: TimeDirection
   dayStart: string
   dayEnd: string
 }
@@ -25,11 +23,6 @@ export interface CardResizePlan {
   heightPx: number
   /** Change to the card's displayed top while previewing the resize. */
   topOffsetPx: number
-}
-
-function resizeEdit(edge: CardResizeEdge, direction: TimeDirection): TimelineEditKind {
-  if (edge === 'start') return direction === 'down' ? 'resize-top' : 'resize-bottom'
-  return direction === 'down' ? 'resize-bottom' : 'resize-top'
 }
 
 function interval(card: Card, dayStart: string, dayEnd: string) {
@@ -45,14 +38,13 @@ export function planCardResize({
   card,
   edge,
   deltaPx,
-  direction,
   dayStart,
   dayEnd,
 }: CardResizeInput): CardResizePlan | null {
   if (!card.startTime) return null
 
   const active = interval(card, dayStart, dayEnd)
-  const clockDelta = (deltaPx / PX_PER_HOUR) * 60 * (direction === 'down' ? 1 : -1)
+  const clockDelta = (deltaPx / PX_PER_HOUR) * 60
   const requestedStart = edge === 'start' ? active.start + clockDelta : active.start
   const requestedEnd =
     edge === 'end' ? active.start + active.duration + clockDelta : active.start + active.duration
@@ -61,13 +53,9 @@ export function planCardResize({
     requested: { start: requestedStart, duration: requestedEnd - requestedStart },
     dayStart: clockMinutes(dayStart),
     dayEnd: clockMinutes(dayEnd),
-    edit: resizeEdit(edge, direction),
-    direction,
+    edit: edge === 'start' ? 'resize-start' : 'resize-end',
   })
-  const originalEnd = active.start + active.duration
-  const resizedEnd = result.activeStart + result.activeDuration
-  const topOffsetMinutes =
-    direction === 'down' ? result.activeStart - active.start : originalEnd - resizedEnd
+  const topOffsetMinutes = result.activeStart - active.start
 
   return {
     startTime: clockString(result.activeStart),
@@ -84,7 +72,6 @@ export function applyCardResize(
   cardId: string,
   edge: CardResizeEdge,
   deltaPx: number,
-  direction: TimeDirection,
 ): CardResizePlan | null {
   const card = getCard(doc, cardId)
   if (!card) return null
@@ -93,7 +80,6 @@ export function applyCardResize(
     card,
     edge,
     deltaPx,
-    direction,
     dayStart,
     dayEnd,
   })

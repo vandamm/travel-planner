@@ -68,7 +68,6 @@ describe('BoardDnd card resizing', () => {
     render(
       createElement(BoardDnd, {
         doc,
-        direction: 'down',
         dayStart: '06:00',
         dayEnd: '21:00',
         onTimelineChange,
@@ -158,7 +157,6 @@ describe('BoardDnd drag timing preview', () => {
     render(
       createElement(BoardDnd, {
         doc,
-        direction: 'down',
         children: createElement('div', null, dayBody(dayKey), createElement(PreviewProbe)),
       }),
     )
@@ -193,7 +191,6 @@ describe('BoardDnd drag timing preview', () => {
     render(
       createElement(BoardDnd, {
         doc,
-        direction: 'down',
         children: createElement('div', null, dayBody(dayKey), createElement(PreviewProbe)),
       }),
     )
@@ -226,7 +223,6 @@ describe('BoardDnd drag timing preview', () => {
     render(
       createElement(BoardDnd, {
         doc,
-        direction: 'down',
         children: createElement(
           'div',
           null,
@@ -261,7 +257,6 @@ describe('BoardDnd drag timing preview', () => {
     render(
       createElement(BoardDnd, {
         doc,
-        direction: 'down',
         children: dayBody(dayKey),
       }),
     )

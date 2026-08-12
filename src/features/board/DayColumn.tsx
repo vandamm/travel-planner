@@ -1,6 +1,6 @@
 // A single day column on the board: a color-coded, city-labeled header above a
-// continuous morning→evening time scale, with the day's cards laid out in the
-// viewer's chosen direction. Purely presentational — it receives the resolved
+// continuous morning→evening time scale, with the day's cards laid out along it.
+// Purely presentational — it receives the resolved
 // city and the day's cards as props so it is trivial to test and reuse (the
 // mobile single-day view in Task 11 reuses the same card/scale logic).
 
@@ -21,7 +21,6 @@ import {
 } from '../cards/cardHeight'
 import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
-import type { TimeDirection } from './timeDirection'
 import { formatFreeDuration, freeTimelineSlots, layoutTimelineCards } from './timelineSlots'
 import { COLUMN_GAP_PX, COLUMN_WIDTH_REM } from './useViewport'
 
@@ -30,7 +29,6 @@ export interface DayColumnProps {
   /** Resolved city for the day, if any (drives the header color). */
   city?: City
   cards: CardType[]
-  direction: TimeDirection
   /** Start of the day's timeline window, 'HH:mm' (sizes the body). */
   dayStart?: string
   /** End of the day's timeline window, 'HH:mm'. */
@@ -57,12 +55,10 @@ function HourRail({
   side,
   dayStart,
   dayEnd,
-  direction,
 }: {
   side: 'left' | 'right'
   dayStart: string
   dayEnd: string
-  direction: TimeDirection
 }) {
   const start = clockMinutes(dayStart)
   const end = clockMinutes(dayEnd)
@@ -81,7 +77,7 @@ function HourRail({
     >
       {hours.map((hour) => {
         const minute = hour * 60
-        const offset = direction === 'up' ? end - minute : minute - start
+        const offset = minute - start
         return (
           <li
             key={hour}
@@ -123,7 +119,6 @@ export function DayColumn({
   day,
   city,
   cards,
-  direction,
   dayStart = '06:00',
   dayEnd = '21:00',
   cities = [],
@@ -135,8 +130,8 @@ export function DayColumn({
   showHeader = true,
   hourRail,
 }: DayColumnProps) {
-  const placements = layoutTimelineCards(cards, dayStart, dayEnd, direction)
-  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd, direction)
+  const placements = layoutTimelineCards(cards, dayStart, dayEnd)
+  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd)
   const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
   const weekday = format(parseISO(day.key), 'EEE').toUpperCase()
   const dateLabel = formatDay(day.key)
@@ -152,12 +147,7 @@ export function DayColumn({
   const dragPreview = useDragPreview()
   const previewTopPx =
     dragPreview?.dayKey === day.key && dragPreview.startTime
-      ? ((direction === 'up'
-          ? clockMinutes(dayEnd) -
-            (clockMinutes(dragPreview.startTime) + dragPreview.durationHours * 60)
-          : clockMinutes(dragPreview.startTime) - clockMinutes(dayStart)) /
-          60) *
-        PX_PER_HOUR
+      ? ((clockMinutes(dragPreview.startTime) - clockMinutes(dayStart)) / 60) * PX_PER_HOUR
       : 0
 
   return (
@@ -231,18 +221,12 @@ export function DayColumn({
           className={`absolute right-0 ${hourRail === 'left' ? 'left-7' : 'left-0'}`}
         >
           {hourRail && (
-            <HourRail
-              side={hourRail}
-              dayStart={dayStart}
-              dayEnd={dayEnd}
-              direction={direction}
-            />
+            <HourRail side={hourRail} dayStart={dayStart} dayEnd={dayEnd} />
           )}
           {freeSlots.map((slot) => {
             const start = clockMinutes(slot.startTime)
             const end = clockMinutes(slot.endTime)
-            const offset =
-              direction === 'up' ? clockMinutes(dayEnd) - end : start - clockMinutes(dayStart)
+            const offset = start - clockMinutes(dayStart)
             const height = ((end - start) / 60) * PX_PER_HOUR
             return (
               <button
@@ -283,7 +267,6 @@ export function DayColumn({
                   onEdit={onEditCard}
                   dayStart={dayStart}
                   dayEnd={dayEnd}
-                  direction={direction}
                   layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
                 />
               )

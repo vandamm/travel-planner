@@ -10,7 +10,6 @@ const actions = {
   onOpenMenu: vi.fn(),
   onUndo: vi.fn(),
   onRedo: vi.fn(),
-  onToggleDirection: vi.fn(),
 }
 
 describe('BoardToolbar', () => {
@@ -24,7 +23,6 @@ describe('BoardToolbar', () => {
         presences={[{ userId: 'anna', name: 'Anna', color: '#c0392b' }]}
         canUndo={false}
         canRedo={false}
-        direction="down"
         {...actions}
       />,
     )
@@ -58,7 +56,6 @@ describe('BoardToolbar', () => {
         presences={[]}
         canUndo={false}
         canRedo={false}
-        direction="down"
         {...actions}
       />,
     )
@@ -75,7 +72,6 @@ describe('BoardToolbar', () => {
         presences={[]}
         canUndo={false}
         canRedo={false}
-        direction="down"
         {...actions}
       />,
     )

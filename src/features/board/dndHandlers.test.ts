@@ -34,22 +34,18 @@ describe('dropTimeForOffset', () => {
   })
 
   it('maps the dropped card top to the clock and snaps to 15 minutes', () => {
-    expect(dropTimeForOffset(255, 1, '06:00', '21:00', 'down')).toBe('10:15')
-  })
-
-  it('maps offsets from evening toward morning in up direction', () => {
-    expect(dropTimeForOffset(120, 1, '06:00', '21:00', 'up')).toBe('18:00')
+    expect(dropTimeForOffset(255, 1, '06:00', '21:00')).toBe('10:15')
   })
 
   it('keeps the whole card inside the configured day window', () => {
-    expect(dropTimeForOffset(-100, 2, '06:00', '21:00', 'down')).toBe('06:00')
-    expect(dropTimeForOffset(2_000, 2, '06:00', '21:00', 'down')).toBe('19:00')
+    expect(dropTimeForOffset(-100, 2, '06:00', '21:00')).toBe('06:00')
+    expect(dropTimeForOffset(2_000, 2, '06:00', '21:00')).toBe('19:00')
   })
 
   it('keeps edge drops snapped for custom day boundaries', () => {
-    expect(dropTimeForOffset(-100, 1, '06:07', '21:07', 'down')).toBe('06:15')
-    expect(dropTimeForOffset(60, 1, '06:07', '21:07', 'down')).toBe('07:00')
-    expect(dropTimeForOffset(2_000, 1, '06:07', '21:07', 'down')).toBe('20:00')
+    expect(dropTimeForOffset(-100, 1, '06:07', '21:07')).toBe('06:15')
+    expect(dropTimeForOffset(60, 1, '06:07', '21:07')).toBe('07:00')
+    expect(dropTimeForOffset(2_000, 1, '06:07', '21:07')).toBe('20:00')
   })
 })
 
@@ -65,7 +61,6 @@ describe('applyCardDrop — same-day time drag', () => {
       offsetPx: 255,
       dayStart: '06:00',
       dayEnd: '21:00',
-      direction: 'down' as const,
     }
 
     const preview = planCardDrop(input)

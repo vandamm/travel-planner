@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import App from './App'
 import * as provider from './data/provider'
+import { setTrip } from './data/doc'
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
@@ -50,7 +51,7 @@ describe('App (with a room slug path)', () => {
     expect(screen.getByTestId('sync-status')).toHaveTextContent('Local')
   })
 
-  it('shows loading instead of flashing the trip shell before a missing response', async () => {
+  it('gates the first load when no local copy exists yet', async () => {
     vi.stubEnv('MODE', 'production')
     const doc = new Y.Doc()
     let emitStatus!: (status: provider.SyncStatus) => void
@@ -67,6 +68,8 @@ describe('App (with a room slug path)', () => {
       destroy: () => undefined,
     } as unknown as provider.RoomConnection)
 
+    // Nothing in IndexedDB: an editable board here would let edits merge into
+    // the trip that is still arriving, so wait for the first connect to resolve.
     render(<App />)
     expect(screen.getByText('Loading')).toBeInTheDocument()
     expect(screen.queryByTestId('app-seal')).not.toBeInTheDocument()
@@ -78,28 +81,53 @@ describe('App (with a room slug path)', () => {
     spy.mockRestore()
   })
 
-  it('keeps the app shell mounted after the initial connection resolves', async () => {
+  it('shows a local copy immediately instead of a loading screen', async () => {
     vi.stubEnv('MODE', 'production')
-    const doc = new Y.Doc()
-    let emitStatus!: (status: provider.SyncStatus) => void
-    const spy = vi.spyOn(provider, 'connectRoom').mockReturnValue({
-      doc,
-      whenLocalLoaded: Promise.resolve(),
-      getStatus: () => 'connecting',
-      onStatus: (callback: (status: provider.SyncStatus) => void) => {
-        emitStatus = callback
-        return () => undefined
-      },
-      getPresences: () => [],
-      onPresences: () => () => undefined,
-      destroy: () => undefined,
-    } as unknown as provider.RoomConnection)
+    vi.stubGlobal('indexedDB', {})
+    const spy = vi.spyOn(provider, 'connectRoom').mockImplementation((opts) => {
+      // What y-indexeddb does: fill the caller's doc, then resolve local load.
+      setTrip(opts.doc!, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
+      return {
+        doc: opts.doc!,
+        whenLocalLoaded: Promise.resolve(),
+        getStatus: () => 'connecting',
+        onStatus: () => () => undefined,
+        getPresences: () => [],
+        onPresences: () => () => undefined,
+        destroy: () => undefined,
+      } as unknown as provider.RoomConnection
+    })
 
     render(<App />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
+    // Sync is still connecting, but the stored trip renders without a gate.
+    expect(await screen.findByTestId('app-seal')).toBeInTheDocument()
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument()
+    expect(screen.getByTestId('sync-status')).toHaveTextContent('Connecting…')
+    spy.mockRestore()
+  })
 
-    act(() => emitStatus('synced'))
-    const appShell = await screen.findByTestId('app-seal').then((seal) => seal.closest('main'))
+  it('keeps the app shell mounted when background sync reconnects', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubGlobal('indexedDB', {})
+    let emitStatus!: (status: provider.SyncStatus) => void
+    const spy = vi.spyOn(provider, 'connectRoom').mockImplementation((opts) => {
+      setTrip(opts.doc!, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
+      return {
+        doc: opts.doc!,
+        whenLocalLoaded: Promise.resolve(),
+        getStatus: () => 'connecting',
+        onStatus: (callback: (status: provider.SyncStatus) => void) => {
+          emitStatus = callback
+          return () => undefined
+        },
+        getPresences: () => [],
+        onPresences: () => () => undefined,
+        destroy: () => undefined,
+      } as unknown as provider.RoomConnection
+    })
+
+    render(<App />)
+    const appShell = (await screen.findByTestId('app-seal')).closest('main')
 
     act(() => emitStatus('connecting'))
     expect(screen.queryByText('Loading')).not.toBeInTheDocument()

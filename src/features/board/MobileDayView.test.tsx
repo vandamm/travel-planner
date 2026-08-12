@@ -24,7 +24,6 @@ function renderView(extra: Partial<Parameters<typeof MobileDayView>[0]> = {}) {
       accommodations={[]}
       overrides={{}}
       cityById={new Map<string, City>()}
-      direction="down"
       {...extra}
     />,
   )
