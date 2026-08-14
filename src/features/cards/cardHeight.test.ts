@@ -9,6 +9,7 @@ import {
   resolvedDurationHours,
   SNAP_MINUTES,
   fitPxPerHour,
+  hourMarkAlignment,
 } from './cardHeight'
 
 const card = (over: Partial<Card>): Card => ({
@@ -24,6 +25,21 @@ const card = (over: Partial<Card>): Card => ({
 // A 15-hour window (06:00–21:00), the default trip day.
 const START = '06:00'
 const END = '21:00'
+
+describe('hourMarkAlignment', () => {
+  it('centres a label on its rail inside the track', () => {
+    expect(hourMarkAlignment(200, 700)).toBe('center')
+  })
+
+  it('tucks the first and last labels inside, not astride the edge', () => {
+    // Centred there, half the label would sit outside the grid — under the
+    // footer at the bottom, clipped away at the top.
+    expect(hourMarkAlignment(0, 700)).toBe('start')
+    expect(hourMarkAlignment(700, 700)).toBe('end')
+    // A window ending on an odd hour has no rail on the edge at all.
+    expect(hourMarkAlignment(650, 700)).toBe('center')
+  })
+})
 
 describe('fitPxPerHour', () => {
   it('stretches an hour so the day fills the height it is given', () => {

@@ -14,6 +14,7 @@ import { toDayKey } from '../../data/days'
 import { NO_CITY_COLOR } from '../cities/colors'
 import { HourGutter } from './HourGutter'
 import { localClock, nowLine } from './nowLine'
+import { usePxPerHour } from './timelineScale'
 import { MOBILE_GUTTER_PX } from './useViewport'
 import type {
   Accommodation,
@@ -86,6 +87,7 @@ export function MobileDayView({
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const ownScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = containerRef ?? ownScrollRef
+  const pxPerHour = usePxPerHour()
 
   // The trip can shrink (fewer days) under us, so clamp on every render rather
   // than trusting the stored index.
@@ -129,6 +131,7 @@ export function MobileDayView({
     localClock(new Date()),
     dayStart ?? '06:00',
     dayEnd ?? '21:00',
+    pxPerHour,
   )
 
   function onTouchStart(event: React.TouchEvent) {
@@ -223,7 +226,7 @@ export function MobileDayView({
       />
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto pb-4 pt-1.5"
+        className="min-h-0 flex-1 overflow-y-auto pb-4"
         ref={scrollRef}
         data-testid="mobile-day-scroll"
         data-scrolled={hasScrolled ? '' : undefined}

@@ -63,8 +63,10 @@ export function AccommodationLane({
     days.length * COLUMN_WIDTH_PX + Math.max(0, days.length - 1) * COLUMN_GAP_PX
 
   return (
-    // No bottom margin: the stays band and the day-header row meet flush.
-    <div className="flex border-t border-hour-rule">
+    // No bottom margin: the stays band and the day-header row meet flush, with a
+    // hairline on each side of the band so it reads as its own row (the
+    // reference rules the top of both the lane and the header row).
+    <div className="flex border-y border-hour-rule">
       {gutterPx > 0 && (
         <div aria-hidden style={{ width: gutterPx, flex: `0 0 ${gutterPx}px` }} className="sticky left-0 z-30 bg-white" />
       )}

@@ -82,6 +82,21 @@ export function evenHourMarks(dayStart: string, dayEnd: string): number[] {
     .filter((hour) => hour % 2 === 0 && hour * 60 >= start && hour * 60 <= end)
 }
 
+/**
+ * How an hour label should sit against its rail. Centred normally, but the
+ * first and last rails are the track's own edges — centring there would hang
+ * half the label outside the grid, where the footer covers it (and where it
+ * counts toward the scroll height).
+ */
+export function hourMarkAlignment(
+  offsetPx: number,
+  trackHeightPx: number,
+): 'start' | 'center' | 'end' {
+  if (offsetPx <= 0) return 'start'
+  if (offsetPx >= trackHeightPx) return 'end'
+  return 'center'
+}
+
 /** Length of the day window in hours (floored to a default block). */
 export function windowHours(dayStart: string, dayEnd: string): number {
   return Math.max((clockMinutes(dayEnd) - clockMinutes(dayStart)) / 60, DEFAULT_CARD_HOURS)

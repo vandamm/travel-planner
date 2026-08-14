@@ -7,7 +7,12 @@
 // column is header-above-body with the same body height, that makes the labels
 // line up with the timeline tracks without measuring anything.
 
-import { clockMinutes, evenHourMarks, windowHeightPx } from '../cards/cardHeight'
+import {
+  clockMinutes,
+  evenHourMarks,
+  hourMarkAlignment,
+  windowHeightPx,
+} from '../cards/cardHeight'
 import { usePxPerHour } from './timelineScale'
 
 export interface HourGutterProps {
@@ -34,6 +39,13 @@ export function HourGutter({
   const pxPerHour = usePxPerHour()
   const start = clockMinutes(dayStart)
   const hours = evenHourMarks(dayStart, dayEnd)
+  const trackHeight = windowHeightPx(dayStart, dayEnd, pxPerHour)
+
+  /** Keep the first and last labels inside the track rather than astride it. */
+  const shift = (offsetPx: number) =>
+    ({ start: '', center: '-translate-y-1/2', end: '-translate-y-full' })[
+      hourMarkAlignment(offsetPx, trackHeight)
+    ]
 
   return (
     <div
@@ -44,25 +56,28 @@ export function HourGutter({
     >
       <div className="flex-1" />
       <div
-        style={{ height: windowHeightPx(dayStart, dayEnd, pxPerHour) }}
+        style={{ height: trackHeight }}
         className="relative"
       >
-        {hours.map((hour) => (
-          <span
-            key={hour}
-            data-testid="hour-mark"
-            data-hour={hour}
-            style={{ top: ((hour * 60 - start) / 60) * pxPerHour }}
-            className={`absolute -translate-y-1/2 font-sans font-semibold leading-none text-hour-text ${compact ? 'right-2 text-[9.5px]' : 'right-2.5 text-[10px]'}`}
-          >
-            {String(hour).padStart(2, '0')}:00
-          </span>
-        ))}
+        {hours.map((hour) => {
+          const offsetPx = ((hour * 60 - start) / 60) * pxPerHour
+          return (
+            <span
+              key={hour}
+              data-testid="hour-mark"
+              data-hour={hour}
+              style={{ top: offsetPx }}
+              className={`absolute font-sans font-semibold leading-none text-hour-text ${shift(offsetPx)} ${compact ? 'right-2 text-[9.5px]' : 'right-2.5 text-[10px]'}`}
+            >
+              {String(hour).padStart(2, '0')}:00
+            </span>
+          )
+        })}
         {nowOffsetPx !== undefined && nowClock && (
           <span
             data-testid="now-pill"
             style={{ top: nowOffsetPx }}
-            className="absolute right-1 -translate-y-1/2 rounded-chip bg-city-vermilion px-[5px] py-[2px] font-sans text-[9.5px] font-extrabold leading-none text-white"
+            className={`absolute right-1 ${shift(nowOffsetPx)} rounded-chip bg-city-vermilion px-[5px] py-[2px] font-sans text-[9.5px] font-extrabold leading-none text-white`}
           >
             {nowClock}
           </span>
