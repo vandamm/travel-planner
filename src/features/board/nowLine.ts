@@ -5,7 +5,7 @@
 // is off-screen" and "now is outside the window" cases are unit-testable without
 // mocking a clock.
 
-import { PX_PER_HOUR, clockMinutes } from '../cards/cardHeight'
+import { MIN_PX_PER_HOUR, clockMinutes } from '../cards/cardHeight'
 import type { Day } from '../../data/schema'
 
 /** 'HH:mm' for a Date, in the viewer's local time (the trip models no timezone). */
@@ -18,12 +18,17 @@ export function localClock(now: Date): string {
  * when now falls outside the window — the line is drawn only while it would land
  * on the grid.
  */
-export function nowOffsetPx(clock: string, dayStart: string, dayEnd: string): number | null {
+export function nowOffsetPx(
+  clock: string,
+  dayStart: string,
+  dayEnd: string,
+  pxPerHour: number = MIN_PX_PER_HOUR,
+): number | null {
   const minutes = clockMinutes(clock)
   const start = clockMinutes(dayStart)
   const end = clockMinutes(dayEnd)
   if (minutes < start || minutes > end) return null
-  return ((minutes - start) / 60) * PX_PER_HOUR
+  return ((minutes - start) / 60) * pxPerHour
 }
 
 /**
@@ -36,8 +41,9 @@ export function nowLine(
   clock: string,
   dayStart: string,
   dayEnd: string,
+  pxPerHour: number = MIN_PX_PER_HOUR,
 ): { offsetPx: number; clock: string } | null {
   if (!days.some((day) => day.key === todayKey)) return null
-  const offsetPx = nowOffsetPx(clock, dayStart, dayEnd)
+  const offsetPx = nowOffsetPx(clock, dayStart, dayEnd, pxPerHour)
   return offsetPx === null ? null : { offsetPx, clock }
 }

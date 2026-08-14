@@ -22,7 +22,6 @@ import { NO_CITY_COLOR } from '../cities/colors'
 import { CityPicker } from '../cities/CityPicker'
 import { Card, SortableCard } from '../cards/Card'
 import {
-  PX_PER_HOUR,
   cardHeightPx,
   clockMinutes,
   evenHourMarks,
@@ -33,6 +32,7 @@ import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
 import { planBandHeightPx, planBandTiming, planBandTopPx, showsPlanBand } from './planBand'
 import { freeTimelineSlots, layoutTimelineCards } from './timelineSlots'
+import { usePxPerHour } from './timelineScale'
 import { COLUMN_WIDTH_REM } from './useViewport'
 
 export interface DayColumnProps {
@@ -80,6 +80,7 @@ export interface DayColumnProps {
 
 /** The two-hourly horizontal rails that carry the scale now the word labels are gone. */
 function GridRails({ dayStart, dayEnd }: { dayStart: string; dayEnd: string }) {
+  const pxPerHour = usePxPerHour()
   const start = clockMinutes(dayStart)
   return (
     <div aria-hidden data-testid="grid-rails" className="pointer-events-none absolute inset-0 z-0">
@@ -87,7 +88,7 @@ function GridRails({ dayStart, dayEnd }: { dayStart: string; dayEnd: string }) {
         <span
           key={hour}
           data-testid="grid-rail"
-          style={{ top: ((hour * 60 - start) / 60) * PX_PER_HOUR }}
+          style={{ top: ((hour * 60 - start) / 60) * pxPerHour }}
           className={`absolute inset-x-0 h-px ${index === 0 ? 'bg-hour-rule' : 'bg-hour-grid'}`}
         />
       ))}
@@ -131,8 +132,9 @@ function PlanSlot({
   height: number
   onAdd: (startTime: string, durationHours: number) => void
 }) {
+  const pxPerHour = usePxPerHour()
   const [bandTop, setBandTop] = useState(0)
-  const bandHeight = planBandHeightPx(height)
+  const bandHeight = planBandHeightPx(height, pxPerHour)
 
   return (
     <button
@@ -140,10 +142,16 @@ function PlanSlot({
       data-testid="timeline-slot"
       aria-label={`Plan something between ${slot.startTime} and ${slot.endTime}`}
       onPointerMove={(event) =>
-        setBandTop(planBandTopPx(event.clientY - event.currentTarget.getBoundingClientRect().top, height))
+        setBandTop(
+          planBandTopPx(
+            event.clientY - event.currentTarget.getBoundingClientRect().top,
+            height,
+            pxPerHour,
+          ),
+        )
       }
       onClick={() => {
-        const timing = planBandTiming(slot.startTime, slot.endTime, bandTop)
+        const timing = planBandTiming(slot.startTime, slot.endTime, bandTop, pxPerHour)
         onAdd(timing.startTime, timing.durationHours)
       }}
       style={{ top, height }}
@@ -181,6 +189,7 @@ export function DayColumn({
   showMonth = false,
   fluid = false,
 }: DayColumnProps) {
+  const pxPerHour = usePxPerHour()
   const placements = layoutTimelineCards(cards, dayStart, dayEnd)
   const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd)
   const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
@@ -189,7 +198,7 @@ export function DayColumn({
   const dateLabel = formatDay(day.key)
   const weekend = isWeekend(date)
 
-  const timelineHeight = windowHeightPx(dayStart, dayEnd)
+  const timelineHeight = windowHeightPx(dayStart, dayEnd, pxPerHour)
 
   // The column body is a drop target so cards can be dropped onto an empty day
   // (or its blank space), not only onto another card.
@@ -199,7 +208,7 @@ export function DayColumn({
   const dragPreview = useDragPreview()
   const previewTopPx =
     dragPreview?.dayKey === day.key && dragPreview.startTime
-      ? ((clockMinutes(dragPreview.startTime) - clockMinutes(dayStart)) / 60) * PX_PER_HOUR
+      ? ((clockMinutes(dragPreview.startTime) - clockMinutes(dayStart)) / 60) * pxPerHour
       : 0
 
   return (
@@ -326,8 +335,8 @@ export function DayColumn({
                   <PlanSlot
                     key={`${slot.startTime}-${slot.endTime}`}
                     slot={slot}
-                    top={(offset / 60) * PX_PER_HOUR}
-                    height={((end - start) / 60) * PX_PER_HOUR}
+                    top={(offset / 60) * pxPerHour}
+                    height={((end - start) / 60) * pxPerHour}
                     onAdd={(startTime, durationHours) =>
                       onAddCard(day.key, startTime, durationHours)
                     }
@@ -344,7 +353,7 @@ export function DayColumn({
               const previousEnd = previous
                 ? previous.offsetMinutes + previous.durationMinutes
                 : 0
-              const gap = ((placement.offsetMinutes - previousEnd) / 60) * PX_PER_HOUR
+              const gap = ((placement.offsetMinutes - previousEnd) / 60) * pxPerHour
               const c = placement.card
               return (
                 <SortableCard
@@ -354,7 +363,10 @@ export function DayColumn({
                   onEdit={onEditCard}
                   dayStart={dayStart}
                   dayEnd={dayEnd}
-                  layoutStyle={{ height: cardHeightPx(c, dayStart, dayEnd), marginTop: gap }}
+                  layoutStyle={{
+                    height: cardHeightPx(c, dayStart, dayEnd, pxPerHour),
+                    marginTop: gap,
+                  }}
                 />
               )
             })}
@@ -376,7 +388,7 @@ export function DayColumn({
               data-testid="drag-preview-card"
               style={{
                 top: previewTopPx,
-                height: dragPreview.durationHours * PX_PER_HOUR,
+                height: dragPreview.durationHours * pxPerHour,
               }}
               className="pointer-events-none absolute inset-x-1.5 z-20"
             >

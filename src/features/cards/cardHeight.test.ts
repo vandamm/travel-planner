@@ -5,9 +5,10 @@ import {
   hoursToMinutes,
   MIN_CARD_MINUTES,
   minutesToHours,
-  PX_PER_HOUR,
+  MIN_PX_PER_HOUR,
   resolvedDurationHours,
   SNAP_MINUTES,
+  fitPxPerHour,
 } from './cardHeight'
 
 const card = (over: Partial<Card>): Card => ({
@@ -24,30 +25,55 @@ const card = (over: Partial<Card>): Card => ({
 const START = '06:00'
 const END = '21:00'
 
+describe('fitPxPerHour', () => {
+  it('stretches an hour so the day fills the height it is given', () => {
+    // A 15-hour day in 1200px of board → 80px an hour.
+    expect(fitPxPerHour(1200, 15)).toBe(80)
+    expect(fitPxPerHour(900, 15)).toBe(60)
+  })
+
+  it('never squeezes below the floor — the board scrolls instead', () => {
+    // 15h would need 40px/h to fit 600px; the floor wins and the day overflows.
+    expect(fitPxPerHour(600, 15)).toBe(MIN_PX_PER_HOUR)
+    expect(fitPxPerHour(0, 15)).toBe(MIN_PX_PER_HOUR)
+    expect(fitPxPerHour(-100, 15)).toBe(MIN_PX_PER_HOUR)
+  })
+
+  it('floors to a whole pixel so rails and card edges stay aligned', () => {
+    expect(Number.isInteger(fitPxPerHour(1000, 13))).toBe(true)
+    expect(fitPxPerHour(1000, 13)).toBe(76)
+  })
+
+  it('falls back to the floor when the measurement is not usable yet', () => {
+    expect(fitPxPerHour(Number.NaN, 15)).toBe(MIN_PX_PER_HOUR)
+    expect(fitPxPerHour(1200, 0)).toBe(MIN_PX_PER_HOUR)
+  })
+})
+
 describe('cardHeightPx — duration', () => {
-  it('uses the reference scale of 40px per hour', () => {
-    expect(PX_PER_HOUR).toBe(40)
+  it('floors the scale at 50px per hour', () => {
+    expect(MIN_PX_PER_HOUR).toBe(50)
   })
 
   it('uses the configured day window for a day duration', () => {
-    expect(cardHeightPx(card({ duration: 'day' }), START, END)).toBe(15 * PX_PER_HOUR)
+    expect(cardHeightPx(card({ duration: 'day' }), START, END)).toBe(15 * MIN_PX_PER_HOUR)
   })
 
   it('uses half the configured day window for a half-day duration', () => {
     // 15h window → 7.5h.
-    expect(cardHeightPx(card({ duration: 'half' }), START, END)).toBe(7.5 * PX_PER_HOUR)
+    expect(cardHeightPx(card({ duration: 'half' }), START, END)).toBe(7.5 * MIN_PX_PER_HOUR)
   })
 
   it('uses custom durationHours', () => {
     expect(cardHeightPx(card({ duration: 'custom', durationHours: 2 }), START, END)).toBe(
-      2 * PX_PER_HOUR,
+      2 * MIN_PX_PER_HOUR,
     )
   })
 
   it('keeps a quarter-hour custom duration', () => {
     const quarterHour = card({ duration: 'custom', durationHours: 0.25 })
     expect(resolvedDurationHours(quarterHour, START, END)).toBe(0.25)
-    expect(cardHeightPx(quarterHour, START, END)).toBe(PX_PER_HOUR / 4)
+    expect(cardHeightPx(quarterHour, START, END)).toBe(MIN_PX_PER_HOUR / 4)
   })
 
   it('keeps a legacy non-quarter custom duration for rendering', () => {

@@ -1,9 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { setupTrip, E2E_LINK } from './helpers'
-import { PX_PER_HOUR } from '../src/features/cards/cardHeight'
+import { MIN_PX_PER_HOUR } from '../src/features/cards/cardHeight'
 
 /** One quarter-hour of vertical travel on the timeline scale. */
-const QUARTER_PX = PX_PER_HOUR / 4
+const QUARTER_PX = MIN_PX_PER_HOUR / 4
 
 interface PlannerBridge {
   doc: unknown

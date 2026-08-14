@@ -29,7 +29,8 @@ import {
   isTicketWashed,
   ticketMarkerState,
 } from './cardPalette'
-import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
+import { clockMinutes, clockString, resolvedDurationHours } from './cardHeight'
+import { usePxPerHour } from '../board/timelineScale'
 
 export interface CardProps {
   card: CardType
@@ -180,6 +181,7 @@ export function Card({
   dayEnd = '21:00',
   timingPreview,
 }: CardProps) {
+  const pxPerHour = usePxPerHour()
   const category = cardCategory(card)
   const durationHours =
     timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
@@ -247,7 +249,7 @@ export function Card({
 
   // The card's own height decides its layout: a short card collapses to one
   // line (glyph + name + time) rather than clipping its second and third rows.
-  const short = isShortCard(durationHours * PX_PER_HOUR)
+  const short = isShortCard(durationHours * pxPerHour)
   const ticket = ticketMarkerState(card.ticketState, category)
   const washed = isTicketWashed(card.ticketState, category)
   const surface = category ? CATEGORY_STYLE[category].surface : UNCATEGORISED_SURFACE
@@ -404,6 +406,7 @@ export function SortableCard({
   layoutStyle,
 }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: card.id })
+  const pxPerHour = usePxPerHour()
   const resizeController = useContext(CardResizeContext)
   const pointerResize = useRef<{
     pointerId: number
@@ -490,7 +493,7 @@ export function SortableCard({
           : 0
     if (!sign || !resizeController) return
     event.preventDefault()
-    resizeController.commit(card.id, edge, sign * (event.shiftKey ? PX_PER_HOUR : PX_PER_HOUR / 4))
+    resizeController.commit(card.id, edge, sign * (event.shiftKey ? pxPerHour : pxPerHour / 4))
   }
 
   const resizeHandleProps =

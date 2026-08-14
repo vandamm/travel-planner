@@ -1,7 +1,12 @@
 import type * as Y from 'yjs'
 import { getCard, getTrip, updateCardSchedules } from '../../data/doc'
 import type { Card } from '../../data/schema'
-import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
+import {
+  clockMinutes,
+  clockString,
+  MIN_PX_PER_HOUR,
+  resolvedDurationHours,
+} from '../cards/cardHeight'
 import { planTimelineSchedule, TIMELINE_SNAP_MINUTES } from './timelineSchedule'
 
 export const DAY_DROPPABLE_PREFIX = 'day:'
@@ -31,6 +36,7 @@ export function dropTimeForOffset(
   durationHours: number,
   dayStart: string,
   dayEnd: string,
+  pxPerHour: number = MIN_PX_PER_HOUR,
 ): string {
   const first = clockMinutes(dayStart)
   const end = clockMinutes(dayEnd)
@@ -38,7 +44,7 @@ export function dropTimeForOffset(
   const latest =
     Math.floor((end - durationHours * 60) / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   if (latest < earliest) return clockString(first)
-  const raw = first + (offsetPx / PX_PER_HOUR) * 60
+  const raw = first + (offsetPx / pxPerHour) * 60
   const snapped = Math.round(raw / TIMELINE_SNAP_MINUTES) * TIMELINE_SNAP_MINUTES
   return clockString(Math.min(Math.max(snapped, earliest), latest))
 }
@@ -56,6 +62,8 @@ export interface CardDropPlanInput {
   offsetPx: number
   dayStart: string
   dayEnd: string
+  /** The board's live vertical scale; the drop offset is read against it. */
+  pxPerHour?: number
 }
 
 export interface CardDropPlan {
@@ -70,9 +78,12 @@ export function planCardDrop({
   offsetPx,
   dayStart,
   dayEnd,
+  pxPerHour = MIN_PX_PER_HOUR,
 }: CardDropPlanInput): CardDropPlan {
   const durationHours = resolvedDurationHours(card, dayStart, dayEnd)
-  const requested = clockMinutes(dropTimeForOffset(offsetPx, durationHours, dayStart, dayEnd))
+  const requested = clockMinutes(
+    dropTimeForOffset(offsetPx, durationHours, dayStart, dayEnd, pxPerHour),
+  )
   const currentStart = card.startTime ? clockMinutes(card.startTime) : requested
   const result = planTimelineSchedule({
     active: { id: card.id, start: currentStart, duration: durationHours * 60 },
@@ -99,6 +110,7 @@ export function commitCardDropPlan(doc: Y.Doc, activeId: string, plan: CardDropP
 export function applyCardDrop(
   doc: Y.Doc,
   { activeId, targetDayKey, offsetPx }: CardDrop,
+  pxPerHour: number = MIN_PX_PER_HOUR,
 ): CardDropPlan | null {
   const active = getCard(doc, activeId)
   if (!active) return null
@@ -110,6 +122,7 @@ export function applyCardDrop(
     offsetPx,
     dayStart,
     dayEnd,
+    pxPerHour,
   })
 
   commitCardDropPlan(doc, activeId, plan)

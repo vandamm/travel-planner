@@ -7,7 +7,8 @@
 // column is header-above-body with the same body height, that makes the labels
 // line up with the timeline tracks without measuring anything.
 
-import { PX_PER_HOUR, clockMinutes, evenHourMarks, windowHeightPx } from '../cards/cardHeight'
+import { clockMinutes, evenHourMarks, windowHeightPx } from '../cards/cardHeight'
+import { usePxPerHour } from './timelineScale'
 
 export interface HourGutterProps {
   dayStart: string
@@ -30,6 +31,7 @@ export function HourGutter({
   widthPx,
   compact = false,
 }: HourGutterProps) {
+  const pxPerHour = usePxPerHour()
   const start = clockMinutes(dayStart)
   const hours = evenHourMarks(dayStart, dayEnd)
 
@@ -42,7 +44,7 @@ export function HourGutter({
     >
       <div className="flex-1" />
       <div
-        style={{ height: windowHeightPx(dayStart, dayEnd) }}
+        style={{ height: windowHeightPx(dayStart, dayEnd, pxPerHour) }}
         className="relative"
       >
         {hours.map((hour) => (
@@ -50,7 +52,7 @@ export function HourGutter({
             key={hour}
             data-testid="hour-mark"
             data-hour={hour}
-            style={{ top: ((hour * 60 - start) / 60) * PX_PER_HOUR }}
+            style={{ top: ((hour * 60 - start) / 60) * pxPerHour }}
             className={`absolute -translate-y-1/2 font-sans font-semibold leading-none text-hour-text ${compact ? 'right-2 text-[9.5px]' : 'right-2.5 text-[10px]'}`}
           >
             {String(hour).padStart(2, '0')}:00

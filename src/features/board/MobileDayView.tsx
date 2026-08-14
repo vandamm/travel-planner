@@ -55,6 +55,12 @@ export interface MobileDayViewProps {
   /** Set, explicitly clear, or return a day's city to Auto. */
   onSetCity?: (dayKey: string, cityId: DayCityOverride | undefined) => void
   onSwapDay?: (dayKey: string) => void
+  /**
+   * The scrolling element, when the board wants to measure it — the timeline
+   * scale is derived from its height, and the board owns that measurement so
+   * the drag/resize math and the rendered grid agree on one number.
+   */
+  containerRef?: React.RefObject<HTMLDivElement>
 }
 
 export function MobileDayView({
@@ -73,11 +79,13 @@ export function MobileDayView({
   onAddStay,
   onSetCity,
   onSwapDay,
+  containerRef,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const ownScrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = containerRef ?? ownScrollRef
 
   // The trip can shrink (fewer days) under us, so clamp on every render rather
   // than trusting the stored index.
@@ -89,7 +97,7 @@ export function MobileDayView({
   // day's offset. Runs before the hint effect so the recompute sees scrollTop 0.
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }, [safeIndex])
+  }, [safeIndex, scrollRef])
 
   if (days.length === 0) return null
 

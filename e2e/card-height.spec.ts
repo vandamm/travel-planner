@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { PX_PER_HOUR } from '../src/features/cards/cardHeight'
+import { MIN_PX_PER_HOUR } from '../src/features/cards/cardHeight'
 import { addActivity, setupTrip, E2E_LINK } from './helpers'
 
 test('a card set to whole-day grows taller than a default card', async ({ page }) => {
@@ -19,7 +19,7 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   const timelineTrack = await column.getByTestId('timeline-track').boundingBox()
   expect(dayBody).not.toBeNull()
   expect(timelineTrack).not.toBeNull()
-  expect(timelineTrack!.height).toBe(15 * PX_PER_HOUR)
+  expect(timelineTrack!.height).toBe(15 * MIN_PX_PER_HOUR)
   // The body is exactly the window — no dead space above or below the track.
   expect(dayBody!.height).toBe(timelineTrack!.height)
 

@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { addCard, getCard, setTrip } from '../../data/doc'
 import type { Card } from '../../data/schema'
-import { PX_PER_HOUR } from '../cards/cardHeight'
+import { MIN_PX_PER_HOUR } from '../cards/cardHeight'
 import { applyCardResize, planCardResize, type CardResizeEdge } from './cardResize'
 
 /** Pointer deltas and heights are expressed in scale units, not raw pixels, so
- *  changing PX_PER_HOUR does not mean rewriting every expectation. */
-const QUARTER = PX_PER_HOUR / 4
-const px = (hours: number) => hours * PX_PER_HOUR
+ *  changing MIN_PX_PER_HOUR does not mean rewriting every expectation. */
+const QUARTER = MIN_PX_PER_HOUR / 4
+const px = (hours: number) => hours * MIN_PX_PER_HOUR
 
 const DAY = '2027-05-01'
 const DAY_START = '06:00'
@@ -80,8 +80,8 @@ describe('planCardResize', () => {
   )
 
   it.each([
-    ['start', -PX_PER_HOUR, '09:00', 2, -PX_PER_HOUR],
-    ['end', PX_PER_HOUR, '10:00', 2, 0],
+    ['start', -MIN_PX_PER_HOUR, '09:00', 2, -MIN_PX_PER_HOUR],
+    ['end', MIN_PX_PER_HOUR, '10:00', 2, 0],
   ] satisfies [CardResizeEdge, number, string, number, number][])(
     'allows the %s edge to overlap without neighbor results',
     (edge, deltaPx, startTime, durationHours, topOffsetPx) => {
@@ -121,7 +121,7 @@ describe('applyCardResize', () => {
       transactionCount += 1
     })
 
-    applyCardResize(doc, 'active', 'end', PX_PER_HOUR)
+    applyCardResize(doc, 'active', 'end', MIN_PX_PER_HOUR)
 
     expect(getCard(doc, 'active')).toMatchObject({
       startTime: '10:00',

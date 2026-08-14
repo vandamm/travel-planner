@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { addCard, getCard, setTrip } from '../../data/doc'
-import { PX_PER_HOUR } from '../cards/cardHeight'
+import { MIN_PX_PER_HOUR } from '../cards/cardHeight'
 import {
   applyCardDrop,
   dayDroppableId,
@@ -35,7 +35,7 @@ describe('dropTimeForOffset', () => {
   })
 
   it('maps the dropped card top to the clock and snaps to 15 minutes', () => {
-    expect(dropTimeForOffset(4.25 * PX_PER_HOUR, 1, '06:00', '21:00')).toBe('10:15')
+    expect(dropTimeForOffset(4.25 * MIN_PX_PER_HOUR, 1, '06:00', '21:00')).toBe('10:15')
   })
 
   it('keeps the whole card inside the configured day window', () => {
@@ -44,8 +44,8 @@ describe('dropTimeForOffset', () => {
   })
 
   it('keeps edge drops snapped for custom day boundaries', () => {
-    expect(dropTimeForOffset(-2 * PX_PER_HOUR, 1, '06:07', '21:07')).toBe('06:15')
-    expect(dropTimeForOffset(PX_PER_HOUR, 1, '06:07', '21:07')).toBe('07:00')
+    expect(dropTimeForOffset(-2 * MIN_PX_PER_HOUR, 1, '06:07', '21:07')).toBe('06:15')
+    expect(dropTimeForOffset(MIN_PX_PER_HOUR, 1, '06:07', '21:07')).toBe('07:00')
     expect(dropTimeForOffset(2_000, 1, '06:07', '21:07')).toBe('20:00')
   })
 })
@@ -59,7 +59,7 @@ describe('applyCardDrop — same-day time drag', () => {
     const input = {
       card,
       targetDayKey: DAY1,
-      offsetPx: 4.25 * PX_PER_HOUR,
+      offsetPx: 4.25 * MIN_PX_PER_HOUR,
       dayStart: '06:00',
       dayEnd: '21:00',
     }
@@ -71,7 +71,7 @@ describe('applyCardDrop — same-day time drag', () => {
       durationHours: 1,
     })
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4.25 * PX_PER_HOUR })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4.25 * MIN_PX_PER_HOUR })
     expect(getCard(doc, active)).toMatchObject(preview)
     expect(getCard(doc, neighbor)?.startTime).toBe('10:00')
   })
@@ -80,7 +80,7 @@ describe('applyCardDrop — same-day time drag', () => {
     const doc = new Y.Doc()
     const id = addCard(doc, { dayKey: DAY1, title: 'Stroll' }).id
 
-    applyCardDrop(doc, { activeId: id, targetDayKey: DAY1, offsetPx: 4 * PX_PER_HOUR })
+    applyCardDrop(doc, { activeId: id, targetDayKey: DAY1, offsetPx: 4 * MIN_PX_PER_HOUR })
 
     expect(getCard(doc, id)?.startTime).toBe('10:00')
   })
@@ -91,7 +91,7 @@ describe('applyCardDrop — same-day time drag', () => {
     const museum = addTimed(doc, 'Museum', '10:00', 2)
     const lunch = addTimed(doc, 'Lunch', '12:00')
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4 * PX_PER_HOUR })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4 * MIN_PX_PER_HOUR })
 
     expect(getCard(doc, active)?.startTime).toBe('10:00')
     expect(getCard(doc, museum)?.startTime).toBe('10:00')
@@ -106,7 +106,7 @@ describe('applyCardDrop — same-day time drag', () => {
     let updates = 0
     doc.on('update', () => (updates += 1))
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4 * PX_PER_HOUR })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4 * MIN_PX_PER_HOUR })
 
     expect(updates).toBe(1)
   })
@@ -117,7 +117,7 @@ describe('applyCardDrop — same-day time drag', () => {
     const active = addTimed(doc, 'Museum', '09:00', 2)
     const targetNeighbor = addTimed(doc, 'Lunch', '10:00', 1, DAY2)
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY2, offsetPx: 4 * PX_PER_HOUR })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY2, offsetPx: 4 * MIN_PX_PER_HOUR })
 
     expect(getCard(doc, active)?.dayKey).toBe(DAY2)
     expect(getCard(doc, active)?.startTime).toBe('10:00')
@@ -131,7 +131,7 @@ describe('applyCardDrop — same-day time drag', () => {
     let updates = 0
     doc.on('update', () => (updates += 1))
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 2 * PX_PER_HOUR })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 2 * MIN_PX_PER_HOUR })
 
     expect(updates).toBe(0)
   })
@@ -141,7 +141,7 @@ describe('applyCardDrop — same-day time drag', () => {
     const earlier = addTimed(doc, 'Breakfast', '08:00')
     const active = addTimed(doc, 'Museum', '12:00')
 
-    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4 * PX_PER_HOUR })
+    applyCardDrop(doc, { activeId: active, targetDayKey: DAY1, offsetPx: 4 * MIN_PX_PER_HOUR })
 
     expect(getCard(doc, earlier)?.startTime).toBe('08:00')
     expect(getCard(doc, active)?.startTime).toBe('10:00')

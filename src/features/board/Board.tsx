@@ -17,6 +17,7 @@ import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
 import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
 import { generateDays, toDayKey } from '../../data/days'
+import { windowHours } from '../cards/cardHeight'
 import { COLUMN_STRIDE_PX, rangeSummary, showRightFade, todayIndex } from './multiWeekNav'
 import type { Accommodation, Card, City } from '../../data/schema'
 import { AccommodationEditor } from '../accommodation/AccommodationEditor'
@@ -26,6 +27,7 @@ import { cardCategory } from '../cards/cardCategory'
 import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
 import { HourGutter } from './HourGutter'
+import { TimelineScaleContext, useFittedPxPerHour } from './timelineScale'
 import { localClock, nowLine } from './nowLine'
 import { DaySwapModal } from './DaySwapModal'
 import { MobileDayView } from './MobileDayView'
@@ -86,6 +88,9 @@ export function Board({
   }, [addStayNonce])
 
   const trip = getTrip(doc)
+  // One scale for the whole board, measured from the space the scroller has, so
+  // a tall screen gets taller hours and the columns reach the bottom of the page.
+  const pxPerHour = useFittedPxPerHour(scrollRef, windowHours(trip.dayStart, trip.dayEnd))
   const days = generateDays(trip.startDate, trip.endDate)
   const accommodations = listAccommodations(doc)
   const overrides = listDayOverrides(doc)
@@ -132,7 +137,7 @@ export function Board({
   // against the visible days; both vanish when today is outside the trip or the
   // current time falls outside the day window.
   const todayKey = toDayKey(new Date())
-  const now = nowLine(days, todayKey, localClock(new Date()), trip.dayStart, trip.dayEnd)
+  const now = nowLine(days, todayKey, localClock(new Date()), trip.dayStart, trip.dayEnd, pxPerHour)
   const todayIdx = todayIndex(days, todayKey)
   const jumpToToday = () =>
     scrollRef.current?.scrollTo({ left: todayIdx * COLUMN_STRIDE_PX, behavior: 'smooth' })
@@ -153,224 +158,235 @@ export function Board({
       : undefined
 
   return (
-    <section
-      data-testid="board-frame"
-      aria-label="Board"
-      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
-    >
-      <BoardToolbar
-        title={wordmark}
-        meta={meta}
-        status={status}
-        presences={presences}
-        ticketsToBuy={ticketsToBuy}
-        onOpenTrip={onOpenTrip}
-        onOpenCities={onOpenCities}
-        onOpenShare={onOpenShare}
-        onOpenMenu={onOpenMenu}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
-      {days.length === 0 ? (
-        <BoardEmptyState onOpenTrip={onOpenTrip} />
-      ) : viewport === 'mobile' ? (
-        // Below 640px: one day at a time, paged by swipe or the
-        // prev/next controls. Same cards/accommodation logic as desktop.
-        <div className="min-h-0 flex-1">
-          <BoardDnd
-            doc={doc}
-            dayStart={trip.dayStart}
-            dayEnd={trip.dayEnd}
-            onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
-          >
-            <MobileDayView
-              days={days}
-              cardsByDay={cardsByDay}
-              accommodations={accommodations}
-              overrides={overrides}
-              cityById={cityById}
-              cities={cities}
-              dayStart={trip.dayStart}
-              dayEnd={trip.dayEnd}
-              columns={columns}
-              onAddCard={(dayKey, startTime, durationHours) =>
-                setEditor({ mode: 'create', dayKey, startTime, durationHours })
-              }
-              onEditCard={(card) => setEditor({ mode: 'edit', card })}
-              onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
-              onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
-              onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
-              onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
-            />
-          </BoardDnd>
-        </div>
-      ) : (
-        // The grid scrolls in both axes so the day-range footer below it stays
-        // reachable on a viewport shorter than the 06:00–21:00 window.
-        <div className="relative min-h-0 flex-1">
-          <div
-            ref={scrollRef}
-            data-testid="board-scroll"
-            onScroll={(e) => {
-              setShowFade(showRightFade(e.currentTarget))
-              setRangeText(rangeSummary(days, e.currentTarget))
-            }}
-            className="h-full overflow-auto"
-          >
-            {/* Stays lane, then the columns row — the two bands sit flush, with
-                the lane inset past the sticky hour gutter so it lines up with
-                the day columns and shares their boundary hairlines. */}
-            <AccommodationLane
-              days={days}
-              accommodations={accommodations}
-              cityById={cityById}
-              gutterPx={HOUR_GUTTER_PX}
-              onEditAccommodation={(accommodation) => setAccEditor({ mode: 'edit', accommodation })}
-              onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
-            />
+    <TimelineScaleContext.Provider value={pxPerHour}>
+      <section
+        data-testid="board-frame"
+        aria-label="Board"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
+      >
+        <BoardToolbar
+          title={wordmark}
+          meta={meta}
+          status={status}
+          presences={presences}
+          ticketsToBuy={ticketsToBuy}
+          onOpenTrip={onOpenTrip}
+          onOpenCities={onOpenCities}
+          onOpenShare={onOpenShare}
+          onOpenMenu={onOpenMenu}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
+        {days.length === 0 ? (
+          <BoardEmptyState onOpenTrip={onOpenTrip} />
+        ) : viewport === 'mobile' ? (
+          // Below 640px: one day at a time, paged by swipe or the
+          // prev/next controls. Same cards/accommodation logic as desktop.
+          <div className="min-h-0 flex-1">
             <BoardDnd
               doc={doc}
               dayStart={trip.dayStart}
               dayEnd={trip.dayEnd}
               onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
             >
-              {/* Not stretched to fill the scroller: HourGutter aligns its
+              <MobileDayView
+                containerRef={scrollRef}
+                days={days}
+                cardsByDay={cardsByDay}
+                accommodations={accommodations}
+                overrides={overrides}
+                cityById={cityById}
+                cities={cities}
+                dayStart={trip.dayStart}
+                dayEnd={trip.dayEnd}
+                columns={columns}
+                onAddCard={(dayKey, startTime, durationHours) =>
+                  setEditor({ mode: 'create', dayKey, startTime, durationHours })
+                }
+                onEditCard={(card) => setEditor({ mode: 'edit', card })}
+                onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
+                onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
+                onEditAccommodation={(accommodation) =>
+                  setAccEditor({ mode: 'edit', accommodation })
+                }
+                onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
+              />
+            </BoardDnd>
+          </div>
+        ) : (
+          // The grid scrolls in both axes so the day-range footer below it stays
+          // reachable on a viewport shorter than the 06:00–21:00 window.
+          <div className="relative min-h-0 flex-1">
+            <div
+              ref={scrollRef}
+              data-testid="board-scroll"
+              onScroll={(e) => {
+                setShowFade(showRightFade(e.currentTarget))
+                setRangeText(rangeSummary(days, e.currentTarget))
+              }}
+              className="h-full overflow-auto"
+            >
+              {/* Stays lane, then the columns row — the two bands sit flush, with
+                the lane inset past the sticky hour gutter so it lines up with
+                the day columns and shares their boundary hairlines. */}
+              <AccommodationLane
+                days={days}
+                accommodations={accommodations}
+                cityById={cityById}
+                gutterPx={HOUR_GUTTER_PX}
+                onEditAccommodation={(accommodation) =>
+                  setAccEditor({ mode: 'edit', accommodation })
+                }
+                onAddStay={(startNight) => setAccEditor({ mode: 'create', startNight })}
+              />
+              <BoardDnd
+                doc={doc}
+                dayStart={trip.dayStart}
+                dayEnd={trip.dayEnd}
+                onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
+              >
+                {/* Not stretched to fill the scroller: HourGutter aligns its
                   labels by sitting at the bottom of a column that is exactly
                   header + body tall, so growing the columns would slide every
                   hour label off its rail. */}
-              <div data-testid="board" className="flex min-w-full" style={{ gap: COLUMN_GAP_REM }}>
-                <HourGutter
-                  dayStart={trip.dayStart}
-                  dayEnd={trip.dayEnd}
-                  widthPx={HOUR_GUTTER_PX}
-                  nowOffsetPx={now?.offsetPx}
-                  nowClock={now?.clock}
-                />
-                {days.map((day, index) => {
-                  const cityId = resolveDayCity(day.key, accommodations, overrides)
-                  return (
-                    <DayColumn
-                      key={day.key}
-                      day={day}
-                      city={cityId ? cityById.get(cityId) : undefined}
-                      cards={cardsByDay.get(day.key) ?? []}
-                      dayStart={trip.dayStart}
-                      dayEnd={trip.dayEnd}
-                      cities={cities}
-                      overrideCityId={overrides[day.key]}
-                      onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
-                      onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
-                      onAddCard={(dayKey, startTime, durationHours) =>
-                        setEditor({ mode: 'create', dayKey, startTime, durationHours })
-                      }
-                      onEditCard={(card) => setEditor({ mode: 'edit', card })}
-                      nowOffsetPx={now?.offsetPx}
-                      isToday={day.key === todayKey}
-                      firstColumn={index === 0}
-                      // The month rides the first column and each month change,
-                      // so the date reads in full without repeating it 21 times.
-                      showMonth={index === 0 || day.key.endsWith('-01')}
-                    />
-                  )
-                })}
-              </div>
-            </BoardDnd>
-          </div>
-          {/* Right-edge fade: a decorative hint that more columns lie off-screen,
+                <div
+                  data-testid="board"
+                  className="flex min-w-full"
+                  style={{ gap: COLUMN_GAP_REM }}
+                >
+                  <HourGutter
+                    dayStart={trip.dayStart}
+                    dayEnd={trip.dayEnd}
+                    widthPx={HOUR_GUTTER_PX}
+                    nowOffsetPx={now?.offsetPx}
+                    nowClock={now?.clock}
+                  />
+                  {days.map((day, index) => {
+                    const cityId = resolveDayCity(day.key, accommodations, overrides)
+                    return (
+                      <DayColumn
+                        key={day.key}
+                        day={day}
+                        city={cityId ? cityById.get(cityId) : undefined}
+                        cards={cardsByDay.get(day.key) ?? []}
+                        dayStart={trip.dayStart}
+                        dayEnd={trip.dayEnd}
+                        cities={cities}
+                        overrideCityId={overrides[day.key]}
+                        onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}
+                        onSwapDay={days.length > 1 ? setSwapSourceDayKey : undefined}
+                        onAddCard={(dayKey, startTime, durationHours) =>
+                          setEditor({ mode: 'create', dayKey, startTime, durationHours })
+                        }
+                        onEditCard={(card) => setEditor({ mode: 'edit', card })}
+                        nowOffsetPx={now?.offsetPx}
+                        isToday={day.key === todayKey}
+                        firstColumn={index === 0}
+                        // The month rides the first column and each month change,
+                        // so the date reads in full without repeating it 21 times.
+                        showMonth={index === 0 || day.key.endsWith('-01')}
+                      />
+                    )
+                  })}
+                </div>
+              </BoardDnd>
+            </div>
+            {/* Right-edge fade: a decorative hint that more columns lie off-screen,
               shown only while not scrolled fully right (mirrors the mobile fade). */}
-          {showFade && (
-            <div
-              aria-hidden
-              data-testid="board-fade"
-              className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent"
-            />
-          )}
-        </div>
-      )}
-
-      {/* Day-range nav sits *under* the grid, flush against the last hour rail. */}
-      {viewport === 'desktop' && days.length > 0 && (
-        <div
-          data-testid="board-footer"
-          className="flex items-center gap-3 border-t border-hour-rule px-3 py-2.5"
-        >
-          <div data-testid="range-stepper" className="flex items-center gap-1.5">
-            <button
-              type="button"
-              aria-label="Previous days"
-              title="Earlier days"
-              onClick={() => pageBy(-1)}
-              className="h-7 w-[30px] rounded-card border border-edge-350 text-[15px] text-ink-600"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              aria-label="Next days"
-              title="Later days"
-              onClick={() => pageBy(1)}
-              className="h-7 w-[30px] rounded-card border border-edge-350 text-[15px] text-ink-600"
-            >
-              ›
-            </button>
+            {showFade && (
+              <div
+                aria-hidden
+                data-testid="board-fade"
+                className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent"
+              />
+            )}
           </div>
-          <span
-            data-testid="visible-range"
-            className="font-sans text-[11px] font-semibold text-ink-450"
+        )}
+
+        {/* Day-range nav sits *under* the grid, flush against the last hour rail. */}
+        {viewport === 'desktop' && days.length > 0 && (
+          <div
+            data-testid="board-footer"
+            className="flex items-center gap-3 border-t border-hour-rule px-3 py-2.5"
           >
-            {rangeText}
-          </span>
-          {todayIdx >= 0 && (
-            <button
-              type="button"
-              aria-label="Jump to today"
-              onClick={jumpToToday}
-              className="ml-auto rounded-card border border-edge-350 px-3 py-1.5 font-sans text-[11px] font-semibold text-ink-600"
+            <div data-testid="range-stepper" className="flex items-center gap-1.5">
+              <button
+                type="button"
+                aria-label="Previous days"
+                title="Earlier days"
+                onClick={() => pageBy(-1)}
+                className="h-7 w-[30px] rounded-card border border-edge-350 text-[15px] text-ink-600"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label="Next days"
+                title="Later days"
+                onClick={() => pageBy(1)}
+                className="h-7 w-[30px] rounded-card border border-edge-350 text-[15px] text-ink-600"
+              >
+                ›
+              </button>
+            </div>
+            <span
+              data-testid="visible-range"
+              className="font-sans text-[11px] font-semibold text-ink-450"
             >
-              Today
-            </button>
-          )}
-        </div>
-      )}
+              {rangeText}
+            </span>
+            {todayIdx >= 0 && (
+              <button
+                type="button"
+                aria-label="Jump to today"
+                onClick={jumpToToday}
+                className="ml-auto rounded-card border border-edge-350 px-3 py-1.5 font-sans text-[11px] font-semibold text-ink-600"
+              >
+                Today
+              </button>
+            )}
+          </div>
+        )}
 
-      {editor && (
-        <CardEditor
-          card={editor.mode === 'edit' ? editor.card : undefined}
-          dayKey={editor.mode === 'create' ? editor.dayKey : undefined}
-          defaultStartTime={editor.mode === 'create' ? editor.startTime : undefined}
-          defaultDurationHours={editor.mode === 'create' ? editor.durationHours : undefined}
-          dayCityName={
-            editor.mode === 'create'
-              ? cityByDay.get(editor.dayKey)?.name
-              : cityByDay.get(editor.card.dayKey)?.name
-          }
-          onClose={() => setEditor(null)}
-        />
-      )}
+        {editor && (
+          <CardEditor
+            card={editor.mode === 'edit' ? editor.card : undefined}
+            dayKey={editor.mode === 'create' ? editor.dayKey : undefined}
+            defaultStartTime={editor.mode === 'create' ? editor.startTime : undefined}
+            defaultDurationHours={editor.mode === 'create' ? editor.durationHours : undefined}
+            dayCityName={
+              editor.mode === 'create'
+                ? cityByDay.get(editor.dayKey)?.name
+                : cityByDay.get(editor.card.dayKey)?.name
+            }
+            onClose={() => setEditor(null)}
+          />
+        )}
 
-      {accEditor && (
-        <AccommodationEditor
-          accommodation={accEditor.mode === 'edit' ? accEditor.accommodation : undefined}
-          defaultStartNight={createStartNight}
-          defaultEndNight={createStartNight}
-          onClose={() => setAccEditor(null)}
-        />
-      )}
+        {accEditor && (
+          <AccommodationEditor
+            accommodation={accEditor.mode === 'edit' ? accEditor.accommodation : undefined}
+            defaultStartNight={createStartNight}
+            defaultEndNight={createStartNight}
+            onClose={() => setAccEditor(null)}
+          />
+        )}
 
-      {swapSourceDay && (
-        <DaySwapModal
-          sourceDay={swapSourceDay}
-          days={days}
-          cityByDay={cityByDay}
-          onClose={() => setSwapSourceDayKey(null)}
-          onConfirm={(targetDayKey) => {
-            swapActivityDays(doc, swapSourceDay.key, targetDayKey)
-            setSwapSourceDayKey(null)
-          }}
-        />
-      )}
-    </section>
+        {swapSourceDay && (
+          <DaySwapModal
+            sourceDay={swapSourceDay}
+            days={days}
+            cityByDay={cityByDay}
+            onClose={() => setSwapSourceDayKey(null)}
+            onConfirm={(targetDayKey) => {
+              swapActivityDays(doc, swapSourceDay.key, targetDayKey)
+              setSwapSourceDayKey(null)
+            }}
+          />
+        )}
+      </section>
+    </TimelineScaleContext.Provider>
   )
 }

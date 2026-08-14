@@ -10,14 +10,12 @@
 // Pure math, so the geometry is unit-testable and the component only has to
 // wire a pointermove.
 
-import { PX_PER_HOUR, SNAP_MINUTES, clockMinutes, clockString } from '../cards/cardHeight'
+import { MIN_PX_PER_HOUR, SNAP_MINUTES, clockMinutes, clockString } from '../cards/cardHeight'
 
 /** Gaps shorter than this get no hover affordance at all — use the header ＋. */
 export const PLAN_BAND_MIN_GAP_MINUTES = 45
 /** The band's nominal length; a shorter gap collapses it to the gap. */
 export const PLAN_BAND_MINUTES = 60
-
-const SNAP_PX = (SNAP_MINUTES / 60) * PX_PER_HOUR
 
 /** Whether a free slot is long enough to offer the hover band. */
 export function showsPlanBand(startTime: string, endTime: string): boolean {
@@ -25,8 +23,11 @@ export function showsPlanBand(startTime: string, endTime: string): boolean {
 }
 
 /** The band's height: one hour, or the whole gap when the gap is shorter. */
-export function planBandHeightPx(gapHeightPx: number): number {
-  return Math.min((PLAN_BAND_MINUTES / 60) * PX_PER_HOUR, gapHeightPx)
+export function planBandHeightPx(
+  gapHeightPx: number,
+  pxPerHour: number = MIN_PX_PER_HOUR,
+): number {
+  return Math.min((PLAN_BAND_MINUTES / 60) * pxPerHour, gapHeightPx)
 }
 
 /**
@@ -34,10 +35,15 @@ export function planBandHeightPx(gapHeightPx: number): number {
  * on the cursor, snapped to {@link SNAP_MINUTES}, clamped so the band never
  * escapes the gap.
  */
-export function planBandTopPx(offsetPx: number, gapHeightPx: number): number {
-  const height = planBandHeightPx(gapHeightPx)
+export function planBandTopPx(
+  offsetPx: number,
+  gapHeightPx: number,
+  pxPerHour: number = MIN_PX_PER_HOUR,
+): number {
+  const snapPx = (SNAP_MINUTES / 60) * pxPerHour
+  const height = planBandHeightPx(gapHeightPx, pxPerHour)
   const centred = offsetPx - height / 2
-  const snapped = Math.round(centred / SNAP_PX) * SNAP_PX
+  const snapped = Math.round(centred / snapPx) * snapPx
   return Math.max(0, Math.min(gapHeightPx - height, snapped))
 }
 
@@ -56,10 +62,11 @@ export function planBandTiming(
   startTime: string,
   endTime: string,
   topPx: number,
+  pxPerHour: number = MIN_PX_PER_HOUR,
 ): { startTime: string; durationHours: number } {
   const gapStart = clockMinutes(startTime)
   const gapMinutes = clockMinutes(endTime) - gapStart
-  const offsetMinutes = Math.round((topPx / PX_PER_HOUR) * 60 / SNAP_MINUTES) * SNAP_MINUTES
+  const offsetMinutes = Math.round((topPx / pxPerHour) * 60 / SNAP_MINUTES) * SNAP_MINUTES
   const start = gapStart + offsetMinutes
   const minutes = Math.max(SNAP_MINUTES, Math.min(PLAN_BAND_MINUTES, gapMinutes))
   return { startTime: clockString(start), durationHours: minutes / 60 }

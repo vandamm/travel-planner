@@ -7,16 +7,28 @@
 import type { Card } from '../../data/schema'
 
 /**
- * Pixels per hour of the time window — the timeline's vertical scale, and the
- * reference's own (its grid draws 06:00–21:00 in 600px). Every offset, height
- * and snap on the board derives from this, so it is the one number to change to
- * make the day taller or shorter.
+ * Pixels per hour of the time window — the timeline's vertical scale.
  *
- * At this scale a one-hour card is 40px, which is under {@link
- * SHORT_CARD_PX} — so it collapses to a single line, exactly as the reference's
- * own short cards do.
+ * The board stretches this so the day fills the viewport (see
+ * {@link fitPxPerHour}), so it is a *runtime* value, passed to every helper
+ * here as a trailing argument. This constant is the floor and the default: what
+ * anything without a viewport to measure uses — tests, the Worker — and the
+ * smallest an hour is ever drawn, below which the board scrolls instead.
  */
-export const PX_PER_HOUR = 40
+export const MIN_PX_PER_HOUR = 50
+
+/**
+ * The scale that makes a `windowHours`-long day exactly fill `availableHeightPx`,
+ * never squeezing an hour below {@link MIN_PX_PER_HOUR} — past that the day is
+ * taller than the space and the board scrolls, which beats an illegible grid.
+ *
+ * Floored to a whole pixel so rails and card edges land on the same device
+ * pixel rather than drifting a fraction apart down the column.
+ */
+export function fitPxPerHour(availableHeightPx: number, windowHours: number): number {
+  if (!Number.isFinite(availableHeightPx) || windowHours <= 0) return MIN_PX_PER_HOUR
+  return Math.max(MIN_PX_PER_HOUR, Math.floor(availableHeightPx / windowHours))
+}
 /** Timeline and custom-duration granularity. */
 export const SNAP_MINUTES = 15
 /** Smallest permitted custom-card duration. */
@@ -71,13 +83,17 @@ export function evenHourMarks(dayStart: string, dayEnd: string): number[] {
 }
 
 /** Length of the day window in hours (floored to a default block). */
-function windowHours(dayStart: string, dayEnd: string): number {
+export function windowHours(dayStart: string, dayEnd: string): number {
   return Math.max((clockMinutes(dayEnd) - clockMinutes(dayStart)) / 60, DEFAULT_CARD_HOURS)
 }
 
 /** Body height (px) for the day window; never shorter than one default block. */
-export function windowHeightPx(dayStart: string, dayEnd: string): number {
-  return windowHours(dayStart, dayEnd) * PX_PER_HOUR
+export function windowHeightPx(
+  dayStart: string,
+  dayEnd: string,
+  pxPerHour: number = MIN_PX_PER_HOUR,
+): number {
+  return windowHours(dayStart, dayEnd) * pxPerHour
 }
 
 /** Resolve a card duration to positive hours for layout, labels, and drag math. */
@@ -95,6 +111,11 @@ export function resolvedDurationHours(card: Card, dayStart: string, dayEnd: stri
 }
 
 /** A card's height in pixels. */
-export function cardHeightPx(card: Card, dayStart: string, dayEnd: string): number {
-  return resolvedDurationHours(card, dayStart, dayEnd) * PX_PER_HOUR
+export function cardHeightPx(
+  card: Card,
+  dayStart: string,
+  dayEnd: string,
+  pxPerHour: number = MIN_PX_PER_HOUR,
+): number {
+  return resolvedDurationHours(card, dayStart, dayEnd) * pxPerHour
 }

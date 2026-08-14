@@ -238,6 +238,22 @@ not above it. These are desktop-only.
 
 ## The board grid
 
+**The vertical scale is a runtime value, not a constant.** The day stretches so
+it fills the height the board has: `useFittedPxPerHour`
+(`src/features/board/timelineScale.ts`) measures the scroll container, subtracts
+the day body's offset inside it (the stays lane + day header, both
+scale-independent, so the measurement can't feed back), and derives px-per-hour
+via `fitPxPerHour`. `MIN_PX_PER_HOUR` (50) is the **floor and the default** —
+below it the board scrolls rather than drawing an illegible grid, and it is what
+anything without a viewport to measure uses (tests, the Worker).
+
+Every helper that converts between minutes and pixels — `windowHeightPx`,
+`cardHeightPx`, `nowOffsetPx`, the `planBand*` family, `planCardResize`,
+`dropTimeForOffset` — takes `pxPerHour` as a trailing argument defaulting to the
+floor. Components read the live value from `TimelineScaleContext` via
+`usePxPerHour()` instead of threading it through props; `Board` owns the single
+provider so the rendered grid and the drag/resize math can never disagree.
+
 Day columns sit **flush** (`COLUMN_GAP_PX` is 0): the boundary between two days
 is a single full-height 1px hairline on the column itself, so it runs unbroken
 from the stays band through the header row into the grid. Because there is no

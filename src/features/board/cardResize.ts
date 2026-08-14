@@ -2,7 +2,12 @@ import { createContext } from 'react'
 import type * as Y from 'yjs'
 import { getCard, getTrip, updateCard, updateCardSchedules } from '../../data/doc'
 import type { Card } from '../../data/schema'
-import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from '../cards/cardHeight'
+import {
+  clockMinutes,
+  clockString,
+  MIN_PX_PER_HOUR,
+  resolvedDurationHours,
+} from '../cards/cardHeight'
 import { planTimelineSchedule } from './timelineSchedule'
 
 export type CardResizeEdge = 'start' | 'end'
@@ -14,6 +19,8 @@ export interface CardResizeInput {
   deltaPx: number
   dayStart: string
   dayEnd: string
+  /** The board's live vertical scale; pointer travel is read against it. */
+  pxPerHour?: number
 }
 
 export interface CardResizePlan {
@@ -40,11 +47,12 @@ export function planCardResize({
   deltaPx,
   dayStart,
   dayEnd,
+  pxPerHour = MIN_PX_PER_HOUR,
 }: CardResizeInput): CardResizePlan | null {
   if (!card.startTime) return null
 
   const active = interval(card, dayStart, dayEnd)
-  const clockDelta = (deltaPx / PX_PER_HOUR) * 60
+  const clockDelta = (deltaPx / pxPerHour) * 60
   const requestedStart = edge === 'start' ? active.start + clockDelta : active.start
   const requestedEnd =
     edge === 'end' ? active.start + active.duration + clockDelta : active.start + active.duration
@@ -61,8 +69,8 @@ export function planCardResize({
     startTime: clockString(result.activeStart),
     duration: 'custom',
     durationHours: result.activeDuration / 60,
-    heightPx: (result.activeDuration / 60) * PX_PER_HOUR,
-    topOffsetPx: (topOffsetMinutes / 60) * PX_PER_HOUR,
+    heightPx: (result.activeDuration / 60) * pxPerHour,
+    topOffsetPx: (topOffsetMinutes / 60) * pxPerHour,
   }
 }
 
@@ -72,6 +80,7 @@ export function applyCardResize(
   cardId: string,
   edge: CardResizeEdge,
   deltaPx: number,
+  pxPerHour: number = MIN_PX_PER_HOUR,
 ): CardResizePlan | null {
   const card = getCard(doc, cardId)
   if (!card) return null
@@ -82,6 +91,7 @@ export function applyCardResize(
     deltaPx,
     dayStart,
     dayEnd,
+    pxPerHour,
   })
   if (!result) return null
 

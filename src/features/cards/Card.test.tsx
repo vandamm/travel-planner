@@ -7,7 +7,7 @@ import {
   type CardResizeController,
   type CardResizePlan,
 } from '../board/cardResize'
-import { PX_PER_HOUR } from './cardHeight'
+import { MIN_PX_PER_HOUR } from './cardHeight'
 import { Card, SortableCard } from './Card'
 
 // Two hours (120px) so the card is tall enough for the stacked layout; a card
@@ -295,9 +295,9 @@ describe('Card', () => {
 
     const restoredStart = screen.getByRole('button', { name: 'Resize Colosseum start' })
     fireEvent.keyDown(restoredStart, { key: 'ArrowUp' })
-    expect(commit).toHaveBeenCalledWith('x', 'start', -PX_PER_HOUR / 4)
+    expect(commit).toHaveBeenCalledWith('x', 'start', -MIN_PX_PER_HOUR / 4)
     fireEvent.keyDown(restoredStart, { key: 'ArrowDown', shiftKey: true })
-    expect(commit).toHaveBeenCalledWith('x', 'start', PX_PER_HOUR)
+    expect(commit).toHaveBeenCalledWith('x', 'start', MIN_PX_PER_HOUR)
   })
 
   it('restores the original card and geometry after a cancelled resize without committing', () => {

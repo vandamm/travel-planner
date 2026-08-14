@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Day } from '../../data/schema'
-import { PX_PER_HOUR } from '../cards/cardHeight'
+import { MIN_PX_PER_HOUR } from '../cards/cardHeight'
 import { localClock, nowLine, nowOffsetPx } from './nowLine'
 
 const days: Day[] = [
@@ -18,8 +18,8 @@ describe('localClock', () => {
 describe('nowOffsetPx', () => {
   it('maps the time of day onto the window scale', () => {
     expect(nowOffsetPx('06:00', '06:00', '21:00')).toBe(0)
-    expect(nowOffsetPx('14:30', '06:00', '21:00')).toBe(8.5 * PX_PER_HOUR)
-    expect(nowOffsetPx('21:00', '06:00', '21:00')).toBe(15 * PX_PER_HOUR)
+    expect(nowOffsetPx('14:30', '06:00', '21:00')).toBe(8.5 * MIN_PX_PER_HOUR)
+    expect(nowOffsetPx('21:00', '06:00', '21:00')).toBe(15 * MIN_PX_PER_HOUR)
   })
 
   it('is null outside the window, so no line is drawn', () => {
@@ -31,7 +31,7 @@ describe('nowOffsetPx', () => {
 describe('nowLine', () => {
   it('draws only when today is one of the visible days', () => {
     expect(nowLine(days, '2027-05-02', '14:30', '06:00', '21:00')).toEqual({
-      offsetPx: 8.5 * PX_PER_HOUR,
+      offsetPx: 8.5 * MIN_PX_PER_HOUR,
       clock: '14:30',
     })
     expect(nowLine(days, '2027-06-01', '14:30', '06:00', '21:00')).toBeNull()
