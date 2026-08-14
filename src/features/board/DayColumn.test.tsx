@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
+import { PX_PER_HOUR } from '../cards/cardHeight'
 import { DayColumn } from './DayColumn'
 import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
 
@@ -115,25 +116,25 @@ describe('DayColumn', () => {
     expect(within(card('Tour')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Museum')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Lunch')).queryByText('Overlap')).not.toBeInTheDocument()
-    // Tour is at 09:00 (180px). Museum starts at 10:30, half an hour before Tour
-    // ends, so it pulls up by 30px to sit on its own hour rather than being
-    // shoved below Tour — the overlap is shown, not hidden.
-    expect(screen.getByText('Tour').closest('li')).toHaveStyle({ marginTop: '180px' })
-    expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: '-30px' })
+    // Tour is at 09:00, three hours down. Museum starts at 10:30 — half an hour
+    // before Tour ends — so it pulls up half an hour to sit on its own time
+    // rather than being shoved below Tour. The overlap is shown, not hidden.
+    expect(screen.getByText('Tour').closest('li')).toHaveStyle({ marginTop: `${3 * PX_PER_HOUR}px` })
+    expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: `${-0.5 * PX_PER_HOUR}px` })
   })
 
   it('is exactly the day window tall, with no dead space above or below', () => {
-    // 06:00–21:00 is 15h at 60px/hour. Any extra would show as blank space under
-    // the last rail and push the board into a needless vertical scroll.
+    // Any extra would show as blank space under the last rail and push the board
+    // into a needless vertical scroll.
     render(<DayColumn day={day} cards={[]} dayStart="06:00" dayEnd="21:00" />)
-    expect(screen.getByTestId('day-body')).toHaveStyle({ height: '900px' })
+    expect(screen.getByTestId('day-body')).toHaveStyle({ height: `${15 * PX_PER_HOUR}px` })
     const track = screen.getByTestId('timeline-track')
-    expect(track).toHaveStyle({ height: '900px' })
+    expect(track).toHaveStyle({ height: `${15 * PX_PER_HOUR}px` })
     expect(track).toHaveClass('top-0')
 
     // A shorter window shrinks to match rather than keeping a fixed frame.
     render(<DayColumn day={day} cards={[]} dayStart="07:00" dayEnd="20:00" />)
-    expect(screen.getAllByTestId('day-body').at(-1)).toHaveStyle({ height: '780px' })
+    expect(screen.getAllByTestId('day-body').at(-1)).toHaveStyle({ height: `${13 * PX_PER_HOUR}px` })
   })
 
   it('carries the scale as two-hourly rails, the labels living in the shared gutter', () => {
@@ -144,7 +145,7 @@ describe('DayColumn', () => {
     const rails = screen.getAllByTestId('grid-rail')
     expect(rails).toHaveLength(8)
     expect(rails[0]).toHaveStyle({ top: '0px' })
-    expect(rails[1]).toHaveStyle({ top: '120px' })
+    expect(rails[1]).toHaveStyle({ top: `${2 * PX_PER_HOUR}px` })
     // The first rail is the stronger hairline, the rest the lighter grid tone.
     expect(rails[0]).toHaveClass('bg-hour-rule')
     expect(rails[1]).toHaveClass('bg-hour-grid')
@@ -163,8 +164,8 @@ describe('DayColumn', () => {
 
     const slots = screen.getAllByTestId('timeline-slot')
     expect(slots).toHaveLength(2)
-    expect(slots[0]).toHaveStyle({ top: '60px', height: '60px' })
-    expect(slots[1]).toHaveStyle({ top: '180px', height: '600px' })
+    expect(slots[0]).toHaveStyle({ top: `${PX_PER_HOUR}px`, height: `${PX_PER_HOUR}px` })
+    expect(slots[1]).toHaveStyle({ top: `${3 * PX_PER_HOUR}px`, height: `${10 * PX_PER_HOUR}px` })
     for (const slot of slots) {
       // No resting box and no duration label — the gap renders as nothing until
       // the band appears on hover.
@@ -176,8 +177,8 @@ describe('DayColumn', () => {
       expect(band).toHaveClass('group-hover:flex', 'group-focus-visible:flex')
     }
     // The one-hour band clamps to the gap when the gap is shorter than an hour.
-    expect(within(slots[0]).getByTestId('plan-band')).toHaveStyle({ height: '60px' })
-    expect(within(slots[1]).getByTestId('plan-band')).toHaveStyle({ height: '60px' })
+    expect(within(slots[0]).getByTestId('plan-band')).toHaveStyle({ height: `${PX_PER_HOUR}px` })
+    expect(within(slots[1]).getByTestId('plan-band')).toHaveStyle({ height: `${PX_PER_HOUR}px` })
 
     // Clicking seeds exactly the band that was on screen.
     fireEvent.click(slots[1])
@@ -227,9 +228,9 @@ describe('DayColumn', () => {
   it('scales each card by its duration', () => {
     render(<DayColumn day={day} cards={cards} />)
     const li = (title: string) => screen.getByText(title).closest('li') as HTMLElement
-    expect(li('Dinner')).toHaveStyle({ height: '120px' })
-    expect(li('Breakfast')).toHaveStyle({ height: '60px' })
-    expect(li('Stroll')).toHaveStyle({ height: '60px' })
+    expect(li('Dinner')).toHaveStyle({ height: `${2 * PX_PER_HOUR}px` })
+    expect(li('Breakfast')).toHaveStyle({ height: `${PX_PER_HOUR}px` })
+    expect(li('Stroll')).toHaveStyle({ height: `${PX_PER_HOUR}px` })
     expect(screen.getByText('Dinner').closest('[data-testid="card"]')).toHaveClass(
       'w-full',
       'h-[calc(100%-2px)]',
@@ -256,7 +257,10 @@ describe('DayColumn', () => {
         dayEnd="21:00"
       />,
     )
-    expect(screen.getByText('Late start').closest('li')).toHaveStyle({ marginTop: '180px' })
+    // 07:00 day start, card at 10:00 → three hours down the scale.
+    expect(screen.getByText('Late start').closest('li')).toHaveStyle({
+      marginTop: `${3 * PX_PER_HOUR}px`,
+    })
   })
 
   it('offers Auto, No city, and per-city overrides, defaulting to Auto', () => {

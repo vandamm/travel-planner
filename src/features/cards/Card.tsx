@@ -304,8 +304,10 @@ export function Card({
             row it was clipped by any card too short for three rows — and a card
             short enough to overlap invisibly is exactly the one that needs it. */}
         {conflict && <ConflictBadge />}
-        {/* A short card has no second row, so its time joins the title line. */}
-        {short && !conflict && (
+        {/* A short card has no second row, so its time joins the title line —
+            alongside any overlap badge, since the title truncates to make room
+            and dropping either would hide something the card must say. */}
+        {short && (
           <span
             data-testid="card-time"
             className="shrink-0 whitespace-nowrap font-sans text-[9.5px] font-semibold text-hour-text"

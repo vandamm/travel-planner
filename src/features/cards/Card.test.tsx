@@ -7,6 +7,7 @@ import {
   type CardResizeController,
   type CardResizePlan,
 } from '../board/cardResize'
+import { PX_PER_HOUR } from './cardHeight'
 import { Card, SortableCard } from './Card'
 
 // Two hours (120px) so the card is tall enough for the stacked layout; a card
@@ -287,14 +288,16 @@ describe('Card', () => {
     expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 – 12:00 · 2h 15m')
     pointerWindow('pointerUp', 85)
     expect(document.body).not.toHaveClass('cursor-row-resize')
+    // The pointer forwards its raw travel (100 → 85); only the keyboard steps
+    // below are expressed in scale units.
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
 
     const restoredStart = screen.getByRole('button', { name: 'Resize Colosseum start' })
     fireEvent.keyDown(restoredStart, { key: 'ArrowUp' })
-    expect(commit).toHaveBeenCalledWith('x', 'start', -15)
+    expect(commit).toHaveBeenCalledWith('x', 'start', -PX_PER_HOUR / 4)
     fireEvent.keyDown(restoredStart, { key: 'ArrowDown', shiftKey: true })
-    expect(commit).toHaveBeenCalledWith('x', 'start', 60)
+    expect(commit).toHaveBeenCalledWith('x', 'start', PX_PER_HOUR)
   })
 
   it('restores the original card and geometry after a cancelled resize without committing', () => {

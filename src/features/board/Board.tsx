@@ -236,6 +236,10 @@ export function Board({
               dayEnd={trip.dayEnd}
               onTimelineChange={() => rerenderAfterTimelineChange((version) => version + 1)}
             >
+              {/* Not stretched to fill the scroller: HourGutter aligns its
+                  labels by sitting at the bottom of a column that is exactly
+                  header + body tall, so growing the columns would slide every
+                  hour label off its rail. */}
               <div data-testid="board" className="flex min-w-full" style={{ gap: COLUMN_GAP_REM }}>
                 <HourGutter
                   dayStart={trip.dayStart}

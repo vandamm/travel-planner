@@ -90,10 +90,10 @@ export const TICKET_WASH = 'bg-ticket-wash border-ticket-wash-edge'
 /**
  * Cards at or under this height collapse to a single glyph + name + time row.
  *
- * Set just under an hour on purpose. The reference collapses cards of roughly
- * 1.5 hours and stacks from ~2, but this board runs at 60px/hour where a card of
- * an hour has room for title + time — and an hour is the app's default length,
- * so collapsing it would quietly drop the note and link off every new card.
+ * This is a *pixel* threshold, not a duration, because it is about whether the
+ * text fits: title (17) + gap (5) + time (12) + padding (16) needs ~50px. It
+ * therefore holds regardless of {@link PX_PER_HOUR} — changing the scale changes
+ * which durations collapse, not whether the rows would be legible.
  */
 export const SHORT_CARD_PX = 50
 

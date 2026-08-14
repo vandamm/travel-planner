@@ -25,8 +25,8 @@ const START = '06:00'
 const END = '21:00'
 
 describe('cardHeightPx — duration', () => {
-  it('uses a one-pixel-per-minute scale', () => {
-    expect(PX_PER_HOUR).toBe(60)
+  it('uses the reference scale of 40px per hour', () => {
+    expect(PX_PER_HOUR).toBe(40)
   })
 
   it('uses the configured day window for a day duration', () => {
@@ -47,7 +47,7 @@ describe('cardHeightPx — duration', () => {
   it('keeps a quarter-hour custom duration', () => {
     const quarterHour = card({ duration: 'custom', durationHours: 0.25 })
     expect(resolvedDurationHours(quarterHour, START, END)).toBe(0.25)
-    expect(cardHeightPx(quarterHour, START, END)).toBe(15)
+    expect(cardHeightPx(quarterHour, START, END)).toBe(PX_PER_HOUR / 4)
   })
 
   it('keeps a legacy non-quarter custom duration for rendering', () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PX_PER_HOUR } from '../cards/cardHeight'
 import {
   PLAN_BAND_MIN_GAP_MINUTES,
   planBandHeightPx,
@@ -18,34 +19,41 @@ describe('showsPlanBand', () => {
 
 describe('planBandHeightPx', () => {
   it('is one hour, or the whole gap when the gap is shorter', () => {
-    expect(planBandHeightPx(600)).toBe(60)
-    expect(planBandHeightPx(60)).toBe(60)
-    expect(planBandHeightPx(45)).toBe(45)
+    expect(planBandHeightPx(10 * PX_PER_HOUR)).toBe(PX_PER_HOUR)
+    expect(planBandHeightPx(PX_PER_HOUR)).toBe(PX_PER_HOUR)
+    // A gap shorter than an hour collapses the band to the gap.
+    expect(planBandHeightPx(PX_PER_HOUR * 0.75)).toBe(PX_PER_HOUR * 0.75)
   })
 })
 
 describe('planBandTopPx', () => {
   it('centres the band on the pointer, snapped to quarter-hours', () => {
-    // 200 - 30 = 170 → snapped to the nearest 15px step.
-    expect(planBandTopPx(200, 600)).toBe(165)
-    // 97 - 30 = 67 → nearest step is 60, not 75.
-    expect(planBandTopPx(97, 600)).toBe(60)
+    const quarter = PX_PER_HOUR / 4
+    const gap = 10 * PX_PER_HOUR
+    // Pointer five hours down: the band centres on it, then snaps to a quarter.
+    expect(planBandTopPx(5 * PX_PER_HOUR, gap)).toBe(4.5 * PX_PER_HOUR)
+    // Half a quarter past a step rounds up to the next one.
+    expect(planBandTopPx(PX_PER_HOUR + PX_PER_HOUR / 2 + quarter * 0.6, gap)).toBe(
+      PX_PER_HOUR + quarter,
+    )
   })
 
   it('clamps the band inside the gap at both ends', () => {
-    expect(planBandTopPx(0, 600)).toBe(0)
-    expect(planBandTopPx(-50, 600)).toBe(0)
-    expect(planBandTopPx(600, 600)).toBe(540)
-    expect(planBandTopPx(9999, 600)).toBe(540)
+    const gap = 10 * PX_PER_HOUR
+    const lastTop = gap - PX_PER_HOUR
+    expect(planBandTopPx(0, gap)).toBe(0)
+    expect(planBandTopPx(-gap, gap)).toBe(0)
+    expect(planBandTopPx(gap, gap)).toBe(lastTop)
+    expect(planBandTopPx(gap * 10, gap)).toBe(lastTop)
     // A gap shorter than the band has nowhere to move.
-    expect(planBandTopPx(20, 45)).toBe(0)
+    expect(planBandTopPx(PX_PER_HOUR / 3, PX_PER_HOUR * 0.75)).toBe(0)
   })
 })
 
 describe('planBandTiming', () => {
   it('seeds exactly the band the user saw — one hour, wherever it sits', () => {
     expect(planBandTiming('09:00', '19:00', 0)).toEqual({ startTime: '09:00', durationHours: 1 })
-    expect(planBandTiming('09:00', '19:00', 165)).toEqual({
+    expect(planBandTiming('09:00', '19:00', 2.75 * PX_PER_HOUR)).toEqual({
       startTime: '11:45',
       durationHours: 1,
     })

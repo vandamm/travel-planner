@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { addCard, getCard, setTrip } from '../../data/doc'
 import type { Card } from '../../data/schema'
+import { PX_PER_HOUR } from '../cards/cardHeight'
 import { applyCardResize, planCardResize, type CardResizeEdge } from './cardResize'
+
+/** Pointer deltas and heights are expressed in scale units, not raw pixels, so
+ *  changing PX_PER_HOUR does not mean rewriting every expectation. */
+const QUARTER = PX_PER_HOUR / 4
+const px = (hours: number) => hours * PX_PER_HOUR
 
 const DAY = '2027-05-01'
 const DAY_START = '06:00'
@@ -33,8 +39,8 @@ function plan(edge: CardResizeEdge, deltaPx: number, card = timed()) {
 
 describe('planCardResize', () => {
   it.each([
-    ['start', -15, '09:45', 1.25, -15],
-    ['end', 15, '10:00', 1.25, 0],
+    ['start', -QUARTER, '09:45', 1.25, -QUARTER],
+    ['end', QUARTER, '10:00', 1.25, 0],
   ] satisfies [CardResizeEdge, number, string, number, number][])(
     'resizes the %s edge from a pointer delta',
     (edge, deltaPx, startTime, durationHours, topOffsetPx) => {
@@ -42,23 +48,24 @@ describe('planCardResize', () => {
         startTime,
         duration: 'custom',
         durationHours,
-        heightPx: 75,
+        heightPx: px(1.25),
         topOffsetPx,
       })
     },
   )
 
   it('snaps the preview to 15-minute values', () => {
-    expect(plan('end', 8)).toMatchObject({
+    // Just over half a quarter-hour of travel rounds up to a full quarter.
+    expect(plan('end', QUARTER * 0.55)).toMatchObject({
       startTime: '10:00',
       durationHours: 1.25,
-      heightPx: 75,
+      heightPx: px(1.25),
     })
   })
 
   it('converts preset durations to a custom duration', () => {
     const card = timed({ duration: 'half', durationHours: undefined })
-    expect(plan('end', 15, card)).toMatchObject({
+    expect(plan('end', QUARTER, card)).toMatchObject({
       duration: 'custom',
       durationHours: 7.75,
     })
@@ -67,14 +74,14 @@ describe('planCardResize', () => {
   it.each(['start', 'end'] satisfies CardResizeEdge[])(
     'keeps the %s edge resize at or above 15 minutes',
     (edge) => {
-      const deltaPx = edge === 'start' ? 200 : -200
-      expect(plan(edge, deltaPx)).toMatchObject({ durationHours: 0.25, heightPx: 15 })
+      const deltaPx = edge === 'start' ? px(4) : -px(4)
+      expect(plan(edge, deltaPx)).toMatchObject({ durationHours: 0.25, heightPx: px(0.25) })
     },
   )
 
   it.each([
-    ['start', -60, '09:00', 2, -60],
-    ['end', 60, '10:00', 2, 0],
+    ['start', -PX_PER_HOUR, '09:00', 2, -PX_PER_HOUR],
+    ['end', PX_PER_HOUR, '10:00', 2, 0],
   ] satisfies [CardResizeEdge, number, string, number, number][])(
     'allows the %s edge to overlap without neighbor results',
     (edge, deltaPx, startTime, durationHours, topOffsetPx) => {
@@ -83,7 +90,7 @@ describe('planCardResize', () => {
         startTime,
         duration: 'custom',
         durationHours,
-        heightPx: 120,
+        heightPx: px(2),
         topOffsetPx,
       })
     },
@@ -114,7 +121,7 @@ describe('applyCardResize', () => {
       transactionCount += 1
     })
 
-    applyCardResize(doc, 'active', 'end', 60)
+    applyCardResize(doc, 'active', 'end', PX_PER_HOUR)
 
     expect(getCard(doc, 'active')).toMatchObject({
       startTime: '10:00',

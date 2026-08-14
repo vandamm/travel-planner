@@ -6,8 +6,17 @@
 
 import type { Card } from '../../data/schema'
 
-/** Pixels per hour of the time window — the timeline's vertical scale. */
-export const PX_PER_HOUR = 60
+/**
+ * Pixels per hour of the time window — the timeline's vertical scale, and the
+ * reference's own (its grid draws 06:00–21:00 in 600px). Every offset, height
+ * and snap on the board derives from this, so it is the one number to change to
+ * make the day taller or shorter.
+ *
+ * At this scale a one-hour card is 40px, which is under {@link
+ * SHORT_CARD_PX} — so it collapses to a single line, exactly as the reference's
+ * own short cards do.
+ */
+export const PX_PER_HOUR = 40
 /** Timeline and custom-duration granularity. */
 export const SNAP_MINUTES = 15
 /** Smallest permitted custom-card duration. */
