@@ -47,6 +47,8 @@ export interface MobileDayViewProps {
   /** Day timeline window 'HH:mm', forwarded to the day column. */
   dayStart?: string
   dayEnd?: string
+  /** Draw travel lead-ins as bands (and count their time); off shows badges. */
+  showTravelTimes?: boolean
   /** How many day columns to show per page (≥1); pages advance by this count. */
   columns?: number
   onAddCard?: (dayKey: string, startTime?: string, durationHours?: number) => void
@@ -73,6 +75,7 @@ export function MobileDayView({
   cities,
   dayStart,
   dayEnd,
+  showTravelTimes,
   columns = 1,
   onAddCard,
   onEditCard,
@@ -252,6 +255,7 @@ export function MobileDayView({
                 cards={cardsByDay.get(day.key) ?? []}
                 dayStart={dayStart}
                 dayEnd={dayEnd}
+                showTravelTimes={showTravelTimes}
                 cities={cities}
                 overrideCityId={overrides[day.key]}
                 onSetCity={onSetCity}

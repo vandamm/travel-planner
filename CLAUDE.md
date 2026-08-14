@@ -17,7 +17,7 @@ Everything persistent lives on one shared `Y.Doc`. Top-level containers:
 
 | Container        | Yjs type       | Holds                                                                                                                                            |
 | ---------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `trip`           | `Y.Map`        | `title`, `startDate`/`endDate` (`YYYY-MM-DD`, inclusive), `dayStart`/`dayEnd` (`HH:mm`, the day's timeline window, default `06:00`/`21:00`) (plain values) |
+| `trip`           | `Y.Map`        | `title`, `startDate`/`endDate` (`YYYY-MM-DD`, inclusive), `dayStart`/`dayEnd` (`HH:mm`, the day's timeline window, default `06:00`/`21:00`), `showTravelTimes`/`defaultTravelMinutes` (see Travel time) (plain values) |
 | `cities`         | `Y.Map<Y.Map>` | id → `{ id, name, color }`                                                                                                                       |
 | `dayOverrides`   | `Y.Map`        | `YYYY-MM-DD` → `cityId` (manual per-day city)                                                                                                    |
 | `cards`          | `Y.Map<Y.Map>` | id → `Card` fields                                                                                                                               |
@@ -138,6 +138,51 @@ category chip or folded corner on the board card: the inline glyph and the left
 edge carry the type, so the board needs no legend. The chip triads
 (`indoor`/`outdoor`/`transit` in `tailwind.config.js`) survive only for the
 compact multi-week cards.
+
+## Travel time
+
+A card may carry `travelMinutes?: number` — a **lead-in**: how long it takes to
+get there, counted *before* `startTime`. A 09:00 activity with 45 travel minutes
+occupies 08:15–12:00. Two trip settings govern the display:
+`showTravelTimes?: boolean` (absent = shown) and `defaultTravelMinutes?: number`
+(absent = 30, the editor's pre-fill).
+
+The lead-in **occupies timeline minutes** — it is not decoration. All of it flows
+from one pure module, `src/features/cards/travelTime.ts`:
+
+- `travelLeadMinutes(card, showTravelTimes)` is the single answer to "how much
+  time does this card's lead-in take?" It is **0** on an untimed card (there is
+  no start to count before) and 0 when the trip hides travel times. Every
+  consumer goes through it, so the band, the free-slot search and the overlap
+  check can never disagree.
+- `layoutTimelineCards`/`freeTimelineSlots` take `showTravelTimes` as a trailing
+  argument and treat `offsetMinutes - leadMinutes` as the occupied start, so
+  hovering never offers "＋ plan something" during the drive there.
+  `TimelineCardPlacement` carries `leadMinutes` beside the offset; the card's own
+  `offsetMinutes` stays its **true clock position**, exactly as before.
+- `overlappingCardIds` (`DayColumn`) counts the lead-in too: two activities can
+  clash through the travel alone, and that is what the Overlap badge is for.
+
+Rendering: `SortableCard` hangs the hatched band off the **top of the list item**
+(`absolute`, negative `top`) rather than putting it inside. The card's own box —
+the one dnd-kit measures on drop and `cardResize` offsets — therefore still
+starts at the card's start time, so **drag and resize are unchanged**. `Card`
+squares its top corners (`fusedTravelBand`) so band and card read as one block,
+and adds a `leave by HH:mm` meta line.
+
+A lead-in may reach back **before `dayStart`**. The day body is exactly the
+window tall and the header sits directly above it, so an overflowing band would
+print over the date rather than scroll: `DayColumn` **clamps the drawn band** to
+the space above the card while the label keeps stating the true length, and
+`freeTimelineSlots` clamps the occupied start to the window top the same way.
+(That clamp is also why the occupied intervals are re-sorted by their *occupied*
+start — a lead-in can invert start-time order.)
+
+With `showTravelTimes` off the values survive: `Card` swaps the band for a
+compact `+45m` badge (`travelBadgeLabel`) and no lead-in occupies time.
+
+The band's hatching is the `bg-travel` token (`backgroundImage` in
+`tailwind.config.js`) — a gradient, so it lives outside `colors`.
 
 A card carries `duration: 'day' | 'half' | 'custom'`; custom cards require a
 positive `durationHours`. Day and half-day durations resolve from the trip's

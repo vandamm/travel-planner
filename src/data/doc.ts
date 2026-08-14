@@ -118,6 +118,10 @@ export function getTrip(doc: Y.Doc): Trip {
     color: m.get('color') as string | undefined,
     dayStart: (m.get('dayStart') as string | undefined) ?? DEFAULT_TRIP.dayStart,
     dayEnd: (m.get('dayEnd') as string | undefined) ?? DEFAULT_TRIP.dayEnd,
+    // Left absent when unset: absent already means "shown" / the default length
+    // (see travelTime.ts), so writing the fallback in would only bloat exports.
+    showTravelTimes: m.get('showTravelTimes') as boolean | undefined,
+    defaultTravelMinutes: m.get('defaultTravelMinutes') as number | undefined,
   }
 }
 
@@ -137,6 +141,10 @@ export function setTrip(doc: Y.Doc, patch: Partial<Trip>): void {
       }
     }
     if (patch.color !== undefined) m.set('color', patch.color)
+    if (patch.showTravelTimes !== undefined) m.set('showTravelTimes', patch.showTravelTimes)
+    if (patch.defaultTravelMinutes !== undefined) {
+      m.set('defaultTravelMinutes', patch.defaultTravelMinutes)
+    }
     // The day window must stay non-empty (dayEnd > dayStart, comparing 'HH:mm'
     // lexicographically) — `tripDocumentSchema` refines on it, so an inverted
     // window in the doc would make `exportTrip`/agent-GET throw. Resolve the
@@ -215,6 +223,7 @@ export interface NewCard {
   transport?: boolean
   category?: CardCategory
   ticketState?: TicketState
+  travelMinutes?: number
   id?: string
 }
 
@@ -269,6 +278,7 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
     ...(input.transport !== undefined && { transport: input.transport }),
     ...(input.category !== undefined && { category: input.category }),
     ...(input.ticketState !== undefined && { ticketState: input.ticketState }),
+    ...(input.travelMinutes !== undefined && { travelMinutes: input.travelMinutes }),
   }
   doc.transact(() => entityMap(doc, CARDS).set(id, toYMap(card)))
   return card

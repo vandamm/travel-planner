@@ -78,6 +78,11 @@ export default {
           border: '#e6c2b8',
         },
       },
+      backgroundImage: {
+        // The travel lead-in band's hatching (v4) — a gradient, so it lives here
+        // rather than in `colors`; its hairline is `hour.rule` and its label `ink.500`.
+        travel: 'repeating-linear-gradient(135deg,#f2eee4 0 4px,#faf8f1 4px 8px)',
+      },
       borderRadius: {
         frame: '5px',
         card: '4px',
