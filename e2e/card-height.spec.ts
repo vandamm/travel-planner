@@ -19,7 +19,8 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   expect(dayBody).not.toBeNull()
   expect(timelineTrack).not.toBeNull()
   expect(timelineTrack!.height).toBe(900)
-  expect(dayBody!.height).toBeGreaterThan(timelineTrack!.height)
+  // The body is exactly the window — no dead space above or below the track.
+  expect(dayBody!.height).toBe(timelineTrack!.height)
 
   // A default-height card (exact duration, untimed → one block).
   await addActivity(column)
@@ -45,6 +46,7 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   expect(fullBody).not.toBeNull()
   // 15h window → 900px vs the 60px default block.
   expect(fullBox!.height + 2).toBe((defaultBox!.height + 2) * 15)
-  expect(fullBox!.y).toBeGreaterThan(fullBody!.y)
-  expect(fullBody!.y + fullBody!.height).toBeGreaterThan(fullBox!.y + fullBox!.height)
+  // A whole-day card spans the body edge to edge (bar the 2px card inset).
+  expect(Math.round(fullBox!.y - fullBody!.y)).toBe(0)
+  expect(Math.round(fullBody!.y + fullBody!.height - (fullBox!.y + fullBox!.height))).toBe(2)
 })

@@ -216,7 +216,9 @@ Date and time entry is **custom, not native** (no `<input type="date/time">`):
   (trip start in `TripModal`) and first→last **range** mode (a stay's nights in
   `AccommodationEditor`, one control replacing the two night inputs). Grid + range
   math is pure in `src/features/pickers/calendar.ts` (`monthGrid`, `nextRange`
-  swap-reducer, `inRange`/`isEndpoint`); weeks start Sunday; ISO-string compare is
+  swap-reducer, `inRange`/`isEndpoint`); weeks start **Monday**, matching the home
+  year calendar and the app's European formatting (the handoff's `S M T W T F S`
+  row is the one place it assumes a US week); ISO-string compare is
   chronological so no `Date` parsing is needed.
 - `src/features/pickers/TimePicker.tsx` — an hour/minute wheel pop-over
   (`TripModal` day window, `CardEditor` start/end). Value lists + parse/format/snap

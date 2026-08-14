@@ -300,20 +300,19 @@ export function Card({
       >
         {category && <CategoryGlyph category={category} />}
         {titleButton}
-        {/* A short card has no second row, so its time rides the title line —
-            and an overlap warning takes that slot ahead of the time, since it is
-            the one thing a collapsed card must not swallow. */}
-        {short &&
-          (conflict ? (
-            <ConflictBadge />
-          ) : (
-            <span
-              data-testid="card-time"
-              className="shrink-0 whitespace-nowrap font-sans text-[9.5px] font-semibold text-hour-text"
-            >
-              {displayedTime}
-            </span>
-          ))}
+        {/* The overlap warning rides the title line on every card. As its own
+            row it was clipped by any card too short for three rows — and a card
+            short enough to overlap invisibly is exactly the one that needs it. */}
+        {conflict && <ConflictBadge />}
+        {/* A short card has no second row, so its time joins the title line. */}
+        {short && !conflict && (
+          <span
+            data-testid="card-time"
+            className="shrink-0 whitespace-nowrap font-sans text-[9.5px] font-semibold text-hour-text"
+          >
+            {displayedTime}
+          </span>
+        )}
       </div>
       {!short && (
         <span
@@ -331,12 +330,6 @@ export function Card({
         >
           {card.note}
         </p>
-      )}
-
-      {conflict && !short && (
-        <div data-testid="card-badge-row" className="flex flex-wrap gap-1">
-          <ConflictBadge />
-        </div>
       )}
 
       {card.link &&

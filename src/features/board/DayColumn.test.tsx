@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
 import { DayColumn } from './DayColumn'
 import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
-import { TIMELINE_VERTICAL_PADDING_PX } from '../cards/cardHeight'
 
 const day: Day = { key: '2027-05-01', index: 0 }
 const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
@@ -116,19 +115,25 @@ describe('DayColumn', () => {
     expect(within(card('Tour')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Museum')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Lunch')).queryByText('Overlap')).not.toBeInTheDocument()
+    // Tour is at 09:00 (180px). Museum starts at 10:30, half an hour before Tour
+    // ends, so it pulls up by 30px to sit on its own hour rather than being
+    // shoved below Tour — the overlap is shown, not hidden.
     expect(screen.getByText('Tour').closest('li')).toHaveStyle({ marginTop: '180px' })
-    expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: '0px' })
+    expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: '-30px' })
   })
 
-  it('pads the exact day-window track above and below the activity range', () => {
+  it('is exactly the day window tall, with no dead space above or below', () => {
+    // 06:00–21:00 is 15h at 60px/hour. Any extra would show as blank space under
+    // the last rail and push the board into a needless vertical scroll.
     render(<DayColumn day={day} cards={[]} dayStart="06:00" dayEnd="21:00" />)
-    expect(screen.getByTestId('day-body')).toHaveStyle({
-      height: `${900 + TIMELINE_VERTICAL_PADDING_PX * 2}px`,
-    })
-    expect(screen.getByTestId('timeline-track')).toHaveStyle({
-      top: `${TIMELINE_VERTICAL_PADDING_PX}px`,
-      height: '900px',
-    })
+    expect(screen.getByTestId('day-body')).toHaveStyle({ height: '900px' })
+    const track = screen.getByTestId('timeline-track')
+    expect(track).toHaveStyle({ height: '900px' })
+    expect(track).toHaveClass('top-0')
+
+    // A shorter window shrinks to match rather than keeping a fixed frame.
+    render(<DayColumn day={day} cards={[]} dayStart="07:00" dayEnd="20:00" />)
+    expect(screen.getAllByTestId('day-body').at(-1)).toHaveStyle({ height: '780px' })
   })
 
   it('carries the scale as two-hourly rails, the labels living in the shared gutter', () => {

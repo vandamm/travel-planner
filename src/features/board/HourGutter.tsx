@@ -7,13 +7,7 @@
 // column is header-above-body with the same body height, that makes the labels
 // line up with the timeline tracks without measuring anything.
 
-import {
-  PX_PER_HOUR,
-  TIMELINE_VERTICAL_PADDING_PX,
-  clockMinutes,
-  evenHourMarks,
-  windowHeightPx,
-} from '../cards/cardHeight'
+import { PX_PER_HOUR, clockMinutes, evenHourMarks, windowHeightPx } from '../cards/cardHeight'
 
 export interface HourGutterProps {
   dayStart: string
@@ -48,7 +42,7 @@ export function HourGutter({
     >
       <div className="flex-1" />
       <div
-        style={{ height: windowHeightPx(dayStart, dayEnd) + TIMELINE_VERTICAL_PADDING_PX * 2 }}
+        style={{ height: windowHeightPx(dayStart, dayEnd) }}
         className="relative"
       >
         {hours.map((hour) => (
@@ -56,7 +50,7 @@ export function HourGutter({
             key={hour}
             data-testid="hour-mark"
             data-hour={hour}
-            style={{ top: ((hour * 60 - start) / 60) * PX_PER_HOUR + TIMELINE_VERTICAL_PADDING_PX }}
+            style={{ top: ((hour * 60 - start) / 60) * PX_PER_HOUR }}
             className={`absolute -translate-y-1/2 font-sans font-semibold leading-none text-hour-text ${compact ? 'right-2 text-[9.5px]' : 'right-2.5 text-[10px]'}`}
           >
             {String(hour).padStart(2, '0')}:00
@@ -65,7 +59,7 @@ export function HourGutter({
         {nowOffsetPx !== undefined && nowClock && (
           <span
             data-testid="now-pill"
-            style={{ top: nowOffsetPx + TIMELINE_VERTICAL_PADDING_PX }}
+            style={{ top: nowOffsetPx }}
             className="absolute right-1 -translate-y-1/2 rounded-chip bg-city-vermilion px-[5px] py-[2px] font-sans text-[9.5px] font-extrabold leading-none text-white"
           >
             {nowClock}

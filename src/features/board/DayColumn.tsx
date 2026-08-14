@@ -18,7 +18,6 @@ import { CityPicker } from '../cities/CityPicker'
 import { Card, SortableCard } from '../cards/Card'
 import {
   PX_PER_HOUR,
-  TIMELINE_VERTICAL_PADDING_PX,
   cardHeightPx,
   clockMinutes,
   evenHourMarks,
@@ -270,16 +269,14 @@ export function DayColumn({
         </header>
       )}
 
-      <div
-        data-testid="day-body"
-        style={{ height: timelineHeight + TIMELINE_VERTICAL_PADDING_PX * 2 }}
-        className="relative"
-      >
+      {/* The body is exactly the window's height: the last rail sits on its
+          bottom edge, with no dead space under it. */}
+      <div data-testid="day-body" style={{ height: timelineHeight }} className="relative">
         <div
           ref={setNodeRef}
           data-testid="timeline-track"
-          style={{ top: TIMELINE_VERTICAL_PADDING_PX, height: timelineHeight }}
-          className="absolute inset-x-0"
+          style={{ height: timelineHeight }}
+          className="absolute inset-x-0 top-0"
         >
           <GridRails dayStart={dayStart} dayEnd={dayEnd} />
 

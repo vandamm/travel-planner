@@ -8,8 +8,6 @@ import type { Card } from '../../data/schema'
 
 /** Pixels per hour of the time window — the timeline's vertical scale. */
 export const PX_PER_HOUR = 60
-/** Space reserved outside the activity track for the Morning/Evening labels. */
-export const TIMELINE_VERTICAL_PADDING_PX = 24
 /** Timeline and custom-duration granularity. */
 export const SNAP_MINUTES = 15
 /** Smallest permitted custom-card duration. */
