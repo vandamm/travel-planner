@@ -7,15 +7,18 @@ import {
   type CardResizeController,
   type CardResizePlan,
 } from '../board/cardResize'
+import { MIN_PX_PER_HOUR } from './cardHeight'
 import { Card, SortableCard } from './Card'
 
+// Two hours (120px) so the card is tall enough for the stacked layout; a card
+// of an hour or less collapses to a single line and drops its secondary rows.
 const base: CardType = {
   id: 'x',
   dayKey: '2027-05-01',
   title: 'Colosseum',
   order: 0,
   duration: 'custom',
-  durationHours: 1,
+  durationHours: 2,
 }
 
 describe('Card', () => {
@@ -49,46 +52,82 @@ describe('Card', () => {
     expect(screen.getByTestId('card-time')).toHaveTextContent('10:15 – 12:00 · 1h 45m')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
-    expect(screen.getByTestId('card-category-corner')).toHaveAttribute(
-      'data-category',
-      'indoor',
-    )
+    expect(screen.getByTestId('card-category-icon')).toHaveAttribute('data-category', 'indoor')
     expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
   })
 
-  it('lets title and time use the full card width', () => {
+  it('collapses a short card to one line of glyph, name and time', () => {
     render(
       <Card
         card={{
           ...base,
           title: 'Brunch reservation',
           startTime: '10:00',
+          note: 'Bring tickets',
+          link: 'https://example.com',
+          category: 'food',
           duration: 'custom',
-          durationHours: 1,
+          durationHours: 0.75,
         }}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Edit Brunch reservation' })).toHaveClass(
-      'min-w-0',
-      'max-w-full',
-      'flex-none',
-    )
-    expect(screen.getByTestId('card-title')).toHaveClass('min-w-0', 'break-words')
+    const card = screen.getByTestId('card')
+    expect(card).toHaveAttribute('data-short', '')
+    // The time rides the title row; the note and link rows are dropped entirely
+    // rather than clipped.
+    expect(screen.getByTestId('card-title-row')).toContainElement(screen.getByTestId('card-time'))
+    expect(screen.queryByTestId('card-note')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card-link')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card-title')).toHaveClass('truncate')
   })
 
-  it('renders category as a folded corner while preserving the overlap badge', () => {
+  it('renders category as a tint, left edge and inline type glyph — no chip', () => {
     render(<Card card={{ ...base, category: 'outdoor' }} conflict />)
 
     const header = screen.getByTestId('card-title-row')
-    const category = screen.getByTestId('card-category-corner')
-    expect(header).toHaveClass('pr-5')
+    const glyph = screen.getByTestId('card-category-icon')
+    expect(screen.getByTestId('card')).toHaveClass(
+      'bg-category-outdoor-bg',
+      'border-category-outdoor-edge',
+      'border-l-category-outdoor',
+    )
+    // The glyph is inline, before the title — not a corner or a chip.
+    expect(header).toContainElement(glyph)
     expect(header).toContainElement(screen.getByTestId('card-title'))
-    expect(header).not.toContainElement(category)
-    expect(category).toHaveAttribute('data-category', 'outdoor')
-    expect(screen.getByTestId('card-category-icon')).toBeInTheDocument()
+    expect(glyph).toHaveAttribute('data-category', 'outdoor')
+    expect(screen.queryByTestId('card-category-corner')).not.toBeInTheDocument()
     expect(screen.queryByTestId('card-category')).not.toBeInTheDocument()
     expect(screen.getByTestId('card-time').previousElementSibling).toBe(header)
     expect(screen.getByTestId('card-conflict')).toBeInTheDocument()
+  })
+
+  it('marks a ticket only when there is one, and washes a required-but-unbought card', () => {
+    const { rerender } = render(<Card card={{ ...base, category: 'indoor' }} />)
+    // No ticket to think about → no corner marker; the common case stays quiet.
+    expect(screen.queryByTestId('card-ticket')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card')).not.toHaveClass('bg-ticket-wash')
+
+    rerender(<Card card={{ ...base, category: 'indoor', ticketState: 'none' }} />)
+    expect(screen.queryByTestId('card-ticket')).not.toBeInTheDocument()
+
+    rerender(<Card card={{ ...base, category: 'indoor', ticketState: 'bought' }} />)
+    expect(screen.getByTestId('card-ticket')).toHaveAttribute('data-ticket', 'bought')
+    expect(screen.getByTestId('card')).not.toHaveClass('bg-ticket-wash')
+
+    rerender(<Card card={{ ...base, category: 'indoor', ticketState: 'required' }} />)
+    expect(screen.getByTestId('card-ticket')).toHaveAttribute('data-ticket', 'required')
+    // The wash sits over the tint but keeps the category's left edge.
+    expect(screen.getByTestId('card')).toHaveClass(
+      'bg-ticket-wash',
+      'border-ticket-wash-edge',
+      'border-l-category-indoor',
+    )
+  })
+
+  it('never marks a transport card, whatever its ticket state', () => {
+    render(<Card card={{ ...base, category: 'transit', ticketState: 'required' }} />)
+    expect(screen.queryByTestId('card-ticket')).not.toBeInTheDocument()
+    expect(screen.getByTestId('card')).not.toHaveClass('bg-ticket-wash')
   })
 
   it('uses the card surface as the drag activator without a separate handle', () => {
@@ -130,10 +169,7 @@ describe('Card', () => {
     expect(screen.getByTestId('card')).toHaveClass('border-indoor-border', 'bg-indoor-bg/40')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
-    expect(screen.getByTestId('card-category-corner')).toHaveAttribute(
-      'data-category',
-      'indoor',
-    )
+    expect(screen.getByTestId('card-category-icon')).toHaveAttribute('data-category', 'indoor')
     expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
   })
@@ -190,8 +226,8 @@ describe('Card', () => {
       (_cardId: string, _edge: string, deltaPx: number): CardResizePlan => ({
         startTime: deltaPx < 0 ? '09:45' : '10:00',
         duration: 'custom',
-        durationHours: deltaPx === 0 ? 1 : 1.25,
-        heightPx: deltaPx === 0 ? 60 : 75,
+        durationHours: deltaPx === 0 ? 2 : 2.25,
+        heightPx: deltaPx === 0 ? 120 : 135,
         topOffsetPx: deltaPx < 0 ? -15 : 0,
       }),
     )
@@ -209,7 +245,7 @@ describe('Card', () => {
               link: 'https://example.com',
             }}
             conflict
-            layoutStyle={{ height: 60, marginTop: 240 }}
+            layoutStyle={{ height: 120, marginTop: 240 }}
           />
         </DndContext>
       </CardResizeContext.Provider>,
@@ -226,14 +262,11 @@ describe('Card', () => {
     pointer('pointerDown', 100)
     expect(document.body).toHaveClass('cursor-row-resize')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('10:00')
-    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 – 11:00 · 1h')
+    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('12:00')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('10:00 – 12:00 · 2h')
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
     expect(screen.getByTestId('card-note')).toHaveTextContent('Bring tickets')
-    expect(screen.getByTestId('card-category-corner')).toHaveAttribute(
-      'data-category',
-      'indoor',
-    )
+    expect(screen.getByTestId('card-category-icon')).toHaveAttribute('data-category', 'indoor')
     expect(screen.getByTestId('card-link')).toHaveTextContent('example.com')
     expect(screen.getByTestId('card-conflict')).toHaveTextContent('Overlap')
     expect(screen.queryByRole('button', { name: /Resize Colosseum/ })).not.toBeInTheDocument()
@@ -251,21 +284,23 @@ describe('Card', () => {
     }
     pointerWindow('pointerMove', 85)
     const sortable = screen.getByTestId('sortable-card')
-    expect(sortable).toHaveStyle({ height: '75px' })
+    expect(sortable).toHaveStyle({ height: '135px' })
     expect(sortable.style.marginTop).toBe('225px')
     expect(screen.getByTestId('event-timing-start')).toHaveTextContent('09:45')
-    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('11:00')
-    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 – 11:00 · 1h 15m')
+    expect(screen.getByTestId('event-timing-end')).toHaveTextContent('12:00')
+    expect(screen.getByTestId('card-time')).toHaveTextContent('09:45 – 12:00 · 2h 15m')
     pointerWindow('pointerUp', 85)
     expect(document.body).not.toHaveClass('cursor-row-resize')
+    // The pointer forwards its raw travel (100 → 85); only the keyboard steps
+    // below are expressed in scale units.
     expect(commit).toHaveBeenCalledWith('x', 'start', -15)
     expect(screen.getByTestId('card-title')).toHaveTextContent('Colosseum')
 
     const restoredStart = screen.getByRole('button', { name: 'Resize Colosseum start' })
     fireEvent.keyDown(restoredStart, { key: 'ArrowUp' })
-    expect(commit).toHaveBeenCalledWith('x', 'start', -15)
+    expect(commit).toHaveBeenCalledWith('x', 'start', -MIN_PX_PER_HOUR / 4)
     fireEvent.keyDown(restoredStart, { key: 'ArrowDown', shiftKey: true })
-    expect(commit).toHaveBeenCalledWith('x', 'start', 60)
+    expect(commit).toHaveBeenCalledWith('x', 'start', MIN_PX_PER_HOUR)
   })
 
   it('restores the original card and geometry after a cancelled resize without committing', () => {
@@ -324,7 +359,7 @@ describe('Card', () => {
   })
 
   it('shows the default duration when the card is untimed', () => {
-    render(<Card card={base} />)
+    render(<Card card={{ ...base, duration: 'custom', durationHours: 1 }} />)
     expect(screen.getByTestId('card-time')).toHaveTextContent('1h')
   })
 
@@ -354,28 +389,26 @@ describe('Card', () => {
     expect(screen.queryByTestId('card-link')).not.toBeInTheDocument()
   })
 
-  it.each(['indoor', 'outdoor', 'transit'] as const)(
-    'renders a %s folded corner reflecting the card category',
+  it.each(['indoor', 'outdoor', 'food', 'transit'] as const)(
+    'renders a %s type glyph reflecting the card category',
     (category) => {
       render(<Card card={{ ...base, category }} />)
-      const corner = screen.getByTestId('card-category-corner')
-      expect(corner).toHaveAttribute('data-category', category)
-      expect(screen.getByTestId('card-category-icon')).toBeInTheDocument()
+      expect(screen.getByTestId('card-category-icon')).toHaveAttribute('data-category', category)
       expect(screen.getByTestId('card')).toHaveAttribute('data-category', category)
     },
   )
 
-  it('shows the transit corner for a legacy transport card', () => {
+  it('shows the transit glyph for a legacy transport card', () => {
     render(<Card card={{ ...base, transport: true }} />)
-    const corner = screen.getByTestId('card-category-corner')
-    expect(corner).toHaveAttribute('data-category', 'transit')
+    expect(screen.getByTestId('card-category-icon')).toHaveAttribute('data-category', 'transit')
     expect(screen.getByTestId('card')).toHaveAttribute('data-category', 'transit')
   })
 
-  it('omits the category corner for an uncategorised card', () => {
+  it('keeps an uncategorised card on the neutral surface, with no glyph', () => {
     render(<Card card={base} />)
-    expect(screen.queryByTestId('card-category-corner')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('card-category-icon')).not.toBeInTheDocument()
     expect(screen.getByTestId('card')).not.toHaveAttribute('data-category')
+    expect(screen.getByTestId('card')).toHaveClass('bg-surface', 'border-edge-100')
   })
 
   it('calls onEdit with the card when clicked', () => {

@@ -91,7 +91,8 @@ const cardBaseSchema = z.object({
   color: z.string().optional(),
   icon: z.string().optional(),
   transport: z.boolean().optional(),
-  category: z.enum(['indoor', 'outdoor', 'transit']).optional(),
+  category: z.enum(['indoor', 'outdoor', 'food', 'transit']).optional(),
+  ticketState: z.enum(['none', 'required', 'bought']).optional(),
 })
 
 export const cardSchema = z.discriminatedUnion('duration', [

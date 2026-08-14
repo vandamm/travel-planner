@@ -17,16 +17,20 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from 'react'
-import type { Card as CardType, CardCategory } from '../../data/schema'
+import type { Card as CardType, CardCategory, TicketState } from '../../data/schema'
 import { CardResizeContext, type CardResizeEdge, type CardResizePlan } from '../board/cardResize'
 import { cardCategory } from './cardCategory'
-import { clockMinutes, clockString, PX_PER_HOUR, resolvedDurationHours } from './cardHeight'
-
-const CATEGORY_CORNER: Record<CardCategory, string> = {
-  indoor: 'border-t-category-indoor',
-  outdoor: 'border-t-category-outdoor',
-  transit: 'border-t-category-transit',
-}
+import {
+  CATEGORY_GLYPH,
+  CATEGORY_STYLE,
+  TICKET_WASH,
+  UNCATEGORISED_SURFACE,
+  isShortCard,
+  isTicketWashed,
+  ticketMarkerState,
+} from './cardPalette'
+import { clockMinutes, clockString, resolvedDurationHours } from './cardHeight'
+import { usePxPerHour } from '../board/timelineScale'
 
 export interface CardProps {
   card: CardType
@@ -81,43 +85,84 @@ function formatDuration(hours: number): string {
   return remainder === 0 ? `${wholeHours}h` : `${wholeHours}h ${remainder}m`
 }
 
-function CategoryCorner({ category }: { category: CardCategory }) {
+/**
+ * The type glyph: a small stroked mark in the category's accent, inline before
+ * the title. It replaces the old chip and folded corner — with four hues on the
+ * board the glyphs carry the legend, so there is no legend.
+ */
+function CategoryGlyph({ category }: { category: CardCategory }) {
+  const { d, width } = CATEGORY_GLYPH[category]
+  return (
+    <svg
+      data-testid="card-category-icon"
+      data-category={category}
+      viewBox="0 0 24 24"
+      role="img"
+      aria-label={CATEGORY_STYLE[category].label}
+      className={`h-3 w-3 shrink-0 fill-none ${CATEGORY_STYLE[category].glyph}`}
+      strokeWidth={width}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={d} />
+    </svg>
+  )
+}
+
+/** The overlap warning. Shown on every card, however short — it is not meta. */
+function ConflictBadge() {
   return (
     <span
-      aria-hidden
-      data-testid="card-category-corner"
-      data-category={category}
-      className="pointer-events-none absolute right-0 top-0 h-6 w-6 overflow-hidden"
+      data-testid="card-conflict"
+      className="inline-block shrink-0 rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
     >
-      <span
-        className={`absolute right-0 top-0 h-0 w-0 border-l-[24px] border-t-[24px] border-l-transparent ${CATEGORY_CORNER[category]}`}
-      />
-      {category === 'transit' ? (
-        <svg
-          data-testid="card-category-icon"
-          viewBox="0 0 16 16"
-          className="absolute right-0.5 top-0.5 h-3 w-3 fill-none stroke-white stroke-[2.4]"
-        >
-          <path d="M3 8h9M8 4l4 4-4 4" />
-        </svg>
-      ) : category === 'indoor' ? (
-        <svg
-          data-testid="card-category-icon"
-          viewBox="0 0 16 16"
-          className="absolute right-0.5 top-0.5 h-3 w-3 fill-none stroke-white stroke-[2.4]"
-        >
-          <path d="M2.5 7.5 8 3l5.5 4.5M4.5 6.5V13h7V6.5" />
-        </svg>
-      ) : (
-        <svg
-          data-testid="card-category-icon"
-          viewBox="0 0 16 16"
-          className="absolute right-0.5 top-0.5 h-3 w-3 fill-none stroke-white stroke-[2.2]"
-        >
-          <circle cx="8" cy="8" r="2.5" />
-          <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" />
-        </svg>
-      )}
+      Overlap
+    </span>
+  )
+}
+
+type MarkedTicket = Exclude<TicketState, 'none'>
+
+const TICKET_LABEL: Record<MarkedTicket, string> = {
+  required: 'Ticket still to buy',
+  bought: 'Ticket bought',
+}
+
+/**
+ * The corner ticket marker, shown only when there is a ticket to think about:
+ * filled vermilion with a "!" = required and unbought (the card body also
+ * washes warm), pine with a "✓" = bought.
+ */
+function TicketMarker({ state }: { state: MarkedTicket }) {
+  return (
+    <span
+      data-testid="card-ticket"
+      data-ticket={state}
+      title={TICKET_LABEL[state]}
+      className="pointer-events-none absolute right-[10px] top-[10px] flex"
+    >
+      <svg viewBox="0 0 30 24" role="img" aria-label={TICKET_LABEL[state]} className="h-[19px] w-[24px] fill-none">
+        {state === 'required' ? (
+          <>
+            <rect x="15.5" y="2" width="14" height="20" rx="2.5" className="fill-ticket-required" />
+            <path d="M16.3 9h12.4" className="stroke-white" strokeWidth="1.3" strokeDasharray="1.8 1.8" />
+            <path d="M5 7.2v6.6" className="stroke-ticket-required" strokeWidth="2.9" strokeLinecap="round" />
+            <circle cx="5" cy="18.8" r="1.7" className="fill-ticket-required" />
+          </>
+        ) : (
+          <>
+            <rect x="15.5" y="2" width="14" height="20" rx="2.5" className="stroke-ticket-bought" strokeWidth="1.6" />
+            <path d="M16.3 9h12.4" className="stroke-ticket-bought" strokeWidth="1.3" strokeDasharray="1.8 1.8" />
+            <path
+              d="m1.3 13.6 3 3.1 4.6-6.5"
+              className="stroke-ticket-bought"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </>
+        )}
+      </svg>
     </span>
   )
 }
@@ -132,6 +177,7 @@ export function Card({
   dayEnd = '21:00',
   timingPreview,
 }: CardProps) {
+  const pxPerHour = usePxPerHour()
   const category = cardCategory(card)
   const durationHours =
     timingPreview?.durationHours ?? resolvedDurationHours(card, dayStart, dayEnd)
@@ -197,65 +243,97 @@ export function Card({
     )
   }
 
+  // The card's own height decides its layout: a short card collapses to one
+  // line (glyph + name + time) rather than clipping its second and third rows.
+  const short = isShortCard(durationHours * pxPerHour)
+  const ticket = ticketMarkerState(card.ticketState, category)
+  const washed = isTicketWashed(card.ticketState, category)
+  const surface = category ? CATEGORY_STYLE[category].surface : UNCATEGORISED_SURFACE
+  // The warm wash overrides the tint and hairline but keeps the category's left
+  // edge, so a required ticket reads at a glance without losing the type.
+  const bodyClass = timingPreview
+    ? 'border-indoor-border bg-indoor-bg/40 shadow-none'
+    : washed
+      ? `${surface} ${TICKET_WASH}`
+      : surface
+
+  const titleButton = (
+    <button
+      type="button"
+      aria-label={`Edit ${card.title}`}
+      data-card-action
+      onClick={(event) => {
+        event.stopPropagation()
+        onEdit?.(card)
+      }}
+      className="min-w-0 flex-1 truncate text-left hover:text-ink"
+    >
+      <span
+        data-testid="card-title"
+        className={`truncate font-serif font-semibold leading-tight text-ink ${short ? 'text-[13px]' : 'text-[14.5px]'}`}
+      >
+        {card.title}
+      </span>
+    </button>
+  )
+
+  // 2px shy of full height, with no top margin: back-to-back cards stay visually
+  // separate while each card's top still equals its true start time.
   const cardContent = (
     <article
       {...surfaceProps}
       data-testid="card"
       data-category={category}
+      data-short={short ? '' : undefined}
       aria-label={dragSurfaceProps ? `Move or edit ${card.title}` : undefined}
       onClick={editFromSurface}
-      className={`relative my-0.5 flex h-[calc(100%-4px)] w-full flex-col gap-1.5 overflow-hidden rounded-card border px-[11px] py-[9px] text-sm text-ink shadow-sm min-[400px]:px-[13px] min-[400px]:py-[11px] ${timingPreview ? 'border-indoor-border bg-indoor-bg/40 shadow-none' : 'border-edge-100 bg-surface'} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
+      className={`relative flex h-[calc(100%-2px)] w-full flex-col overflow-hidden rounded-card border px-[10px] py-[8px] text-sm text-ink ${short ? 'justify-center' : 'gap-[5px]'} ${bodyClass} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
     >
       {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
       {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
-      {category && <CategoryCorner category={category} />}
-      <div data-testid="card-title-row" className="flex min-w-0 items-center pr-5">
-        <button
-          type="button"
-          aria-label={`Edit ${card.title}`}
-          data-card-action
-          onClick={(event) => {
-            event.stopPropagation()
-            onEdit?.(card)
-          }}
-          className="min-w-0 max-w-full flex-none text-left hover:text-ink"
-        >
-          <span
-            data-testid="card-title"
-            className="min-w-0 break-words font-serif text-[15px] font-semibold leading-tight text-ink"
-          >
-            {card.title}
-          </span>
-        </button>
-      </div>
-      <span
-        data-testid="card-time"
-        className="text-[10.5px] font-semibold tracking-[0.02em] text-ink-500"
+      {ticket && <TicketMarker state={ticket} />}
+      <div
+        data-testid="card-title-row"
+        className={`flex min-w-0 items-center gap-1.5 ${ticket ? 'pr-[34px]' : ''}`}
       >
-        {displayedTime}
-      </span>
+        {category && <CategoryGlyph category={category} />}
+        {titleButton}
+        {/* The overlap warning rides the title line on every card. As its own
+            row it was clipped by any card too short for three rows — and a card
+            short enough to overlap invisibly is exactly the one that needs it. */}
+        {conflict && <ConflictBadge />}
+        {/* A short card has no second row, so its time joins the title line —
+            alongside any overlap badge, since the title truncates to make room
+            and dropping either would hide something the card must say. */}
+        {short && (
+          <span
+            data-testid="card-time"
+            className="shrink-0 whitespace-nowrap font-sans text-[9.5px] font-semibold text-hour-text"
+          >
+            {displayedTime}
+          </span>
+        )}
+      </div>
+      {!short && (
+        <span
+          data-testid="card-time"
+          className="font-sans text-[10px] font-semibold text-ink-450"
+        >
+          {displayedTime}
+        </span>
+      )}
 
-      {card.note && (
+      {card.note && !short && (
         <p
           data-testid="card-note"
-          className="whitespace-pre-wrap text-[11px] font-medium text-ink-500"
+          className="whitespace-pre-wrap font-sans text-[10px] font-medium text-ink-500"
         >
           {card.note}
         </p>
       )}
 
-      {conflict && (
-        <div data-testid="card-badge-row" className="flex flex-wrap gap-1">
-          <span
-            data-testid="card-conflict"
-            className="inline-block rounded-chip border border-transit-border bg-transit-bg px-[7px] py-[3px] font-sans text-[9.5px] font-bold uppercase tracking-[0.05em] text-city-vermilion"
-          >
-            Overlap
-          </span>
-        </div>
-      )}
-
       {card.link &&
+        !short &&
         (isSafeHref(card.link) ? (
           <a
             data-testid="card-link"
@@ -324,6 +402,7 @@ export function SortableCard({
   layoutStyle,
 }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: card.id })
+  const pxPerHour = usePxPerHour()
   const resizeController = useContext(CardResizeContext)
   const pointerResize = useRef<{
     pointerId: number
@@ -410,7 +489,7 @@ export function SortableCard({
           : 0
     if (!sign || !resizeController) return
     event.preventDefault()
-    resizeController.commit(card.id, edge, sign * (event.shiftKey ? PX_PER_HOUR : PX_PER_HOUR / 4))
+    resizeController.commit(card.id, edge, sign * (event.shiftKey ? pxPerHour : pxPerHour / 4))
   }
 
   const resizeHandleProps =

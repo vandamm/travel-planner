@@ -5,6 +5,7 @@ import * as Y from 'yjs'
 import App from './App'
 import * as provider from './data/provider'
 import { setTrip } from './data/doc'
+import { jsonResponse } from './test/responses'
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
@@ -36,7 +37,7 @@ describe('App (with a room slug path)', () => {
     expect(board).toContainElement(screen.getByTestId('board-toolbar'))
     expect(board.className).not.toMatch(/\bmx-|rounded-frame|\bborder\b/)
     expect(shell?.className).not.toMatch(/bg-surface|\bgap-|\bpy-/)
-    expect(screen.getByRole('button', { name: 'Edit trip menu' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Trip' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument()
   })
 
@@ -147,8 +148,7 @@ describe('App (with a room slug path)', () => {
     // Trip setup lives behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Trip details' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
-    await user.click(screen.getByRole('button', { name: 'Trip details' }))
+    await user.click(screen.getByRole('button', { name: 'Trip' }))
     expect(screen.getByRole('dialog', { name: 'Trip details' })).toBeInTheDocument()
 
     // Escape flips AppShell's open flag back off, unmounting the modal.
@@ -162,8 +162,7 @@ describe('App (with a room slug path)', () => {
     // Cities live behind a modal now, not an inline section.
     expect(screen.queryByRole('dialog', { name: 'Cities & colours' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Edit trip menu' }))
-    await user.click(screen.getByRole('button', { name: 'Cities & colours' }))
+    await user.click(screen.getByRole('button', { name: 'Cities' }))
     expect(screen.getByRole('dialog', { name: 'Cities & colours' })).toBeInTheDocument()
 
     // Escape flips AppShell's open flag back off, unmounting the modal.
@@ -189,10 +188,7 @@ describe('App (with a room slug path)', () => {
 describe('App without a room slug', () => {
   it('renders the timeline when no dated trips exist', async () => {
     window.history.replaceState(null, '', '/')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ trips: [] }) }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => jsonResponse({ trips: [] })))
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Your travel timeline' })).toBeInTheDocument()
     expect(screen.queryByText('Plan your first journey')).not.toBeInTheDocument()
@@ -208,12 +204,11 @@ describe('App without a room slug', () => {
     const today = new Date().toISOString().slice(0, 10)
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
+      vi.fn().mockImplementation(async () =>
+        jsonResponse({
           trips: [{ id: 'summer', title: 'Summer coast', startDate: today, endDate: today }],
         }),
-      }),
+      ),
     )
     render(<App />)
 
@@ -227,36 +222,31 @@ describe('App without a room slug', () => {
     const nextYear = year + 1
     const fetchMock = vi.fn().mockImplementation(async (input: string) => {
       if (input.startsWith('https://openholidaysapi.org/SchoolHolidays')) {
-        return {
-          ok: true,
-          json: async () =>
-            input.includes(`validTo=${nextYear}-12-31`)
-              ? [
-                  {
-                    startDate: `${nextYear}-04-05`,
-                    endDate: `${nextYear}-04-09`,
-                    name: [{ language: 'EN', text: 'Spring Holidays' }],
-                  },
-                ]
-              : [],
-        }
+        return jsonResponse(
+          input.includes(`validTo=${nextYear}-12-31`)
+            ? [
+                {
+                  startDate: `${nextYear}-04-05`,
+                  endDate: `${nextYear}-04-09`,
+                  name: [{ language: 'EN', text: 'Spring Holidays' }],
+                },
+              ]
+            : [],
+        )
       }
       if (input.startsWith('https://openholidaysapi.org/PublicHolidays')) {
-        return { ok: true, json: async () => [] }
+        return jsonResponse([])
       }
-      return {
-        ok: true,
-        json: async () => ({
-          trips: [
-            {
-              id: 'japan-spring',
-              title: 'Japan',
-              startDate: `${nextYear}-03-22`,
-              endDate: `${nextYear}-03-22`,
-            },
-          ],
-        }),
-      }
+      return jsonResponse({
+        trips: [
+          {
+            id: 'japan-spring',
+            title: 'Japan',
+            startDate: `${nextYear}-03-22`,
+            endDate: `${nextYear}-03-22`,
+          },
+        ],
+      })
     })
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
@@ -269,10 +259,7 @@ describe('App without a room slug', () => {
 
   it('shows the calendar when selected by the query string', async () => {
     window.history.replaceState(null, '', '/?view=calendar')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ trips: [] }) }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => jsonResponse({ trips: [] })))
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Your travel calendar' })).toBeInTheDocument()
   })
@@ -280,10 +267,7 @@ describe('App without a room slug', () => {
   it('opens a trip draft from an empty calendar date with only its start date selected', async () => {
     const year = new Date().getFullYear()
     window.history.replaceState(null, '', '/?view=calendar')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ trips: [] }) }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => jsonResponse({ trips: [] })))
     const user = userEvent.setup()
     render(<App />)
 
@@ -297,12 +281,12 @@ describe('App without a room slug', () => {
   it('opens the new trip form and reports creation errors', async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
       if (input.startsWith('https://openholidaysapi.org/')) {
-        return { ok: true, json: async () => [] }
+        return jsonResponse([])
       }
       if (init?.method === 'POST') {
-        return { ok: false, json: async () => ({ error: 'room already exists' }) }
+        return jsonResponse({ error: 'room already exists' }, 409)
       }
-      return { ok: true, json: async () => ({ trips: [] }) }
+      return jsonResponse({ trips: [] })
     })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
@@ -356,38 +340,32 @@ describe('App without a room slug', () => {
     window.history.replaceState(null, '', '/?view=calendar')
     const fetchMock = vi.fn().mockImplementation(async (input: string) => {
       if (input.startsWith('https://openholidaysapi.org/')) {
-        return { ok: true, json: async () => [] }
+        return jsonResponse([])
       }
       if (input.includes('cursor=page-2')) {
-        return {
-          ok: true,
-          json: async () => ({
-            trips: [
-              {
-                id: 'lisbon-autumn',
-                title: 'Lisbon',
-                startDate: `${year}-10-15`,
-                endDate: `${year}-10-18`,
-              },
-            ],
-            nextCursor: null,
-          }),
-        }
-      }
-      return {
-        ok: true,
-        json: async () => ({
+        return jsonResponse({
           trips: [
             {
-              id: 'japan-spring',
-              title: 'Japan',
-              startDate: `${year}-03-24`,
-              endDate: `${year}-03-26`,
+              id: 'lisbon-autumn',
+              title: 'Lisbon',
+              startDate: `${year}-10-15`,
+              endDate: `${year}-10-18`,
             },
           ],
-          nextCursor: 'page-2',
-        }),
+          nextCursor: null,
+        })
       }
+      return jsonResponse({
+        trips: [
+          {
+            id: 'japan-spring',
+            title: 'Japan',
+            startDate: `${year}-03-24`,
+            endDate: `${year}-03-26`,
+          },
+        ],
+        nextCursor: 'page-2',
+      })
     })
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
@@ -406,9 +384,8 @@ describe('App without a room slug', () => {
   it('shows Bavaria school holidays as a light calendar background', async () => {
     const year = new Date().getFullYear()
     window.history.replaceState(null, '', '/?view=calendar')
-    const fetchMock = vi.fn().mockImplementation(async (input: string) => ({
-      ok: true,
-      json: async () =>
+    const fetchMock = vi.fn().mockImplementation(async (input: string) =>
+      jsonResponse(
         input.startsWith('https://openholidaysapi.org/SchoolHolidays')
           ? [
               {
@@ -418,7 +395,8 @@ describe('App without a room slug', () => {
               },
             ]
           : { trips: [] },
-    }))
+      ),
+    )
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
 
@@ -433,9 +411,8 @@ describe('App without a room slug', () => {
   it('loads Bavaria public holidays into the calendar', async () => {
     const year = new Date().getFullYear()
     window.history.replaceState(null, '', '/?view=calendar')
-    const fetchMock = vi.fn().mockImplementation(async (input: string) => ({
-      ok: true,
-      json: async () =>
+    const fetchMock = vi.fn().mockImplementation(async (input: string) =>
+      jsonResponse(
         input.startsWith('https://openholidaysapi.org/PublicHolidays')
           ? [
               {
@@ -448,7 +425,8 @@ describe('App without a room slug', () => {
           : input.startsWith('https://openholidaysapi.org/')
             ? []
             : { trips: [] },
-    }))
+      ),
+    )
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
 

@@ -8,6 +8,7 @@ import {
   type TripSummary,
 } from './yearCalendar'
 import { TimelineHome } from './TimelineHome'
+import { workerFetch, workerJson } from '../../data/workerApi'
 import { NewTripModal } from './NewTripModal'
 import { Month } from './YearCalendarHome'
 
@@ -16,10 +17,6 @@ const PUBLIC_HOLIDAYS_API = 'https://openholidaysapi.org/PublicHolidays'
 const MONTHS = Array.from({ length: 12 }, (_, month) =>
   new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2024, month, 1)),
 )
-
-function workerBase(): string {
-  return (import.meta.env.VITE_WORKER_URL ?? '').replace(/\/+$/, '')
-}
 
 function HomeHeader({ view, onCreate }: { view: 'timeline' | 'calendar'; onCreate: () => void }) {
   return (
@@ -107,15 +104,15 @@ export function HomeShell() {
         let cursor: string | null = null
 
         do {
-          const response = await fetch(
-            `${workerBase()}/api/rooms${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
+          const response = await workerFetch(
+            `/api/rooms${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
           )
           if (!response.ok) throw new Error('Failed to fetch trips')
 
-          const body = (await response.json()) as {
+          const body = await workerJson<{
             trips: TripSummary[]
             nextCursor?: string | null
-          }
+          }>(response)
           all.push(...body.trips)
           cursor = body.nextCursor ?? null
 

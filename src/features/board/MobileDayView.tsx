@@ -6,9 +6,16 @@
 // presentational: it receives the board's already-computed data as props and is
 // wrapped in <BoardDnd> by <Board> so within-day reordering still works.
 
-import { format, parseISO } from 'date-fns'
+import { format, isWeekend, parseISO } from 'date-fns'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { resolveDayCity } from '../../data/cityResolution'
+import { formatDay } from '../../data/dateFormat'
+import { toDayKey } from '../../data/days'
+import { NO_CITY_COLOR } from '../cities/colors'
+import { HourGutter } from './HourGutter'
+import { localClock, nowLine } from './nowLine'
+import { usePxPerHour } from './timelineScale'
+import { MOBILE_GUTTER_PX } from './useViewport'
 import type {
   Accommodation,
   Card,
@@ -42,13 +49,19 @@ export interface MobileDayViewProps {
   dayEnd?: string
   /** How many day columns to show per page (≥1); pages advance by this count. */
   columns?: number
-  onAddCard?: (dayKey: string, startTime?: string) => void
+  onAddCard?: (dayKey: string, startTime?: string, durationHours?: number) => void
   onEditCard?: (card: Card) => void
   onEditAccommodation?: (accommodation: Accommodation) => void
   onAddStay?: (startNight?: string) => void
   /** Set, explicitly clear, or return a day's city to Auto. */
   onSetCity?: (dayKey: string, cityId: DayCityOverride | undefined) => void
   onSwapDay?: (dayKey: string) => void
+  /**
+   * The scrolling element, when the board wants to measure it — the timeline
+   * scale is derived from its height, and the board owns that measurement so
+   * the drag/resize math and the rendered grid agree on one number.
+   */
+  containerRef?: React.RefObject<HTMLDivElement>
 }
 
 export function MobileDayView({
@@ -67,11 +80,14 @@ export function MobileDayView({
   onAddStay,
   onSetCity,
   onSwapDay,
+  containerRef,
 }: MobileDayViewProps) {
   const [index, setIndex] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const ownScrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = containerRef ?? ownScrollRef
+  const pxPerHour = usePxPerHour()
 
   // The trip can shrink (fewer days) under us, so clamp on every render rather
   // than trusting the stored index.
@@ -83,7 +99,7 @@ export function MobileDayView({
   // day's offset. Runs before the hint effect so the recompute sees scrollTop 0.
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }, [safeIndex])
+  }, [safeIndex, scrollRef])
 
   if (days.length === 0) return null
 
@@ -108,6 +124,15 @@ export function MobileDayView({
   const activeDay = days[safeIndex]
   const activeCityId = resolveDayCity(activeDay.key, accommodations, overrides)
   const activeCity = activeCityId ? cityById.get(activeCityId) : undefined
+  const todayKey = toDayKey(new Date())
+  const now = nowLine(
+    visible,
+    todayKey,
+    localClock(new Date()),
+    dayStart ?? '06:00',
+    dayEnd ?? '21:00',
+    pxPerHour,
+  )
 
   function onTouchStart(event: React.TouchEvent) {
     const t = event.touches[0]
@@ -131,113 +156,93 @@ export function MobileDayView({
   return (
     <div
       data-testid="mobile-day-view"
-      className="flex h-full min-h-0 flex-col px-4 pb-4"
+      className="flex h-full min-h-0 flex-col px-4"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      <div className="mb-2 flex items-center justify-between border-b border-edge-150 py-2">
-        <button
-          type="button"
-          aria-label="Previous day"
-          disabled={atFirst}
-          onClick={() => go(-1)}
-          className="rounded-card px-2 py-1 text-xs font-semibold text-city-vermilion disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          ‹ Prev
-        </button>
-        <span data-testid="mobile-day-position" className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-500">
-          {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of{' '}
-          {days.length}
-        </span>
-        <button
-          type="button"
-          aria-label="Next day"
-          disabled={atLast}
-          onClick={() => go(1)}
-          className="rounded-card px-2 py-1 text-xs font-semibold text-city-vermilion disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Next ›
-        </button>
-      </div>
+      {/* Stays first — the stay chip sits directly under the app header, above
+          the date/city block, the same order as the desktop board. */}
+      <AccommodationLane
+        days={visible}
+        accommodations={accommodations}
+        cityById={cityById}
+        onEditAccommodation={onEditAccommodation}
+        onAddStay={onAddStay}
+      />
 
-      <div className="mb-2 flex items-center justify-between border-b border-edge-150 pb-2">
-        <div className="min-w-0">
-          <p className="font-serif text-lg font-semibold text-ink">
-            {format(parseISO(activeDay.key), 'EEE, d MMM')}
-          </p>
-          <div data-testid="mobile-city-row" className="flex items-center gap-1">
-            <span className="truncate font-serif text-sm font-semibold text-ink-600">
-              {activeCity?.name ?? 'No city'}
-            </span>
-            {(cities?.length ?? 0) > 0 && (
-              <CityPicker
-                label="Choose city"
-                value={overrides[activeDay.key]}
-                resolvedCityId={activeCity?.id}
-                cities={cities ?? []}
-                includeNoCity
-                bareEdit
-                onChange={(id) => onSetCity?.(activeDay.key, id)}
-              />
-            )}
-          </div>
-          <p className="text-xs text-ink-500">Swipe or use arrows to change day</p>
-        </div>
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between pt-2">
+        <span
+          data-testid="mobile-day-label"
+          className={`font-sans text-[9px] font-extrabold uppercase tracking-[0.18em] ${isWeekend(parseISO(activeDay.key)) ? 'text-city-vermilion' : 'text-ink-400'}`}
+        >
+          {format(parseISO(activeDay.key), 'EEE').toUpperCase()} · {formatDay(activeDay.key)}
+        </span>
+        <span className="flex items-center gap-[9px]">
           {onSwapDay && (
             <button
               type="button"
+              aria-label="Swap day"
+              title="Swap day"
               onClick={() => onSwapDay(activeDay.key)}
-              className="text-[11px] font-semibold text-ink-400 underline decoration-edge-300 underline-offset-2"
+              className="font-sans text-[11px] leading-none text-ink-200 hover:text-ink-600"
             >
-              Swap day
+              <span aria-hidden>⇄</span>
             </button>
           )}
-        </div>
-      </div>
-
-      <div
-        data-testid="mobile-day-dots"
-        // flex-wrap so a long trip's dots wrap to more rows instead of
-        // overflowing the phone width horizontally.
-        className="mb-2 flex flex-wrap items-center justify-center gap-2"
-      >
-        {Array.from({ length: pageCount }, (_, page) => {
-          const isActive = page === activePage
-          const dayNo = page * perPage + 1
-          return (
+          {onAddCard && (
             <button
-              key={page}
               type="button"
-              aria-label={`Go to day ${dayNo}`}
-              aria-current={isActive ? 'true' : undefined}
-              data-testid="mobile-day-dot"
-              onClick={() => setIndex(clampDayIndex(page * perPage, days.length))}
-              // Inline colour only for the active dot — the sanctioned exception
-              // for a city's own hue (matches DayColumn's band).
-              style={isActive ? { backgroundColor: activeColor } : undefined}
-              className={`h-2.5 w-2.5 rounded-full transition-colors ${isActive ? '' : 'bg-edge-300'}`}
-            />
-          )
-        })}
+              aria-label="Add activity to this day"
+              title="Add activity to this day"
+              onClick={() => onAddCard(activeDay.key)}
+              className="font-sans text-[17px] font-semibold leading-none text-ink-200 transition-[color,transform] duration-150 ease-out hover:scale-[1.15] hover:text-city-vermilion"
+            >
+              <span aria-hidden>+</span>
+            </button>
+          )}
+        </span>
       </div>
 
+      <div data-testid="mobile-city-row" className="flex items-center gap-1.5">
+        <span className="truncate font-serif text-[18px] font-bold text-ink">
+          {activeCity?.name ?? 'No city'}
+        </span>
+        {(cities?.length ?? 0) > 0 && (
+          <CityPicker
+            label="Choose city"
+            value={overrides[activeDay.key]}
+            resolvedCityId={activeCity?.id}
+            cities={cities ?? []}
+            includeNoCity
+            bareEdit
+            onChange={(id) => onSetCity?.(activeDay.key, id)}
+          />
+        )}
+      </div>
       <div
-        className="min-h-0 flex-1 overflow-y-auto pb-[calc(2rem+env(safe-area-inset-bottom))] scroll-pb-[calc(2rem+env(safe-area-inset-bottom))]"
+        data-testid="mobile-city-band"
+        style={{ backgroundColor: activeCity?.color ?? NO_CITY_COLOR }}
+        className="mb-3 mt-2 h-1 w-full rounded-[2px]"
+      />
+
+      <div
+        className="min-h-0 flex-1 overflow-y-auto pb-4"
         ref={scrollRef}
         data-testid="mobile-day-scroll"
         data-scrolled={hasScrolled ? '' : undefined}
         onScroll={(event) => setHasScrolled(event.currentTarget.scrollTop > 4)}
       >
-        <AccommodationLane
-          days={visible}
-          accommodations={accommodations}
-          cityById={cityById}
-          onEditAccommodation={onEditAccommodation}
-          onAddStay={onAddStay}
-        />
-        <div className="flex justify-center gap-3">
-          {visible.map((day) => {
+        <div className="flex">
+          {/* The hour rail stays on the screen-left, shared by the visible days. */}
+          <HourGutter
+            dayStart={dayStart ?? '06:00'}
+            dayEnd={dayEnd ?? '21:00'}
+            widthPx={MOBILE_GUTTER_PX}
+            nowOffsetPx={now?.offsetPx}
+            nowClock={now?.clock}
+            compact
+          />
+          {visible.map((day, index) => {
             const cityId = resolveDayCity(day.key, accommodations, overrides)
             return (
               <DayColumn
@@ -254,7 +259,69 @@ export function MobileDayView({
                 onAddCard={onAddCard}
                 onEditCard={onEditCard}
                 showHeader={false}
-                hourRail="left"
+                fluid
+                nowOffsetPx={now?.offsetPx}
+                isToday={day.key === todayKey}
+                firstColumn={index === 0}
+              />
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Day switcher lives at the base of the screen, not the top. */}
+      <div
+        data-testid="mobile-day-footer"
+        className="-mx-4 mt-auto border-t border-ink-frame bg-surface-raised px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2"
+      >
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            aria-label="Previous day"
+            disabled={atFirst}
+            onClick={() => go(-1)}
+            className="rounded-card border border-edge-350 bg-white px-[11px] py-1.5 font-sans text-[11px] font-semibold text-ink-600 disabled:cursor-not-allowed disabled:text-ink-200"
+          >
+            ‹ Prev
+          </button>
+          <span
+            data-testid="mobile-day-position"
+            className="font-sans text-[11.5px] font-semibold text-ink-600"
+          >
+            {firstPos === lastPos ? `Day ${firstPos}` : `Days ${firstPos}–${lastPos}`} of{' '}
+            {days.length}
+          </span>
+          <button
+            type="button"
+            aria-label="Next day"
+            disabled={atLast}
+            onClick={() => go(1)}
+            className="rounded-card border border-edge-350 bg-white px-[11px] py-1.5 font-sans text-[11px] font-semibold text-ink-600 disabled:cursor-not-allowed disabled:text-ink-200"
+          >
+            Next ›
+          </button>
+        </div>
+        <div
+          data-testid="mobile-day-dots"
+          // flex-wrap so a long trip's dots wrap to more rows instead of
+          // overflowing the phone width horizontally.
+          className="flex flex-wrap items-center justify-center gap-1.5 px-1.5 pb-0.5 pt-2"
+        >
+          {Array.from({ length: pageCount }, (_, page) => {
+            const isActive = page === activePage
+            const dayNo = page * perPage + 1
+            return (
+              <button
+                key={page}
+                type="button"
+                aria-label={`Go to day ${dayNo}`}
+                aria-current={isActive ? 'true' : undefined}
+                data-testid="mobile-day-dot"
+                onClick={() => setIndex(clampDayIndex(page * perPage, days.length))}
+                // Inline colour only for the active dot — the sanctioned exception
+                // for a city's own hue (matches DayColumn's band).
+                style={isActive ? { backgroundColor: activeColor } : undefined}
+                className={`h-[7px] w-[7px] rounded-full transition-colors ${isActive ? '' : 'bg-edge-250'}`}
               />
             )
           })}

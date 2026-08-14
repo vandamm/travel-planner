@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../../data/schema'
-import { formatFreeDuration, freeTimelineSlots, layoutTimelineCards } from './timelineSlots'
+import { freeTimelineSlots, layoutTimelineCards } from './timelineSlots'
 
 const card = (startTime: string, hours = 1): Card => ({
   id: startTime,
@@ -21,9 +21,12 @@ describe('freeTimelineSlots', () => {
     ])
   })
 
-  it('removes time occupied by cards shifted below an earlier overlap', () => {
+  it('merges overlapping cards into one occupied span', () => {
+    // 08:00–11:00 and 09:00–12:00 overlap; together they occupy 08:00–12:00,
+    // so the free time is what sits either side of that union.
     expect(freeTimelineSlots([card('08:00', 3), card('09:00', 3)], '06:00', '14:00')).toEqual([
       { startTime: '06:00', endTime: '08:00' },
+      { startTime: '12:00', endTime: '14:00' },
     ])
   })
 
@@ -57,19 +60,24 @@ describe('layoutTimelineCards', () => {
         offsetMinutes,
       })),
     ).toEqual([
+      // 07:00 runs to 09:00, so 08:00 overlaps it — and still sits at 08:00.
       { id: '07:00', offsetMinutes: 60 },
-      { id: '08:00', offsetMinutes: 180 },
-      { id: 'untimed', offsetMinutes: 240 },
+      { id: '08:00', offsetMinutes: 120 },
+      // The untimed card clears everything placed so far (07:00's 09:00 end).
+      { id: 'untimed', offsetMinutes: 180 },
     ])
   })
-})
 
-describe('formatFreeDuration', () => {
-  it.each([
-    ['06:00', '10:00', '4 hours free'],
-    ['12:00', '17:15', '5h 15m free'],
-    ['20:00', '21:00', '1 hour free'],
-  ])('formats %s to %s as %s', (start, end, expected) => {
-    expect(formatFreeDuration(start, end)).toBe(expected)
+  it('keeps a timed card at its clock position when an earlier card is stretched', () => {
+    const at = (id: string, placements: ReturnType<typeof layoutTimelineCards>) =>
+      placements.find((p) => p.card.id === id)?.offsetMinutes
+
+    const before = layoutTimelineCards([card('10:00', 1), card('12:00', 1)], '06:00', '21:00')
+    expect(at('12:00', before)).toBe(360)
+
+    // Stretching 10:00 to three hours overlaps 12:00 — which must not move, or
+    // the card would contradict the hour it displays.
+    const after = layoutTimelineCards([card('10:00', 3), card('12:00', 1)], '06:00', '21:00')
+    expect(at('12:00', after)).toBe(360)
   })
 })

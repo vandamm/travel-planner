@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { slugFromName } from '../../data/slug'
+import { workerFetch, workerJson } from '../../data/workerApi'
 import { DatePicker } from '../pickers/DatePicker'
 import { TRIP_COLORS } from './yearCalendar'
-
-const workerBase = () => (import.meta.env.VITE_WORKER_URL ?? '').replace(/\/+$/, '')
 
 export function NewTripModal({
   onClose,
@@ -33,7 +32,7 @@ export function NewTripModal({
     setSaving(true)
     setError('')
     try {
-      const response = await fetch(`${workerBase()}/api/rooms`, {
+      const response = await workerFetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -44,7 +43,7 @@ export function NewTripModal({
           color: TRIP_COLORS[Math.floor(Math.random() * TRIP_COLORS.length)],
         }),
       })
-      const body = (await response.json()) as { id?: string; error?: string }
+      const body = await workerJson<{ id?: string; error?: string }>(response)
       if (!response.ok || !body.id) throw new Error(body.error || 'Could not create trip')
       location.assign(`/${body.id}`)
     } catch (cause) {

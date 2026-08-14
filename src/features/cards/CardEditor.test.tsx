@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect, useState, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
@@ -76,6 +76,23 @@ function EditHarness() {
   )
 }
 
+/** Edit-mode harness seeded with a half-day card. */
+function HalfDayEditHarness() {
+  const { doc } = useRoom()
+  useDocVersion(doc)
+  const [card, setCard] = useState<Card | null>(null)
+  useEffect(() => {
+    setCard(addCard(doc, { dayKey: '2027-05-01', title: 'Siesta', duration: 'half' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <>
+      <CardDump />
+      {card && <CardEditor card={card} onClose={() => undefined} />}
+    </>
+  )
+}
+
 /** Edit-mode harness seeded with a transport card. */
 function TransportEditHarness() {
   const { doc } = useRoom()
@@ -122,15 +139,16 @@ describe('CardEditor — create', () => {
     expect(save).toBeEnabled()
   })
 
-  it('captures a note and quarter-hour start through a native time input', () => {
+  it('captures a note and quarter-hour start through the always-present time field', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Train' } })
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'platform 4' } })
-    expect(screen.queryByLabelText('Start time')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByLabelText('Schedule activity'))
+    // The field is always shown (the "Set a start time" checkbox is gone); an
+    // empty value is what makes the card untimed.
     const start = screen.getByLabelText('Start time')
     expect(start).toHaveAttribute('type', 'time')
     expect(start).toHaveAttribute('step', '900')
+    expect(start).toHaveValue('')
     fireEvent.change(start, { target: { value: '10:15' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
@@ -139,6 +157,15 @@ describe('CardEditor — create', () => {
     expect(row).toContain('"duration":"custom"')
     expect(row).toContain('"durationHours":1')
     expect(row).toContain('"note":"platform 4"')
+  })
+
+  it('shows the derived end time once a start is set', () => {
+    renderInRoom(<CreateHarness />)
+    expect(screen.getByTestId('when-derived')).toHaveTextContent(
+      'optional — you can place it later',
+    )
+    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '09:00' } })
+    expect(screen.getByTestId('when-derived')).toHaveTextContent('ends 10:00 · derived')
   })
 
   it('stores a link entered in the link field', () => {
@@ -164,7 +191,7 @@ describe('CardEditor — create', () => {
   it('saves the category chosen from the Type control', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Flight' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Transit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Transport' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Flight')) ?? ''
@@ -174,7 +201,7 @@ describe('CardEditor — create', () => {
   it('toggles a Type segment off when reclicked, storing no category', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Park' } })
-    const outdoor = screen.getByRole('button', { name: 'Outdoor' })
+    const outdoor = screen.getByRole('button', { name: 'Outdoors' })
     fireEvent.click(outdoor)
     expect(outdoor).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(outdoor)
@@ -185,31 +212,59 @@ describe('CardEditor — create', () => {
     expect(row).not.toContain('"category":"')
   })
 
-  it('stores a day duration chosen from the Duration control', () => {
+  it('stores a whole-day duration from the All day switch', () => {
     renderInRoom(<CreateHarness />)
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'All day' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Day' }))
+    const allDay = screen.getByRole('switch', { name: 'All day' })
+    expect(allDay).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(allDay)
+    expect(allDay).toHaveAttribute('aria-checked', 'true')
+    // Switched on, the hour/minute fields show the trip window and go read-only.
+    expect(screen.getByLabelText('Duration hours')).toBeDisabled()
+    expect(screen.getByLabelText('Duration hours')).toHaveValue(15)
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('All day')) ?? ''
     expect(row).toContain('"duration":"day"')
   })
 
-  it('defaults new cards to a one-hour custom duration and accepts quarter-hour increments', () => {
+  it('defaults new cards to one hour and takes a length as hours plus minutes', () => {
     renderInRoom(<CreateHarness />)
-    const duration = screen.getByRole('group', { name: 'Duration' })
-    const durationHours = within(duration).getByLabelText('Duration hours')
-    expect(durationHours).toHaveAttribute('min', '0.25')
-    expect(durationHours).toHaveAttribute('step', '0.25')
-    expect(within(duration).getByText('h')).toBeInTheDocument()
-    expect(duration).toHaveClass('items-center')
+    const hours = screen.getByLabelText('Duration hours')
+    const minutes = screen.getByLabelText('Duration minutes')
+    expect(hours).toHaveValue(1)
+    expect(minutes).toHaveValue(0)
+    expect(minutes).toHaveAttribute('step', '15')
+
     fireEvent.change(screen.getByLabelText('Card title'), { target: { value: 'Plain' } })
-    fireEvent.change(durationHours, { target: { value: '0.25' } })
+    fireEvent.change(hours, { target: { value: '2' } })
+    fireEvent.change(minutes, { target: { value: '30' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
 
     const row = rows().find((r) => r.includes('Plain')) ?? ''
     expect(row).toContain('"duration":"custom"')
-    expect(row).toContain('"durationHours":0.25')
+    expect(row).toContain('"durationHours":2.5')
+  })
+
+  it('keeps a stored half-day card on half until its length is actually edited', async () => {
+    renderInRoom(<HalfDayEditHarness />)
+    // A 06:00–21:00 window halves to 7h 30m.
+    await waitFor(() => expect(screen.getByLabelText('Duration hours')).toHaveValue(7))
+    expect(screen.getByLabelText('Duration minutes')).toHaveValue(30)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+    await waitFor(() => {
+      const row = rows().find((r) => r.includes('Siesta')) ?? ''
+      expect(row).toContain('"duration":"half"')
+    })
+
+    fireEvent.change(screen.getByLabelText('Duration hours'), { target: { value: '3' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
+    await waitFor(() => {
+      const row = rows().find((r) => r.includes('Siesta')) ?? ''
+      expect(row).toContain('"duration":"custom"')
+      expect(row).toContain('"durationHours":3.5')
+    })
   })
 
   it('keeps an activity untimed when Start time is blank', () => {
@@ -250,10 +305,10 @@ describe('CardEditor — edit', () => {
     expect(rows().some((r) => r.includes('Old title'))).toBe(false)
   })
 
-  it('pre-selects Transit for a legacy transport card and rewrites it to category on save', async () => {
+  it('pre-selects Transport for a legacy transport card and rewrites it to category on save', async () => {
     renderInRoom(<TransportEditHarness />)
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Transit' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Transport' })).toHaveAttribute(
         'aria-pressed',
         'true',
       ),
@@ -270,7 +325,6 @@ describe('CardEditor — edit', () => {
 
   it('untimes the card when the native start time is cleared', async () => {
     renderInRoom(<EditHarness />)
-    expect(screen.getByLabelText('Schedule activity')).toBeChecked()
     await waitFor(() => expect(screen.getByLabelText('Start time')).toHaveValue('09:00'))
 
     fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '' } })

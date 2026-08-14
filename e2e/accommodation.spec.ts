@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { COLUMN_GAP_PX } from '../src/features/board/useViewport'
+import { LANE_CELL_INSET_PX } from '../src/features/accommodation/AccommodationLane'
 import { addCity, pickRange, setupTrip, E2E_LINK } from './helpers'
 
 interface PlannerBridge {
@@ -146,10 +146,10 @@ test('two stays sharing a changeover day render on one row meeting mid-day', asy
   // Same row: identical top (chained, not stacked).
   expect(Math.abs(a.y - b.y)).toBeLessThan(2)
   // They meet near the middle of the shared day: B starts right where A ends —
-  // not overlapping, and within the shared column gap, nowhere near a full
-  // column apart.
+  // not overlapping, and within the two cell insets, nowhere near a full column
+  // apart.
   const aRight = a.x + a.width
   const between = b.x - aRight
   expect(between).toBeGreaterThanOrEqual(-1)
-  expect(between).toBeLessThanOrEqual(COLUMN_GAP_PX + 1)
+  expect(between).toBeLessThanOrEqual(2 * LANE_CELL_INSET_PX + 1)
 })

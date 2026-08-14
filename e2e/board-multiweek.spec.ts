@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { HOUR_GUTTER_PX } from '../src/features/board/useViewport'
 import { setupTrip, E2E_LINK } from './helpers'
 
 // §9 desktop multi-week affordances: a right-edge fade while more columns lie
@@ -42,7 +43,8 @@ test('a short trip that fits shows no fade', async ({ page }) => {
   expect(geometry.columnWidths).toHaveLength(3)
   expect(geometry.columnWidths[0]).toBeGreaterThan(272)
   expect(Math.max(...geometry.columnWidths) - Math.min(...geometry.columnWidths)).toBeLessThan(0.1)
-  expect(geometry.occupiedWidth).toBeCloseTo(geometry.boardWidth, 0)
+  // The columns fill everything the shared hour gutter leaves them.
+  expect(geometry.occupiedWidth).toBeCloseTo(geometry.boardWidth - HOUR_GUTTER_PX, 0)
 })
 
 test('Jump to today brings today’s column into view', async ({ page }) => {
@@ -92,4 +94,44 @@ test('the range stepper pages the scroll and updates its label', async ({ page }
   const scroll = page.getByTestId('board-scroll')
   await expect.poll(() => scroll.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
   await expect(label).not.toHaveText(before ?? '')
+})
+
+test('the now-line goes away when today is scrolled off screen', async ({ page }) => {
+  await page.goto(E2E_LINK)
+  // Anchor on the browser's real "today" so the component's `new Date()` agrees,
+  // and widen the day window to the whole day so the line does not depend on
+  // what time CI happens to run.
+  const [today, endDate] = await page.evaluate(() => {
+    const start = new Date()
+    const end = new Date(start)
+    end.setDate(end.getDate() + 13)
+    return [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]
+  })
+  await setupTrip(page, { title: 'Now', startDate: today, endDate })
+  await page.waitForFunction(() => Boolean((window as { __planner?: unknown }).__planner))
+  await page.evaluate(() => {
+    const planner = (window as unknown as { __planner: Record<string, never> }).__planner
+    const { doc, setTrip } = planner as unknown as {
+      doc: unknown
+      setTrip: (doc: unknown, patch: Record<string, string>) => void
+    }
+    setTrip(doc, { dayStart: '00:00', dayEnd: '23:45' })
+  })
+
+  const board = page.getByTestId('board-scroll')
+  // Today is column 0, so it is on screen and the line is drawn.
+  await expect(page.getByTestId('now-line').first()).toBeVisible()
+  await expect(page.getByTestId('now-pill')).toBeVisible()
+
+  // Scroll past today: a "now" hairline over next week's columns would read as
+  // if that day were happening right now.
+  await board.evaluate((el) => el.scrollTo({ left: el.scrollWidth }))
+  await expect(page.locator(`[data-day="${today}"]`)).not.toBeInViewport()
+  await expect(page.getByTestId('now-line')).toHaveCount(0)
+  await expect(page.getByTestId('now-pill')).toHaveCount(0)
+
+  // Back to today and it returns.
+  await page.getByRole('button', { name: 'Jump to today' }).click()
+  await expect(page.getByTestId('now-line').first()).toBeVisible()
+  await expect(page.getByTestId('now-pill')).toBeVisible()
 })

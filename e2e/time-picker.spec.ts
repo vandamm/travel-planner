@@ -46,8 +46,7 @@ test('native trip day-window inputs update valid values and reject inverted wind
   await page.goto(E2E_LINK)
   await setupTrip(page, { title: 'Italy 2027', startDate: '2027-05-01', endDate: '2027-05-03' })
 
-  await page.getByRole('button', { name: 'Edit trip menu' }).click()
-  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: 'Trip details' }).click()
+  await page.getByRole('button', { name: 'Trip', exact: true }).click()
   const trip = page.getByRole('dialog', { name: 'Trip details' })
   await expect(trip.getByLabel('Day start')).toHaveValue('06:00')
   await pickTime(trip, 'Day start', '08:00')

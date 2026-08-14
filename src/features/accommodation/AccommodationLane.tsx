@@ -16,6 +16,12 @@ import {
   COLUMN_WIDTH_REM,
 } from '../board/useViewport'
 
+/**
+ * Horizontal breathing room inside each lane cell. Day columns sit flush now, so
+ * the space between neighbouring stays comes from here rather than a grid gap.
+ */
+export const LANE_CELL_INSET_PX = 3
+
 /** Half one day track plus half its following gap, within a multi-day grid cell. */
 function halfDayInset(span: number): string {
   return `calc(${(50 / span).toFixed(4)}% + ${(COLUMN_GAP_PX / (2 * span)).toFixed(4)}px)`
@@ -31,6 +37,12 @@ export interface AccommodationLaneProps {
    * Open the create editor. `startNight` seeds the first uncovered night.
    */
   onAddStay?: (startNight?: string) => void
+  /**
+   * Width of the board's sticky hour gutter. The lane is inset by it so its
+   * tracks line up with the day columns beside it (v4 puts the stays band
+   * directly above the day headers, sharing their boundaries).
+   */
+  gutterPx?: number
 }
 
 export function AccommodationLane({
@@ -39,6 +51,7 @@ export function AccommodationLane({
   cityById,
   onEditAccommodation,
   onAddStay,
+  gutterPx = 0,
 }: AccommodationLaneProps) {
   if (days.length === 0) return null
   const placed = packAccommodations(days, accommodations)
@@ -50,7 +63,21 @@ export function AccommodationLane({
     days.length * COLUMN_WIDTH_PX + Math.max(0, days.length - 1) * COLUMN_GAP_PX
 
   return (
-    <div className="mb-2">
+    // No bottom margin: the stays band and the day-header row meet flush, with a
+    // hairline under the band so it reads as its own row. Only under — the
+    // toolbar already draws the rule above, and doubling them reads as one
+    // 2px line.
+    <div className="flex w-max min-w-full border-b border-hour-rule">
+      {gutterPx > 0 && (
+        <div
+          aria-hidden
+          style={{ width: gutterPx, flex: `0 0 ${gutterPx}px` }}
+          // No border of its own: the row's bottom rule already spans the gutter,
+          // and a border here would paint 1px above it — reading as a thick line
+          // over the hour margin and a hairline everywhere else.
+          className="sticky left-0 z-30 bg-white"
+        />
+      )}
       <div
         data-testid="accommodation-lane"
         style={{
@@ -60,6 +87,7 @@ export function AccommodationLane({
           columnGap: COLUMN_GAP_REM,
           rowGap: '0.25rem',
         }}
+        className="flex-1 border-x border-edge-divider py-1.5"
       >
         {placed.map((p) => {
           const bar = (
@@ -83,6 +111,9 @@ export function AccommodationLane({
                 gridColumn: `${p.startIndex + 1} / span ${p.span}`,
                 gridRow: p.row + 1,
               }}
+              // Columns are flush now, so the breathing room between neighbouring
+              // stays comes from the cell rather than a grid gap.
+              className="px-[3px]"
             >
               {/* Two stays sharing a day split the row: each takes half the width, the
                 earlier on the left, the later pushed right. A changeover pair instead
@@ -117,7 +148,7 @@ export function AccommodationLane({
             aria-label={`New stay starting ${gap[0]}`}
             onClick={() => onAddStay?.(gap[0])}
             style={{ gridColumn: (dayIndex.get(gap[0]) ?? 0) + 1, gridRow: 1 }}
-            className="flex h-7 w-full items-center justify-center rounded-md border border-dashed border-edge-300 text-xs font-medium text-ink-500 hover:border-ink-300 hover:bg-surface-chip"
+            className="mx-[3px] flex h-[22px] items-center justify-center rounded-chip border border-dashed border-edge-300 font-sans text-[10.5px] font-semibold text-ink-500 hover:border-ink-300 hover:bg-surface-chip"
           >
             + Add stay
           </button>

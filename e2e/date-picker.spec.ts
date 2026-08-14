@@ -10,16 +10,15 @@ test('picking the trip start via the calendar rebuilds the board to that date', 
   // Board rebuilt from the picked ISO date.
   const labels = page.getByTestId('day-label')
   await expect(labels).toHaveCount(3)
-  await expect(labels.nth(0)).toHaveText('SAT · 01.05')
+  await expect(labels.nth(0)).toHaveText('SAT01MAY')
 
   // Re-picking a different month moves the whole board.
-  await page.getByRole('button', { name: 'Edit trip menu' }).click()
-  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: 'Trip details' }).click()
+  await page.getByRole('button', { name: 'Trip', exact: true }).click()
   const trip = page.getByRole('dialog', { name: 'Trip details' })
   await pickDate(trip, 'End date', '2027-06-12')
   await pickDate(trip, 'Start date', '2027-06-10')
   await trip.getByRole('button', { name: 'Done' }).click()
-  await expect(page.getByTestId('day-label').nth(0)).toHaveText('THU · 10.06')
+  await expect(page.getByTestId('day-label').nth(0)).toHaveText('THU10JUN')
 })
 
 test('a stay range highlights both endpoints and the days between', async ({ page }) => {

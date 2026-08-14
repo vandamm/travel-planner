@@ -111,14 +111,33 @@ manual `order` within their day. The combined ordering lives in
 `src/features/cards/cardSort.ts`. The timeline always runs morning→evening, top
 to bottom — there is no per-viewer direction toggle.
 
-A card may carry an optional `category?: 'indoor' | 'outdoor' | 'transit'`
-(drives the colour chip on the card and the Type segmented control in the
-editor). It only changes rendering, not ordering. The legacy `transport?:
-boolean` flag is kept valid for back-compat with older synced docs; `category`
-supersedes it. Read the effective category through `cardCategory(card)` in
-`src/features/cards/cardCategory.ts` — it returns `category`, else derives
-`transport: true` as `'transit'` at read time (no bulk CRDT migration; the
-editor rewrites to `category` and drops `transport` on the card's next save).
+A card may carry an optional
+`category?: 'indoor' | 'outdoor' | 'food' | 'transit'` — the four activity types
+(Sights / Outdoors / Food / Transport). It only changes rendering, not ordering.
+The legacy `transport?: boolean` flag is kept valid for back-compat with older
+synced docs; `category` supersedes it. Read the effective category through
+`cardCategory(card)` in `src/features/cards/cardCategory.ts` — it returns
+`category`, else derives `transport: true` as `'transit'` at read time (no bulk
+CRDT migration; the editor rewrites to `category` and drops `transport` on the
+card's next save).
+
+A card also carries `ticketState?: 'none' | 'required' | 'bought'` (absent reads
+as `'none'`). It drives the corner ticket marker, the warm wash over a
+required-but-unbought card, and the toolbar's "N tickets to buy" count.
+
+Only `required` and `bought` are marked. `'none'` shows **nothing** — the
+reference draws a faint outline ticket there too, but that badges every card in
+the common case, which reads as clutter rather than a signal. Transport is never
+marked either, and never counts.
+
+How a category and ticket state become pixels lives in
+`src/features/cards/cardPalette.ts` — the tint / 3px left edge / type-glyph
+triad, the ticket-marker resolution, and the short-card threshold. It is pure
+and unit-tested; `Card.tsx` only renders what it returns. There is **no**
+category chip or folded corner on the board card: the inline glyph and the left
+edge carry the type, so the board needs no legend. The chip triads
+(`indoor`/`outdoor`/`transit` in `tailwind.config.js`) survive only for the
+compact multi-week cards.
 
 A card carries `duration: 'day' | 'half' | 'custom'`; custom cards require a
 positive `durationHours`. Day and half-day durations resolve from the trip's
@@ -170,7 +189,8 @@ close control); `lg:` restores the desktop centered scrim card. Its consumers
 body inside it and keep their in-body `<h2>` title; each caps width with
 `w-full lg:max-w-md` so desktop width is unchanged.
 Trip-setup and Cities are **not** inline sections: on desktop the header carries
-`[✎ Trip]` and `[◉ Cities]` buttons; on mobile these collapse into a `≡` menu
+`[✎ Trip]`, `[◉ Cities]` and `[↗ Share]` as visible outline buttons (there is no
+`✎` pop-over menu); on mobile these collapse into a `≡` menu
 (`MobileMenu`, itself rendered through `Modal`) whose items open `TripModal` /
 `CityModal` (`tripOpen`/`citiesOpen` flags in `App`'s `AppShell`) or trigger
 "Add stay" — the create trigger is lifted into `AppShell` as an `addStayNonce`
@@ -200,7 +220,9 @@ Date and time entry is **custom, not native** (no `<input type="date/time">`):
   (trip start in `TripModal`) and first→last **range** mode (a stay's nights in
   `AccommodationEditor`, one control replacing the two night inputs). Grid + range
   math is pure in `src/features/pickers/calendar.ts` (`monthGrid`, `nextRange`
-  swap-reducer, `inRange`/`isEndpoint`); weeks start Sunday; ISO-string compare is
+  swap-reducer, `inRange`/`isEndpoint`); weeks start **Monday**, matching the home
+  year calendar and the app's European formatting (the handoff's `S M T W T F S`
+  row is the one place it assumes a US week); ISO-string compare is
   chronological so no `Date` parsing is needed.
 - `src/features/pickers/TimePicker.tsx` — an hour/minute wheel pop-over
   (`TripModal` day window, `CardEditor` start/end). Value lists + parse/format/snap
@@ -215,8 +237,56 @@ The desktop multi-week board carries navigation affordances in
 shown only while columns lie off-screen right (`showRightFade`), a **Jump to
 today** button (`todayIndex`; absent when today is outside the trip), and a
 date-range stepper (`visibleRange`/`rangeLabel`, European `dd.MM`) that pages the
-horizontal scroll by a viewport width. These are desktop-only; the mobile
-single-day view and `useViewport.ts` are unchanged.
+horizontal scroll by a viewport width. They live in a **footer under the grid**,
+not above it. These are desktop-only.
+
+## The board grid
+
+**The vertical scale is a runtime value, not a constant.** The day stretches so
+it fills the height the board has: `useFittedPxPerHour`
+(`src/features/board/timelineScale.ts`) measures the scroll container, subtracts
+the day body's offset inside it (the stays lane + day header, both
+scale-independent, so the measurement can't feed back), and derives px-per-hour
+via `fitPxPerHour`. `MIN_PX_PER_HOUR` (50) is the **floor and the default** —
+below it the board scrolls rather than drawing an illegible grid, and it is what
+anything without a viewport to measure uses (tests, the Worker).
+
+Every helper that converts between minutes and pixels — `windowHeightPx`,
+`cardHeightPx`, `nowOffsetPx`, the `planBand*` family, `planCardResize`,
+`dropTimeForOffset` — takes `pxPerHour` as a trailing argument defaulting to the
+floor. Components read the live value from `TimelineScaleContext` via
+`usePxPerHour()` instead of threading it through props; `Board` owns the single
+provider so the rendered grid and the drag/resize math can never disagree.
+
+Day columns sit **flush** (`COLUMN_GAP_PX` is 0): the boundary between two days
+is a single full-height 1px hairline on the column itself, so it runs unbroken
+from the stays band through the header row into the grid. Because there is no
+gap, the two-hourly rails each column draws (`GridRails`, from `evenHourMarks`
+in `cardHeight.ts`) read as continuous lines across the whole board.
+
+The hour numerals live in **one shared gutter** down the left
+(`HourGutter.tsx`, `HOUR_GUTTER_PX`), sticky against horizontal scroll and
+aligned to the timeline tracks by a `flex-1` spacer rather than any measurement.
+The mobile single-day view reuses it at `MOBILE_GUTTER_PX`.
+
+**Free time renders as nothing.** There are no dashed slot boxes and no "N hours
+free" labels. Hovering a gap of 45 minutes or more floats a one-hour
+"＋ plan something" band under the pointer, snapped to quarter-hours and clamped
+inside the gap; gaps shorter than that offer no affordance at all. The geometry
+is pure in `src/features/board/planBand.ts`. Adding an activity outright is the
+bare **＋** in each day header — it opens the editor pinned to that day, which is
+why the editor has **no day picker** (the day shows as fixed text).
+
+The **now-line** is a hairline across every visible column with a red time pill
+in the gutter and a `TODAY` badge in that day's header; all three derive from
+`src/features/board/nowLine.ts`. `Board` feeds it only the days the scroller is
+showing (`visibleRange`, the same range the footer's "Showing …" label reports),
+so the line vanishes when today is scrolled out of view as well as when today is
+outside the trip or the clock is outside the day window — otherwise a "now"
+hairline would sit over next week.
+
+`App.tsx`'s shell is `h-dvh`, not `min-h-dvh`: the board's own regions scroll so
+the desktop day-range footer and the mobile day switcher stay pinned.
 
 ## Auth / room-creation model
 

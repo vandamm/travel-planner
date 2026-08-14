@@ -21,6 +21,7 @@ import {
   type CardResizeController,
 } from './cardResize'
 import { boardCollisionDetection } from './dndCollision'
+import { usePxPerHour } from './timelineScale'
 import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
 import {
   commitCardDropPlan,
@@ -46,6 +47,9 @@ export function BoardDnd({
   onTimelineChange,
   children,
 }: BoardDndProps) {
+  // The board's live scale: pointer travel only means a time once you know how
+  // many pixels an hour is worth right now.
+  const pxPerHour = usePxPerHour()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor),
@@ -72,13 +76,14 @@ export function BoardDnd({
           deltaPx,
           dayStart,
           dayEnd,
+          pxPerHour,
         })
       },
       commit(cardId, edge, deltaPx) {
-        if (applyCardResize(doc, cardId, edge, deltaPx)) onTimelineChange?.()
+        if (applyCardResize(doc, cardId, edge, deltaPx, pxPerHour)) onTimelineChange?.()
       },
     }),
-    [dayEnd, dayStart, doc, onTimelineChange],
+    [dayEnd, dayStart, doc, onTimelineChange, pxPerHour],
   )
 
   function handleDragStart(event: DragStartEvent) {
@@ -125,6 +130,7 @@ export function BoardDnd({
       offsetPx: timelineDropOffset(droppedTop, timelineRect.top, 0),
       dayStart,
       dayEnd,
+      pxPerHour,
     })
   }
 

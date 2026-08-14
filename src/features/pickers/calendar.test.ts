@@ -1,23 +1,35 @@
 import { describe, expect, it } from 'vitest'
-import { inRange, isEndpoint, monthGrid, nextRange } from './calendar'
+import { WEEKDAY_LABELS, inRange, isEndpoint, monthGrid, nextRange } from './calendar'
 
 describe('monthGrid', () => {
-  it('lays out full Sunday-first weeks of 7 days', () => {
+  it('lays out full Monday-first weeks of 7 days', () => {
     const weeks = monthGrid(2027, 4) // May 2027
     expect(weeks.length).toBeGreaterThanOrEqual(4)
     for (const week of weeks) expect(week).toHaveLength(7)
-    // Every week starts on a Sunday (JS getDay 0) — check via the ISO key.
+    // Every week starts on a Monday (JS getDay 1) — check via the ISO key.
     for (const week of weeks) {
-      expect(new Date(`${week[0].key}T00:00`).getDay()).toBe(0)
+      expect(new Date(`${week[0].key}T00:00`).getDay()).toBe(1)
+    }
+  })
+
+  it('keeps the weekday header in step with the grid', () => {
+    // The bug this guards: a Monday-first header over a Sunday-first grid puts
+    // every date one column off. Column i's label must match column i's day.
+    const initials = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+    expect(WEEKDAY_LABELS).toHaveLength(7)
+    for (const week of monthGrid(2027, 4)) {
+      week.forEach((day, column) => {
+        expect(WEEKDAY_LABELS[column]).toBe(initials[new Date(`${day.key}T00:00`).getDay()])
+      })
     }
   })
 
   it('marks leading/trailing adjacent-month days as out-of-month', () => {
-    // May 1 2027 is a Saturday, so the first row is Apr 25–May 1: six filler days.
+    // May 1 2027 is a Saturday, so the first row is Apr 26–May 2: five filler days.
     const weeks = monthGrid(2027, 4)
     const first = weeks[0]
-    expect(first.filter((d) => !d.inMonth)).toHaveLength(6)
-    expect(first[6]).toMatchObject({ key: '2027-05-01', dayOfMonth: 1, inMonth: true })
+    expect(first.filter((d) => !d.inMonth)).toHaveLength(5)
+    expect(first[5]).toMatchObject({ key: '2027-05-01', dayOfMonth: 1, inMonth: true })
   })
 
   it('covers every day of the month exactly once', () => {

@@ -24,6 +24,7 @@ import type {
   City,
   DayCityOverride,
   DayCityOverrides,
+  TicketState,
   Trip,
 } from './schema'
 import { isValidCustomDurationHours } from '../features/cards/cardHeight'
@@ -213,6 +214,7 @@ export interface NewCard {
   icon?: string
   transport?: boolean
   category?: CardCategory
+  ticketState?: TicketState
   id?: string
 }
 
@@ -266,6 +268,7 @@ export function addCard(doc: Y.Doc, input: NewCard): Card {
     ...(input.icon !== undefined && { icon: input.icon }),
     ...(input.transport !== undefined && { transport: input.transport }),
     ...(input.category !== undefined && { category: input.category }),
+    ...(input.ticketState !== undefined && { ticketState: input.ticketState }),
   }
   doc.transact(() => entityMap(doc, CARDS).set(id, toYMap(card)))
   return card

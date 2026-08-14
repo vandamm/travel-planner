@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Card, City, Day } from '../../data/schema'
+import { MIN_PX_PER_HOUR } from '../cards/cardHeight'
 import { DayColumn } from './DayColumn'
 import { DragOverDayContext, DragPreviewContext } from './dragOverDayContext'
-import { TIMELINE_VERTICAL_PADDING_PX } from '../cards/cardHeight'
 
 const day: Day = { key: '2027-05-01', index: 0 }
 const rome: City = { id: 'rome', name: 'Rome', color: '#ef4444' }
@@ -53,7 +53,7 @@ describe('DayColumn', () => {
     render(<DayColumn day={day} city={rome} cards={[]} />)
 
     const column = screen.getByTestId('day-column')
-    expect(column).toHaveStyle({ flex: '1 0 16rem', minWidth: '16rem' })
+    expect(column).toHaveStyle({ flex: '1 0 20rem', minWidth: '20rem' })
     expect(column.style.width).toBe('')
   })
 
@@ -62,9 +62,15 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('city-name')).toHaveTextContent('No city')
   })
 
-  it('labels the day with the approved uppercase weekday and date', () => {
-    render(<DayColumn day={day} city={rome} cards={[]} />)
-    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT · 01.05')
+  it('sets the date as a large day-of-month between a weekday and a month', () => {
+    const { rerender } = render(<DayColumn day={day} city={rome} cards={[]} showMonth />)
+    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT01MAY')
+
+    // The month is dropped on the columns between month changes, so the row
+    // does not repeat it down a three-week trip.
+    rerender(<DayColumn day={day} city={rome} cards={[]} />)
+    expect(screen.queryByTestId('day-month')).not.toBeInTheDocument()
+    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT01')
   })
 
   it('lays out cards morning→evening', () => {
@@ -116,97 +122,124 @@ describe('DayColumn', () => {
     expect(within(card('Tour')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Museum')).getByText('Overlap')).toBeInTheDocument()
     expect(within(card('Lunch')).queryByText('Overlap')).not.toBeInTheDocument()
-    expect(screen.getByText('Tour').closest('li')).toHaveStyle({ marginTop: '180px' })
-    expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: '0px' })
+    // Tour is at 09:00, three hours down. Museum starts at 10:30 — half an hour
+    // before Tour ends — so it pulls up half an hour to sit on its own time
+    // rather than being shoved below Tour. The overlap is shown, not hidden.
+    expect(screen.getByText('Tour').closest('li')).toHaveStyle({ marginTop: `${3 * MIN_PX_PER_HOUR}px` })
+    expect(screen.getByText('Museum').closest('li')).toHaveStyle({ marginTop: `${-0.5 * MIN_PX_PER_HOUR}px` })
   })
 
-  it('pads the exact day-window track above and below the activity range', () => {
+  it('is exactly the day window tall, with no dead space above or below', () => {
+    // Any extra would show as blank space under the last rail and push the board
+    // into a needless vertical scroll.
     render(<DayColumn day={day} cards={[]} dayStart="06:00" dayEnd="21:00" />)
-    expect(screen.getByTestId('day-body')).toHaveStyle({
-      height: `${900 + TIMELINE_VERTICAL_PADDING_PX * 2}px`,
-    })
-    expect(screen.getByTestId('timeline-track')).toHaveStyle({
-      top: `${TIMELINE_VERTICAL_PADDING_PX}px`,
-      height: '900px',
-    })
+    expect(screen.getByTestId('day-body')).toHaveStyle({ height: `${15 * MIN_PX_PER_HOUR}px` })
+    const track = screen.getByTestId('timeline-track')
+    expect(track).toHaveStyle({ height: `${15 * MIN_PX_PER_HOUR}px` })
+    expect(track).toHaveClass('top-0')
+
+    // A shorter window shrinks to match rather than keeping a fixed frame.
+    render(<DayColumn day={day} cards={[]} dayStart="07:00" dayEnd="20:00" />)
+    expect(screen.getAllByTestId('day-body').at(-1)).toHaveStyle({ height: `${13 * MIN_PX_PER_HOUR}px` })
   })
 
-  it('renders a true-positioned numeric hour rail without word labels', () => {
-    render(
-      <DayColumn
-        {...({ hourRail: 'right' } as { hourRail: 'right' })}
-        day={day}
-        cards={cards}
-      />,
-    )
-    expect(screen.getAllByTestId('hour-mark').map((node) => node.textContent)).toEqual([
-      '6',
-      '8',
-      '10',
-      '12',
-      '14',
-      '16',
-      '18',
-      '20',
-    ])
+  it('carries the scale as two-hourly rails, the labels living in the shared gutter', () => {
+    render(<DayColumn day={day} cards={cards} />)
+    // The numerals moved to the board's one shared gutter (v4); the column keeps
+    // only the rails they line up with.
+    expect(screen.queryByTestId('hour-mark')).not.toBeInTheDocument()
+    const rails = screen.getAllByTestId('grid-rail')
+    expect(rails).toHaveLength(8)
+    expect(rails[0]).toHaveStyle({ top: '0px' })
+    expect(rails[1]).toHaveStyle({ top: `${2 * MIN_PX_PER_HOUR}px` })
+    // The first rail is the stronger hairline, the rest the lighter grid tone.
+    expect(rails[0]).toHaveClass('bg-hour-rule')
+    expect(rails[1]).toHaveClass('bg-hour-grid')
     expect(screen.queryByTestId('scale')).not.toBeInTheDocument()
-    expect(screen.getByTestId('card-list')).toHaveClass('pl-0')
     expect(screen.getByTestId('card-list')).toHaveClass('pointer-events-none')
     for (const card of screen.getAllByTestId('sortable-card')) {
       expect(card).toHaveClass('pointer-events-auto')
     }
     expect(screen.getByTestId('card-list')).not.toHaveClass('gap-2')
-    expect(screen.getByTestId('timeline-track')).toHaveClass('left-0', 'right-0')
-    expect(screen.getByTestId('hour-rail')).toHaveStyle({ right: '-20px', width: '20px' })
-    const addCard = screen.getAllByTestId('timeline-slot')[0]
-    expect(addCard).toHaveClass('border-edge-300', 'text-ink-400')
-    expect(addCard.className).not.toMatch(/slate-/)
+    expect(screen.getByTestId('timeline-track')).toHaveClass('inset-x-0')
   })
 
-  it('centers the free-time label and replaces it with the add action on hover', () => {
+  it('leaves free time empty, offering a hover band only in gaps of 45 min or more', () => {
     const onAddCard = vi.fn()
     render(<DayColumn day={day} cards={cards} onAddCard={onAddCard} />)
 
     const slots = screen.getAllByTestId('timeline-slot')
     expect(slots).toHaveLength(2)
-    expect(slots[0]).toHaveStyle({ top: '60px', height: '60px' })
-    expect(slots[1]).toHaveStyle({ top: '180px', height: '600px' })
+    expect(slots[0]).toHaveStyle({ top: `${MIN_PX_PER_HOUR}px`, height: `${MIN_PX_PER_HOUR}px` })
+    expect(slots[1]).toHaveStyle({ top: `${3 * MIN_PX_PER_HOUR}px`, height: `${10 * MIN_PX_PER_HOUR}px` })
     for (const slot of slots) {
-      expect(slot).toHaveTextContent(/hours? free/)
-      expect(slot).toHaveTextContent('＋ add activity')
-      expect(slot).toHaveClass('grid', 'place-items-center')
-      expect(within(slot).getByText(/hours? free/)).toHaveClass(
-        'col-start-1',
-        'row-start-1',
-        'group-hover:opacity-0',
-        'group-focus-visible:opacity-0',
-      )
-      expect(within(slot).getByText('＋ add activity')).toHaveClass(
-        'col-start-1',
-        'row-start-1',
-        'opacity-0',
-        'group-hover:opacity-100',
-        'group-focus-visible:opacity-100',
-      )
-      expect(slot).toHaveClass('group', 'cursor-pointer', 'border-dashed')
-      expect(slot).not.toHaveClass('opacity-0')
+      // No resting box and no duration label — the gap renders as nothing until
+      // the band appears on hover.
+      expect(slot.className).not.toMatch(/border|bg-/)
+      expect(slot).not.toHaveTextContent(/hours? free/)
+      const band = within(slot).getByTestId('plan-band')
+      expect(band).toHaveTextContent('＋ plan something')
+      expect(band).toHaveClass('hidden', 'border-dashed', 'border-edge-plan')
+      expect(band).toHaveClass('group-hover:flex', 'group-focus-visible:flex')
     }
+    // The one-hour band clamps to the gap when the gap is shorter than an hour.
+    expect(within(slots[0]).getByTestId('plan-band')).toHaveStyle({ height: `${MIN_PX_PER_HOUR}px` })
+    expect(within(slots[1]).getByTestId('plan-band')).toHaveStyle({ height: `${MIN_PX_PER_HOUR}px` })
 
+    // Clicking seeds exactly the band that was on screen.
     fireEvent.click(slots[1])
-    expect(onAddCard).toHaveBeenCalledWith(day.key, '09:00')
+    expect(onAddCard).toHaveBeenCalledWith(day.key, '09:00', 1)
     expect(screen.queryByRole('button', { name: 'Add activity' })).not.toBeInTheDocument()
+  })
+
+  it('offers no hover affordance in a gap under 45 minutes', () => {
+    render(
+      <DayColumn
+        day={day}
+        onAddCard={vi.fn()}
+        cards={[
+          {
+            id: 'a',
+            dayKey: day.key,
+            title: 'A',
+            order: 0,
+            startTime: '06:00',
+            duration: 'custom',
+            durationHours: 1,
+          },
+          {
+            id: 'b',
+            dayKey: day.key,
+            title: 'B',
+            order: 1,
+            startTime: '07:30',
+            duration: 'custom',
+            durationHours: 13.5,
+          },
+        ]}
+      />,
+    )
+    // The only gap is 07:00–07:30 — too short to plan into; use the header ＋.
+    expect(screen.queryAllByTestId('timeline-slot')).toHaveLength(0)
+  })
+
+  it('adds an untimed activity to this day from the header ＋', () => {
+    const onAddCard = vi.fn()
+    render(<DayColumn day={day} cards={cards} onAddCard={onAddCard} />)
+    fireEvent.click(screen.getByRole('button', { name: /Add activity to/ }))
+    // No start time: the day is fixed by the column, the time is left empty.
+    expect(onAddCard).toHaveBeenCalledWith(day.key)
   })
 
   it('scales each card by its duration', () => {
     render(<DayColumn day={day} cards={cards} />)
     const li = (title: string) => screen.getByText(title).closest('li') as HTMLElement
-    expect(li('Dinner')).toHaveStyle({ height: '120px' })
-    expect(li('Breakfast')).toHaveStyle({ height: '60px' })
-    expect(li('Stroll')).toHaveStyle({ height: '60px' })
+    expect(li('Dinner')).toHaveStyle({ height: `${2 * MIN_PX_PER_HOUR}px` })
+    expect(li('Breakfast')).toHaveStyle({ height: `${MIN_PX_PER_HOUR}px` })
+    expect(li('Stroll')).toHaveStyle({ height: `${MIN_PX_PER_HOUR}px` })
     expect(screen.getByText('Dinner').closest('[data-testid="card"]')).toHaveClass(
-      'my-0.5',
       'w-full',
-      'h-[calc(100%-4px)]',
+      'h-[calc(100%-2px)]',
       'overflow-hidden',
     )
   })
@@ -230,7 +263,10 @@ describe('DayColumn', () => {
         dayEnd="21:00"
       />,
     )
-    expect(screen.getByText('Late start').closest('li')).toHaveStyle({ marginTop: '180px' })
+    // 07:00 day start, card at 10:00 → three hours down the scale.
+    expect(screen.getByText('Late start').closest('li')).toHaveStyle({
+      marginTop: `${3 * MIN_PX_PER_HOUR}px`,
+    })
   })
 
   it('offers Auto, No city, and per-city overrides, defaulting to Auto', () => {
@@ -238,7 +274,7 @@ describe('DayColumn', () => {
       <DayColumn day={day} city={rome} cards={[]} cities={[rome, florence]} />,
     )
     const picker = screen.getByRole('button', { name: 'Choose city' })
-    expect(picker).toHaveTextContent('✎')
+    expect(picker).toHaveTextContent('▾')
     expect(picker).not.toHaveClass('border', 'rounded-card')
     fireEvent.click(picker)
     expect(screen.getByRole('button', { name: /Auto/ })).toBeInTheDocument()
@@ -257,7 +293,7 @@ describe('DayColumn', () => {
         overrideCityId="florence"
       />,
     )
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('▾')
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
@@ -287,7 +323,7 @@ describe('DayColumn', () => {
     render(
       <DayColumn day={day} cards={[]} cities={[rome]} overrideCityId={null} />,
     )
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('▾')
   })
 
   it('opens the day swap workflow from the header action', () => {
@@ -306,29 +342,61 @@ describe('DayColumn', () => {
   it('flags weekends with a bold-vermilion weekday label, weekdays muted, no tint', () => {
     const { rerender } = render(<DayColumn day={day} cards={[]} />)
     // 2027-05-01 is a Saturday.
+    // Weekend: both the weekday and the big day-of-month go vermilion.
     expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
-    expect(screen.getByTestId('day-label')).toHaveClass('text-city-vermilion')
+    const vermilion = () =>
+      within(screen.getByTestId('day-label'))
+        .getAllByText(/\w+/)
+        .filter((n) => n.className.includes('text-city-vermilion'))
+    expect(vermilion()).toHaveLength(2)
 
     const monday: Day = { key: '2027-05-03', index: 2 }
     rerender(<DayColumn day={monday} cards={[]} />)
     expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
-    expect(screen.getByTestId('day-label')).toHaveClass('text-ink-400')
-    expect(screen.getByTestId('day-label')).not.toHaveClass('text-city-vermilion')
+    expect(vermilion()).toHaveLength(0)
+    expect(screen.getByTestId('day-label').textContent).toContain('MON')
   })
 
-  it('renders the city colour as a 4px rounded header underline', () => {
+  it('renders the city colour as a 4px header underline flush to the column edges', () => {
     render(<DayColumn day={day} city={rome} cards={[]} />)
     const band = screen.getByTestId('city-band')
     expect(band).toHaveStyle({ backgroundColor: '#ef4444' })
-    expect(band).toHaveClass('h-1', 'rounded-[2px]')
+    expect(band).toHaveClass('h-1', 'w-full')
   })
 
-  it('removes persistent column chrome, internal scrolling, and the noon divider', () => {
-    render(<DayColumn day={day} city={rome} cards={cards} />)
+  it('separates days with one full-height hairline, and no other column chrome', () => {
+    const { rerender } = render(<DayColumn day={day} city={rome} cards={cards} />)
     const column = screen.getByTestId('day-column')
-    expect(column.className).not.toMatch(/rounded|shadow|\bborder\b/)
+    // The divider is on the column itself so it runs unbroken from the header
+    // row down through the whole grid.
+    expect(column).toHaveClass('border-r', 'border-edge-divider')
+    expect(column).not.toHaveClass('border-l')
+    expect(column.className).not.toMatch(/rounded|shadow/)
     expect(screen.getByTestId('day-body')).not.toHaveClass('overflow-y-auto')
     expect(screen.queryByTestId('noon-divider')).not.toBeInTheDocument()
+
+    // Only the board's first column closes the run with a left hairline too.
+    rerender(<DayColumn day={day} city={rome} cards={cards} firstColumn />)
+    expect(screen.getByTestId('day-column')).toHaveClass('border-l')
+  })
+
+  it('runs the now-line across every column but pills only today', () => {
+    const { rerender } = render(<DayColumn day={day} city={rome} cards={[]} />)
+    expect(screen.queryByTestId('today-pill')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('now-line')).not.toBeInTheDocument()
+    expect(screen.getByTestId('day-column')).not.toHaveAttribute('data-today')
+
+    // A column that is not today still carries the hairline, so the line reads
+    // as one rule across the whole board.
+    rerender(<DayColumn day={day} city={rome} cards={[]} nowOffsetPx={510} />)
+    expect(screen.getByTestId('now-line')).toHaveStyle({ top: '510px' })
+    expect(screen.queryByTestId('today-pill')).not.toBeInTheDocument()
+
+    rerender(<DayColumn day={day} city={rome} cards={[]} nowOffsetPx={510} isToday />)
+    expect(screen.getByTestId('today-pill')).toHaveTextContent('Today')
+    expect(screen.getByTestId('day-column')).toHaveAttribute('data-today', '')
+    // No background tint on the column — the pill and hairline carry it.
+    expect(screen.getByTestId('day-column').className).not.toMatch(/bg-(?!white)/)
   })
 
   it('highlights the column when the drag context marks this day as the drop target', () => {

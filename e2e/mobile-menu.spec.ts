@@ -10,7 +10,7 @@ test.describe('mobile: ≡ menu', () => {
   test('collapses Trip/Cities/Add-stay into the ≡ menu', async ({ page }) => {
     await page.goto(E2E_LINK)
 
-    await expect(page.getByRole('button', { name: 'Edit trip menu' })).toBeVisible()
+    // The desktop toolbar's Trip / Cities / Share buttons are hidden here.
     await expect(page.getByRole('button', { name: 'Cities & colours' })).toHaveCount(0)
     const menuButton = page.getByRole('button', { name: 'Menu', exact: true })
     await expect(menuButton).toBeVisible()
@@ -38,15 +38,16 @@ test.describe('mobile: ≡ menu', () => {
   })
 })
 
-test.describe('desktop: consolidated edit menu', () => {
+test.describe('desktop: visible toolbar actions', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('keeps trip and city actions in one menu and has no ≡', async ({ page }) => {
+  test('shows Trip, Cities and Share as toolbar buttons and has no ≡', async ({ page }) => {
     await page.goto(E2E_LINK)
-    await page.getByRole('button', { name: 'Edit trip menu' }).click()
-    const editMenu = page.getByRole('dialog', { name: 'Edit trip' })
-    await expect(editMenu.getByRole('button', { name: 'Trip details' })).toBeVisible()
-    await expect(editMenu.getByRole('button', { name: 'Cities & colours' })).toBeVisible()
+    const toolbar = page.getByTestId('board-toolbar')
+    await expect(toolbar.getByRole('button', { name: 'Trip', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Cities', exact: true })).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Edit trip menu' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Add stay' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Menu', exact: true })).toHaveCount(0)
   })

@@ -38,14 +38,15 @@ describe('columnsThatFit', () => {
     expect(columnsThatFit(375)).toBe(1)
   })
 
-  it('uses narrower columns and wider inter-day gutters in fit calculations', () => {
-    expect(COLUMN_WIDTH_PX).toBe(256)
-    expect(COLUMN_GAP_PX).toBe(20)
-    // 256 + 20 gap + 256 = 532, plus 32px container padding = 564.
-    expect(columnsThatFit(564)).toBe(2)
+  it('fits flush columns beside the shared hour gutter', () => {
+    expect(COLUMN_WIDTH_PX).toBe(320)
+    // Columns sit flush; the boundary is a hairline, not a gap.
+    expect(COLUMN_GAP_PX).toBe(0)
+    // 320 + 320 = 640, plus the 56px hour gutter and 32px container padding.
+    expect(columnsThatFit(728)).toBe(2)
     // One pixel short of a clean two-column fit drops back to one.
-    expect(columnsThatFit(563)).toBe(1)
-    expect(columnsThatFit(900)).toBe(3)
+    expect(columnsThatFit(727)).toBe(1)
+    expect(columnsThatFit(1048)).toBe(3)
   })
 })
 
@@ -80,7 +81,7 @@ describe('useColumnsThatFit', () => {
     expect(result.current).toBe(1)
 
     act(() => {
-      setWidth(900)
+      setWidth(1048)
       window.dispatchEvent(new Event('resize'))
     })
     expect(result.current).toBe(3)

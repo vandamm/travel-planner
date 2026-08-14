@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format, parseISO } from 'date-fns'
+import { workerFetch, workerJson } from '../../data/workerApi'
 import { NewTripModal } from './NewTripModal'
 import {
   buildMonth,
@@ -20,10 +21,6 @@ const MONTHS = Array.from({ length: 12 }, (_, month) =>
 const COLORS = ['#3157d5', '#ef6a5b', '#258477', '#8b5bb5', '#d68b24']
 const SCHOOL_HOLIDAYS_API = 'https://openholidaysapi.org/SchoolHolidays'
 const PUBLIC_HOLIDAYS_API = 'https://openholidaysapi.org/PublicHolidays'
-
-function workerBase(): string {
-  return (import.meta.env.VITE_WORKER_URL ?? '').replace(/\/+$/, '')
-}
 
 function tripLabel(trip: TripSummary): string {
   return trip.title.trim() || trip.id
@@ -148,20 +145,22 @@ export function YearCalendarHome() {
       let cursor: string | null = null
       do {
         const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
-        const response = await fetch(`${workerBase()}/api/rooms${query}`)
+        const response = await workerFetch(`/api/rooms${query}`)
         if (!response.ok) throw new Error('Could not load trips')
-        const body = (await response.json()) as {
+        const body = await workerJson<{
           trips: TripSummary[]
           nextCursor?: string | null
-        }
+        }>(response)
         allTrips.push(...body.trips)
         cursor = body.nextCursor ?? null
         if (cursor && seen.has(cursor)) throw new Error('Repeated room cursor')
         if (cursor) seen.add(cursor)
       } while (cursor)
       setTrips(allTrips)
-    } catch {
-      setError('Could not load trips. Try again.')
+    } catch (cause) {
+      // Surface the cause: "the API returned a web page" is a far more useful
+      // thing to read than a generic retry prompt.
+      setError(cause instanceof Error ? cause.message : 'Could not load trips. Try again.')
     } finally {
       setLoading(false)
     }

@@ -6,10 +6,29 @@
 
 import type { Card } from '../../data/schema'
 
-/** Pixels per hour of the time window — the timeline's vertical scale. */
-export const PX_PER_HOUR = 60
-/** Space reserved outside the activity track for the Morning/Evening labels. */
-export const TIMELINE_VERTICAL_PADDING_PX = 24
+/**
+ * Pixels per hour of the time window — the timeline's vertical scale.
+ *
+ * The board stretches this so the day fills the viewport (see
+ * {@link fitPxPerHour}), so it is a *runtime* value, passed to every helper
+ * here as a trailing argument. This constant is the floor and the default: what
+ * anything without a viewport to measure uses — tests, the Worker — and the
+ * smallest an hour is ever drawn, below which the board scrolls instead.
+ */
+export const MIN_PX_PER_HOUR = 50
+
+/**
+ * The scale that makes a `windowHours`-long day exactly fill `availableHeightPx`,
+ * never squeezing an hour below {@link MIN_PX_PER_HOUR} — past that the day is
+ * taller than the space and the board scrolls, which beats an illegible grid.
+ *
+ * Floored to a whole pixel so rails and card edges land on the same device
+ * pixel rather than drifting a fraction apart down the column.
+ */
+export function fitPxPerHour(availableHeightPx: number, windowHours: number): number {
+  if (!Number.isFinite(availableHeightPx) || windowHours <= 0) return MIN_PX_PER_HOUR
+  return Math.max(MIN_PX_PER_HOUR, Math.floor(availableHeightPx / windowHours))
+}
 /** Timeline and custom-duration granularity. */
 export const SNAP_MINUTES = 15
 /** Smallest permitted custom-card duration. */
@@ -51,14 +70,45 @@ export function clockString(minutes: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
+/**
+ * The even hours inside a day window — the ones that get a gutter label and a
+ * horizontal rail. The scale is marked every two hours, not every hour (v4).
+ */
+export function evenHourMarks(dayStart: string, dayEnd: string): number[] {
+  const start = clockMinutes(dayStart)
+  const end = clockMinutes(dayEnd)
+  const first = Math.ceil(start / 60)
+  return Array.from({ length: Math.max(0, Math.ceil(end / 60) - first + 1) }, (_, i) => first + i)
+    .filter((hour) => hour % 2 === 0 && hour * 60 >= start && hour * 60 <= end)
+}
+
+/**
+ * How an hour label should sit against its rail. Centred normally, but the
+ * first and last rails are the track's own edges — centring there would hang
+ * half the label outside the grid, where the footer covers it (and where it
+ * counts toward the scroll height).
+ */
+export function hourMarkAlignment(
+  offsetPx: number,
+  trackHeightPx: number,
+): 'start' | 'center' | 'end' {
+  if (offsetPx <= 0) return 'start'
+  if (offsetPx >= trackHeightPx) return 'end'
+  return 'center'
+}
+
 /** Length of the day window in hours (floored to a default block). */
-function windowHours(dayStart: string, dayEnd: string): number {
+export function windowHours(dayStart: string, dayEnd: string): number {
   return Math.max((clockMinutes(dayEnd) - clockMinutes(dayStart)) / 60, DEFAULT_CARD_HOURS)
 }
 
 /** Body height (px) for the day window; never shorter than one default block. */
-export function windowHeightPx(dayStart: string, dayEnd: string): number {
-  return windowHours(dayStart, dayEnd) * PX_PER_HOUR
+export function windowHeightPx(
+  dayStart: string,
+  dayEnd: string,
+  pxPerHour: number = MIN_PX_PER_HOUR,
+): number {
+  return windowHours(dayStart, dayEnd) * pxPerHour
 }
 
 /** Resolve a card duration to positive hours for layout, labels, and drag math. */
@@ -76,6 +126,11 @@ export function resolvedDurationHours(card: Card, dayStart: string, dayEnd: stri
 }
 
 /** A card's height in pixels. */
-export function cardHeightPx(card: Card, dayStart: string, dayEnd: string): number {
-  return resolvedDurationHours(card, dayStart, dayEnd) * PX_PER_HOUR
+export function cardHeightPx(
+  card: Card,
+  dayStart: string,
+  dayEnd: string,
+  pxPerHour: number = MIN_PX_PER_HOUR,
+): number {
+  return resolvedDurationHours(card, dayStart, dayEnd) * pxPerHour
 }

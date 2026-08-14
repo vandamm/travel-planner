@@ -170,7 +170,7 @@ describe('TripModal', () => {
     await user.click(screen.getByText('Trip JSON (for AI)'))
     await user.click(screen.getByText('Recent versions'))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load version history.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load version history (401).')
     expect(fetchMock).toHaveBeenCalledWith('https://worker.test/api/versions/rome-2027')
   })
 
@@ -195,7 +195,7 @@ describe('TripModal', () => {
     await user.click(screen.getByText('Recent versions'))
     await user.click(await screen.findByRole('button', { name: 'Restore' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load that version.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load that version (500).')
     expect(fetchMock).toHaveBeenLastCalledWith('https://worker.test/api/versions/rome-2027/1000')
   })
 

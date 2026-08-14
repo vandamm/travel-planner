@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { MIN_PX_PER_HOUR } from '../src/features/cards/cardHeight'
 import { addActivity, setupTrip, E2E_LINK } from './helpers'
 
 test('a card set to whole-day grows taller than a default card', async ({ page }) => {
@@ -18,8 +19,9 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   const timelineTrack = await column.getByTestId('timeline-track').boundingBox()
   expect(dayBody).not.toBeNull()
   expect(timelineTrack).not.toBeNull()
-  expect(timelineTrack!.height).toBe(900)
-  expect(dayBody!.height).toBeGreaterThan(timelineTrack!.height)
+  expect(timelineTrack!.height).toBe(15 * MIN_PX_PER_HOUR)
+  // The body is exactly the window — no dead space above or below the track.
+  expect(dayBody!.height).toBe(timelineTrack!.height)
 
   // A default-height card (exact duration, untimed → one block).
   await addActivity(column)
@@ -31,7 +33,7 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   await addActivity(columns.nth(1))
   editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('All day tour')
-  await editor.getByRole('button', { name: 'Day', exact: true }).click()
+  await editor.getByRole('switch', { name: 'All day' }).click()
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   const defaultCard = column.locator('[data-testid="card-list"] > li', { hasText: 'Quick stop' })
@@ -44,7 +46,8 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   expect(fullBox).not.toBeNull()
   expect(fullBody).not.toBeNull()
   // 15h window → 900px vs the 60px default block.
-  expect(fullBox!.height + 4).toBe((defaultBox!.height + 4) * 15)
-  expect(fullBox!.y).toBeGreaterThan(fullBody!.y)
-  expect(fullBody!.y + fullBody!.height).toBeGreaterThan(fullBox!.y + fullBox!.height)
+  expect(fullBox!.height + 2).toBe((defaultBox!.height + 2) * 15)
+  // A whole-day card spans the body edge to edge (bar the 2px card inset).
+  expect(Math.round(fullBox!.y - fullBody!.y)).toBe(0)
+  expect(Math.round(fullBody!.y + fullBody!.height - (fullBox!.y + fullBox!.height))).toBe(2)
 })

@@ -37,8 +37,10 @@ export function AccommodationBar({
       style={{
         backgroundColor: `color-mix(in srgb, ${city?.color ?? NO_CITY_COLOR} 18%, white)`,
         borderColor: `color-mix(in srgb, ${city?.color ?? NO_CITY_COLOR} 55%, transparent)`,
+        // The 3px left edge carries the city's own hue at full strength.
+        borderLeftColor: city?.color ?? NO_CITY_COLOR,
       }}
-      className="flex h-7 w-full items-center gap-1 overflow-hidden rounded-card border px-2 text-left font-serif text-xs font-semibold text-ink shadow-sm hover:brightness-95"
+      className="flex h-[22px] w-full items-center gap-1 overflow-hidden rounded-chip border border-l-[3px] px-2 text-left font-sans text-[10.5px] font-semibold text-ink hover:brightness-95"
     >
       {clippedStart && <span aria-hidden>‹</span>}
       <span data-testid="accommodation-label" className="truncate">

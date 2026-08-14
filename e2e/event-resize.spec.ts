@@ -1,5 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { setupTrip, E2E_LINK } from './helpers'
+import { MIN_PX_PER_HOUR } from '../src/features/cards/cardHeight'
+
+/** One quarter-hour of vertical travel on the timeline scale. */
+const QUARTER_PX = MIN_PX_PER_HOUR / 4
 
 interface PlannerBridge {
   doc: unknown
@@ -82,7 +86,7 @@ test('both resize edges show snapped live timing without moving overlapping neig
   const beforeBoard = await board.boundingBox()
   const beforeMuseum = await card('Museum').boundingBox()
 
-  await holdResize(page, card('Museum').getByRole('button', { name: 'Resize Museum start' }), -15)
+  await holdResize(page, card('Museum').getByRole('button', { name: 'Resize Museum start' }), -QUARTER_PX)
   let preview = sortable('Museum')
   await expect(preview.getByTestId('event-timing-start')).toHaveText('09:45')
   await expect(preview.getByTestId('event-timing-end')).toHaveText('11:00')
@@ -93,7 +97,7 @@ test('both resize edges show snapped live timing without moving overlapping neig
   await expect(card('Museum').getByTestId('card-time')).toHaveText('09:45 – 11:00 · 1h 15m')
   await expect(card('Breakfast').getByTestId('card-time')).toHaveText('09:30 – 10:30 · 1h')
 
-  await holdResize(page, card('Museum').getByRole('button', { name: 'Resize Museum end' }), 15)
+  await holdResize(page, card('Museum').getByRole('button', { name: 'Resize Museum end' }), QUARTER_PX)
   preview = sortable('Museum')
   await expect(preview.getByTestId('event-timing-start')).toHaveText('09:45')
   await expect(preview.getByTestId('event-timing-end')).toHaveText('11:15')

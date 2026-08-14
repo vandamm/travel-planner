@@ -14,19 +14,16 @@ export interface TimelineCardPlacement {
   durationMinutes: number
 }
 
-/** Human-readable duration for the resting free-time target label. */
-export function formatFreeDuration(startTime: string, endTime: string): string {
-  const minutes = clockMinutes(endTime) - clockMinutes(startTime)
-  const hours = Math.floor(minutes / 60)
-  const remainder = minutes % 60
-  if (remainder === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} free`
-  return `${hours}h ${remainder}m free`
-}
-
 /**
- * Lay cards onto the visible timeline. Timed cards aim for their clock position;
- * when that position is already occupied they follow the preceding card.
- * Untimed cards always follow the preceding rendered card.
+ * Lay cards onto the visible timeline. A timed card sits at its clock position —
+ * always, even when that overlaps its neighbour. Untimed cards have no time of
+ * their own, so they flow after the last card rendered before them.
+ *
+ * Timed cards used to be pushed down to clear an earlier card. That quietly
+ * broke the grid's one promise: a card's top edge is its start time. Stretching
+ * one card's end shifted the *next* card away from the hour it still displayed,
+ * so the card and the gutter disagreed. Overlaps are allowed here and called out
+ * by the "Overlap" badge instead.
  */
 export function layoutTimelineCards(
   cards: Card[],
@@ -38,9 +35,11 @@ export function layoutTimelineCards(
 
   return sortCardsForColumn(cards).map((card) => {
     const durationMinutes = resolvedDurationHours(card, dayStart, dayEnd) * 60
-    const desiredOffset = card.startTime ? clockMinutes(card.startTime) - start : cursor
-    const offsetMinutes = Math.max(0, cursor, desiredOffset)
-    cursor = offsetMinutes + durationMinutes
+    const offsetMinutes = card.startTime
+      ? Math.max(0, clockMinutes(card.startTime) - start)
+      : cursor
+    // Untimed cards stack below everything placed so far, overlaps included.
+    cursor = Math.max(cursor, offsetMinutes + durationMinutes)
     return { card, offsetMinutes, durationMinutes }
   })
 }

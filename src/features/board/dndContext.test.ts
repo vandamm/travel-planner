@@ -7,6 +7,7 @@ import { CardResizeContext, type CardResizeController } from './cardResize'
 import { prioritizeCardCollisions } from './dndCollision'
 import { BoardDnd } from './dndContext'
 import { useDragPreview } from './dragOverDayContext'
+import { MIN_PX_PER_HOUR } from '../cards/cardHeight'
 
 const dndCallbacks = vi.hoisted(() => ({
   onDragStart: undefined as ((event: unknown) => void) | undefined,
@@ -75,8 +76,8 @@ describe('BoardDnd card resizing', () => {
       }),
     )
 
-    expect(controller?.plan('active', 'end', 15)).toMatchObject({ durationHours: 1.25 })
-    act(() => controller?.commit('active', 'end', 15))
+    expect(controller?.plan('active', 'end', MIN_PX_PER_HOUR / 4)).toMatchObject({ durationHours: 1.25 })
+    act(() => controller?.commit('active', 'end', MIN_PX_PER_HOUR / 4))
     expect(getCard(doc, 'active')).toMatchObject({ durationHours: 1.25 })
     expect(onTimelineChange).toHaveBeenCalledOnce()
   })
@@ -123,6 +124,11 @@ describe('BoardDnd drag timing preview', () => {
     )
   }
 
+  /** The stubbed timeline's viewport top (see the getBoundingClientRect above). */
+  const TIMELINE_TOP = 124
+  /** Where a card must be dropped to land `hours` into the 06:00 day. */
+  const dropTop = (hours: number) => TIMELINE_TOP + hours * MIN_PX_PER_HOUR
+
   function dragEvent(activeId: string, translatedTop: number, dayKey: string) {
     return {
       active: {
@@ -165,10 +171,10 @@ describe('BoardDnd drag timing preview', () => {
     expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:00 1`)
     expect(document.body).toHaveClass('cursor-grabbing')
 
-    act(() => dndCallbacks.onDragMove?.(dragEvent(active, 379, dayKey)))
+    act(() => dndCallbacks.onDragMove?.(dragEvent(active, dropTop(4.25), dayKey)))
     expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:15 1`)
 
-    act(() => dndCallbacks.onDragEnd?.(dragEvent(active, 379, dayKey)))
+    act(() => dndCallbacks.onDragEnd?.(dragEvent(active, dropTop(4.25), dayKey)))
     expect(getCard(doc, active)?.startTime).toBe('10:15')
     expect(getCard(doc, neighbor)?.startTime).toBe('10:15')
     expect(screen.queryByTestId('drag-preview-state')).not.toBeInTheDocument()
@@ -198,7 +204,7 @@ describe('BoardDnd drag timing preview', () => {
     act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
     expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} null 1`)
 
-    act(() => dndCallbacks.onDragMove?.(dragEvent(active, 379, dayKey)))
+    act(() => dndCallbacks.onDragMove?.(dragEvent(active, dropTop(4.25), dayKey)))
     expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${dayKey} 10:15 1`)
 
     act(() => dndCallbacks.onDragCancel?.())
@@ -234,7 +240,7 @@ describe('BoardDnd drag timing preview', () => {
     )
 
     act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
-    act(() => dndCallbacks.onDragMove?.(dragEvent(active, 379, targetDayKey)))
+    act(() => dndCallbacks.onDragMove?.(dragEvent(active, dropTop(4.25), targetDayKey)))
 
     expect(screen.getByTestId('drag-preview-state')).toHaveTextContent(`${targetDayKey} 10:15 1`)
     expect(getCard(doc, active)?.dayKey).toBe(dayKey)
@@ -262,10 +268,10 @@ describe('BoardDnd drag timing preview', () => {
     )
 
     act(() => dndCallbacks.onDragStart?.(dragEvent(active, 220, dayKey)))
-    act(() => dndCallbacks.onDragMove?.(dragEvent(active, 379, dayKey)))
+    act(() => dndCallbacks.onDragMove?.(dragEvent(active, dropTop(4.25), dayKey)))
     act(() =>
       dndCallbacks.onDragEnd?.({
-        ...dragEvent(active, 379, dayKey),
+        ...dragEvent(active, dropTop(4.25), dayKey),
         over: null,
       }),
     )

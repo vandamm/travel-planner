@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import { Modal } from '../../components/Modal'
+import { workerJson, workerText } from '../../data/workerApi'
 import { DatePicker } from '../pickers/DatePicker'
 import { getTrip, setTrip } from '../../data/doc'
 import { applyTrip } from '../../data/applyTrip'
@@ -132,11 +133,13 @@ export function TripModal({ onClose }: TripModalProps) {
     try {
       const base = `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId)}`
       const res = await fetch(base)
-      if (!res.ok) throw new Error(String(res.status))
-      const body = (await res.json()) as { versions?: VersionMeta[] }
+      if (!res.ok) throw new Error(`Could not load version history (${res.status}).`)
+      const body = await workerJson<{ versions?: VersionMeta[] }>(res)
       setVersions(body.versions ?? [])
-    } catch {
-      setVersionsError('Could not load version history.')
+    } catch (cause) {
+      setVersionsError(
+        cause instanceof Error ? cause.message : 'Could not load version history.',
+      )
     }
   }
 
@@ -146,10 +149,12 @@ export function TripModal({ onClose }: TripModalProps) {
     try {
       const base = `${workerUrl.replace(/\/$/, '')}/api/versions/${encodeURIComponent(roomId)}`
       const res = await fetch(`${base}/${encodeURIComponent(id)}`)
-      if (!res.ok) throw new Error(String(res.status))
-      applyJsonText(await res.text())
-    } catch {
-      setVersionsError('Could not load that version.')
+      if (!res.ok) throw new Error(`Could not load that version (${res.status}).`)
+      // Guard the raw-text path too: an HTML body here would otherwise reach
+      // `parseTripText` and surface as "Invalid JSON: Unexpected token '<'".
+      applyJsonText(await workerText(res))
+    } catch (cause) {
+      setVersionsError(cause instanceof Error ? cause.message : 'Could not load that version.')
     }
   }
 
