@@ -72,9 +72,10 @@ export function AccommodationLane({
         <div
           aria-hidden
           style={{ width: gutterPx, flex: `0 0 ${gutterPx}px` }}
-          // Sticky and opaque, so it would paint over the parent's rule and stop
-          // the line dead at the hour margin; it carries its own to continue it.
-          className="sticky left-0 z-30 border-b border-hour-rule bg-white"
+          // No border of its own: the row's bottom rule already spans the gutter,
+          // and a border here would paint 1px above it — reading as a thick line
+          // over the hour margin and a hairline everywhere else.
+          className="sticky left-0 z-30 bg-white"
         />
       )}
       <div
