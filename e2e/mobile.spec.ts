@@ -85,3 +85,24 @@ test('mobile sheet inputs use a 16px font to prevent iOS focus zoom', async ({ p
   )
   expect(fontSize).toBeGreaterThanOrEqual(16)
 })
+
+test('double-tap zoom is off, but pinch zoom is still allowed', async ({ page }) => {
+  await page.goto(E2E_LINK)
+  await setUpTrip(page)
+
+  // `manipulation` drops the double tap (and its 300ms click delay) while
+  // keeping panning and pinch. It intersects down the tree, so covering body
+  // covers the board.
+  const touchAction = await page.evaluate(() => getComputedStyle(document.body).touchAction)
+  expect(touchAction).toBe('manipulation')
+
+  // Note there is nothing to assert on a descendant: `touch-action` is not
+  // inherited, so the board's computed value is still "auto" — it is the
+  // browser's intersection up the chain that suppresses the gesture.
+
+  // Pinch zoom must survive: never pin the scale or disable user scaling, or
+  // small text becomes unreadable for anyone who needs to magnify it.
+  const viewport = await page.locator('meta[name="viewport"]').getAttribute('content')
+  expect(viewport).not.toMatch(/user-scalable\s*=\s*(no|0)/)
+  expect(viewport).not.toMatch(/maximum-scale/)
+})
