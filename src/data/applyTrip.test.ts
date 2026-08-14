@@ -87,6 +87,26 @@ describe('applyTrip', () => {
     expect(listCards(doc)).toEqual(TRIP.cards)
   })
 
+  it('round-trips the food category and ticket state through the agent path', () => {
+    const doc = new Y.Doc()
+    applyTrip(doc, {
+      trip: { title: 'T', startDate: '2027-05-01', endDate: '2027-05-02' },
+      cards: [
+        {
+          id: 'a',
+          dayKey: '2027-05-01',
+          title: 'Lunch',
+          order: 0,
+          duration: 'custom',
+          durationHours: 1,
+          category: 'food',
+          ticketState: 'required',
+        },
+      ],
+    })
+    expect(listCards(doc)[0]).toMatchObject({ category: 'food', ticketState: 'required' })
+  })
+
   it('runs its transaction under APPLY_TRIP_ORIGIN (so UndoManager can exclude it)', () => {
     const doc = new Y.Doc()
     let seenOrigin: unknown = 'unset'

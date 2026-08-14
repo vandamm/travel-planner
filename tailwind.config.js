@@ -23,6 +23,8 @@ export default {
         surface: {
           DEFAULT: '#faf8f1',
           chip: '#f0ece2',
+          // The barely-there lift under a modal footer / mobile day switcher.
+          raised: '#fdfcf8',
         },
         // Border tones.
         edge: {
@@ -33,6 +35,10 @@ export default {
           250: '#d8d0c0',
           300: '#cfc9bb',
           350: '#c9c1b1',
+          // The full-height vertical hairline between day columns (v4).
+          divider: '#d3cbba',
+          // Dashed border of the hover "＋ plan something" band (v4).
+          plan: '#cfc7b6',
         },
         // City hues (day-header colours).
         city: {
@@ -45,14 +51,28 @@ export default {
         transit: { DEFAULT: '#a8392b', bg: '#f7e6e2', border: '#e7c3bb' },
         outdoor: { DEFAULT: '#4f5e38', bg: '#edf1e1', border: '#d2dcbb' },
         indoor: { DEFAULT: '#34465a', bg: '#e6ecf2', border: '#cfd9e4' },
+        // Card category triads (v4): the 3px left edge + type glyph share the
+        // accent; `bg`/`edge` tint the card body. Distinct from the chip triads
+        // above, which the compact multi-week cards and the editor still use.
         category: {
-          transit: '#c0392b',
-          indoor: '#35618e',
-          outdoor: '#5a8a3c',
+          indoor: { DEFAULT: '#35618e', bg: '#f1f4f7', edge: 'rgba(53,97,142,.2)' },
+          food: { DEFAULT: '#5a8a3c', bg: '#f2f5ec', edge: 'rgba(90,138,60,.2)' },
+          outdoor: { DEFAULT: '#c2952a', bg: '#fbf6e6', edge: 'rgba(184,146,42,.3)' },
+          transit: { DEFAULT: '#8a7355', bg: '#f7f2ea', edge: 'rgba(138,115,85,.28)' },
+        },
+        // Ticket-marker states, and the warm wash a required-but-unbought card
+        // takes over its category tint (reuses the header chip's colours).
+        ticket: {
+          none: '#ded7c8',
+          required: '#c0392b',
+          bought: '#5f6f44',
+          wash: '#fbeee9',
+          'wash-edge': '#e0a99e',
         },
         hour: {
           rule: '#e2dbcb',
-          text: '#b7ad98',
+          grid: '#f2ede1',
+          text: '#a89f8e',
         },
         free: {
           hover: '#fbeee9',

@@ -13,8 +13,7 @@ test('picking the trip start via the calendar rebuilds the board to that date', 
   await expect(labels.nth(0)).toHaveText('SAT · 01.05')
 
   // Re-picking a different month moves the whole board.
-  await page.getByRole('button', { name: 'Edit trip menu' }).click()
-  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: 'Trip details' }).click()
+  await page.getByRole('button', { name: 'Trip', exact: true }).click()
   const trip = page.getByRole('dialog', { name: 'Trip details' })
   await pickDate(trip, 'End date', '2027-06-12')
   await pickDate(trip, 'Start date', '2027-06-10')

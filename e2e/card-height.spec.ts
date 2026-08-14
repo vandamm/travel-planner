@@ -31,7 +31,7 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   await addActivity(columns.nth(1))
   editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('All day tour')
-  await editor.getByRole('button', { name: 'Day', exact: true }).click()
+  await editor.getByRole('switch', { name: 'All day' }).click()
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   const defaultCard = column.locator('[data-testid="card-list"] > li', { hasText: 'Quick stop' })
@@ -44,7 +44,7 @@ test('a card set to whole-day grows taller than a default card', async ({ page }
   expect(fullBox).not.toBeNull()
   expect(fullBody).not.toBeNull()
   // 15h window → 900px vs the 60px default block.
-  expect(fullBox!.height + 4).toBe((defaultBox!.height + 4) * 15)
+  expect(fullBox!.height + 2).toBe((defaultBox!.height + 2) * 15)
   expect(fullBox!.y).toBeGreaterThan(fullBody!.y)
   expect(fullBody!.y + fullBody!.height).toBeGreaterThan(fullBox!.y + fullBox!.height)
 })

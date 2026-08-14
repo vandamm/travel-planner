@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { HOUR_GUTTER_PX } from '../src/features/board/useViewport'
 import { setupTrip, E2E_LINK } from './helpers'
 
 // §9 desktop multi-week affordances: a right-edge fade while more columns lie
@@ -42,7 +43,8 @@ test('a short trip that fits shows no fade', async ({ page }) => {
   expect(geometry.columnWidths).toHaveLength(3)
   expect(geometry.columnWidths[0]).toBeGreaterThan(272)
   expect(Math.max(...geometry.columnWidths) - Math.min(...geometry.columnWidths)).toBeLessThan(0.1)
-  expect(geometry.occupiedWidth).toBeCloseTo(geometry.boardWidth, 0)
+  // The columns fill everything the shared hour gutter leaves them.
+  expect(geometry.occupiedWidth).toBeCloseTo(geometry.boardWidth - HOUR_GUTTER_PX, 0)
 })
 
 test('Jump to today brings today’s column into view', async ({ page }) => {

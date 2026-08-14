@@ -20,9 +20,19 @@ export function selectViewport(width: number): Viewport {
 
 /** Day-column geometry, shared by the board, stays lane, fit calculation, and scroll stride. */
 export const COLUMN_WIDTH_PX = 256
-export const COLUMN_GAP_PX = 20
+/**
+ * Columns sit flush against each other (v4): the boundary is a full-height 1px
+ * hairline, not a gap, so the hour rails read as continuous lines across the
+ * whole board. Kept as a named constant because the stays lane and the scroll
+ * stride derive from it.
+ */
+export const COLUMN_GAP_PX = 0
 export const COLUMN_WIDTH_REM = `${COLUMN_WIDTH_PX / 16}rem`
 export const COLUMN_GAP_REM = `${COLUMN_GAP_PX / 16}rem`
+/** The one shared hour gutter down the left of the desktop board. */
+export const HOUR_GUTTER_PX = 56
+/** Its narrower counterpart at the left of the mobile single-day timeline. */
+export const MOBILE_GUTTER_PX = 40
 const CONTAINER_PADDING_PX = 16 // px-4 = 1rem each side
 
 /**
@@ -30,7 +40,7 @@ const CONTAINER_PADDING_PX = 16 // px-4 = 1rem each side
  * the narrow pager always shows a day. Pure, so it can be unit-tested.
  */
 export function columnsThatFit(width: number): number {
-  const available = width - 2 * CONTAINER_PADDING_PX
+  const available = width - 2 * CONTAINER_PADDING_PX - HOUR_GUTTER_PX
   const n = Math.floor((available + COLUMN_GAP_PX) / (COLUMN_WIDTH_PX + COLUMN_GAP_PX))
   return Math.max(1, n)
 }

@@ -67,11 +67,13 @@ describe('MobileDayView', () => {
     expect(screen.getByRole('button', { name: 'Next day' })).toHaveTextContent('Next ›')
   })
 
-  it('keeps bottom safe-area padding in the inner mobile scroller', () => {
+  it('keeps bottom safe-area padding on the pinned day-switcher footer', () => {
     renderView()
-    expect(screen.getByTestId('mobile-day-scroll')).toHaveClass(
-      'pb-[calc(2rem+env(safe-area-inset-bottom))]',
-      'scroll-pb-[calc(2rem+env(safe-area-inset-bottom))]',
+    // The day switcher moved to the base of the screen, so it — not the inner
+    // scroller — is what has to clear the home indicator.
+    expect(screen.getByTestId('mobile-day-footer')).toHaveClass(
+      'mt-auto',
+      'pb-[calc(0.5rem+env(safe-area-inset-bottom))]',
     )
   })
 

@@ -58,7 +58,9 @@ function AppShell() {
   if (status === 'missing') return <MissingTrip />
 
   return (
-    <main className="flex min-h-dvh flex-col bg-white text-ink">
+    // A fixed viewport height, not a minimum: the board's own regions scroll,
+    // so the day-range footer (desktop) and day switcher (mobile) stay pinned.
+    <main className="flex h-dvh flex-col bg-white text-ink">
       <Board
         addStayNonce={addStayNonce}
         onOpenTrip={() => setTripOpen(true)}

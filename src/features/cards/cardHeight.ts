@@ -51,6 +51,18 @@ export function clockString(minutes: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
+/**
+ * The even hours inside a day window — the ones that get a gutter label and a
+ * horizontal rail. The scale is marked every two hours, not every hour (v4).
+ */
+export function evenHourMarks(dayStart: string, dayEnd: string): number[] {
+  const start = clockMinutes(dayStart)
+  const end = clockMinutes(dayEnd)
+  const first = Math.ceil(start / 60)
+  return Array.from({ length: Math.max(0, Math.ceil(end / 60) - first + 1) }, (_, i) => first + i)
+    .filter((hour) => hour % 2 === 0 && hour * 60 >= start && hour * 60 <= end)
+}
+
 /** Length of the day window in hours (floored to a default block). */
 function windowHours(dayStart: string, dayEnd: string): number {
   return Math.max((clockMinutes(dayEnd) - clockMinutes(dayStart)) / 60, DEFAULT_CARD_HOURS)

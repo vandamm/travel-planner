@@ -52,8 +52,15 @@ export type DayCityOverrides = Record<string, DayCityOverride>
 /** How long an activity occupies on a day timeline. */
 export type CardDuration = 'day' | 'half' | 'custom'
 
-/** Activity category — drives the card's colour chip. */
-export type CardCategory = 'indoor' | 'outdoor' | 'transit'
+/** Activity category — drives the card's type glyph, tint and left edge. */
+export type CardCategory = 'indoor' | 'outdoor' | 'food' | 'transit'
+
+/**
+ * Whether an activity needs a ticket, and whether it is already bought. Drives
+ * the card's corner marker and (for `required`) the warm wash over its tint, so
+ * "still to buy" reads at a glance without a per-card style.
+ */
+export type TicketState = 'none' | 'required' | 'bought'
 
 /** An activity card living in a single day column. */
 export interface Card {
@@ -81,6 +88,8 @@ export interface Card {
   transport?: boolean
   /** Activity category (see `cardCategory`); absent = uncategorised. */
   category?: CardCategory
+  /** Ticket status; absent reads as `'none'`. Transport cards carry no marker. */
+  ticketState?: TicketState
 }
 
 /**

@@ -53,17 +53,33 @@ export async function pickTime(scope: Page | Locator, triggerName: string, hhmm:
   await scope.getByLabel(triggerName).fill(hhmm)
 }
 
-/** Open the card editor from the first visible free-time target in a day. */
+/** Open the card editor from the first free-time gap in a day. */
 export async function addActivity(scope: Page | Locator) {
   const target = scope.getByTestId('timeline-slot').first()
-  await expect(target).toBeVisible()
+  await expect(target).toBeAttached()
   await target.click()
 }
 
-/** Open Trip / Cities through the compact edit menu beside the trip title. */
+/**
+ * Open Trip / Cities. On desktop they are visible toolbar buttons (the ✎ popover
+ * is gone in v4); on mobile they still collapse into the ≡ menu.
+ */
 async function openEditor(page: Page, menuItem: 'Trip details' | 'Cities & colours') {
-  await page.getByRole('button', { name: 'Edit trip menu' }).click()
-  await page.getByRole('dialog', { name: 'Edit trip' }).getByRole('button', { name: menuItem }).click()
+  // Decide by width, not by probing visibility — the toolbar may not have
+  // rendered yet when the helper runs, and a false negative sends us to a
+  // control the mobile layout does not have.
+  if ((page.viewportSize()?.width ?? 0) < 400) {
+    const menuButton = page.getByRole('button', { name: 'Menu', exact: true })
+    await menuButton.click()
+    await page
+      .getByRole('dialog', { name: 'Menu' })
+      .getByRole('button', { name: menuItem === 'Trip details' ? 'Trip setup' : menuItem })
+      .click()
+    return
+  }
+  await page
+    .getByRole('button', { name: menuItem === 'Trip details' ? 'Trip' : 'Cities', exact: true })
+    .click()
 }
 
 /**

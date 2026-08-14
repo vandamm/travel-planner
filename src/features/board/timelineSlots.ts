@@ -14,15 +14,6 @@ export interface TimelineCardPlacement {
   durationMinutes: number
 }
 
-/** Human-readable duration for the resting free-time target label. */
-export function formatFreeDuration(startTime: string, endTime: string): string {
-  const minutes = clockMinutes(endTime) - clockMinutes(startTime)
-  const hours = Math.floor(minutes / 60)
-  const remainder = minutes % 60
-  if (remainder === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} free`
-  return `${hours}h ${remainder}m free`
-}
-
 /**
  * Lay cards onto the visible timeline. Timed cards aim for their clock position;
  * when that position is already occupied they follow the preceding card.

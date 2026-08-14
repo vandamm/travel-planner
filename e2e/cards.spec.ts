@@ -14,18 +14,21 @@ test('create, edit, and delete an activity card on the board', async ({ page }) 
   const editor = page.getByRole('dialog', { name: 'Card editor' })
   await editor.getByLabel('Title').fill('Visit Colosseum')
   await pickTime(editor, 'Start time', '10:00')
-  await editor.getByRole('button', { name: 'Transit' }).click()
+  await editor.getByRole('button', { name: 'Transport' }).click()
   await editor.getByRole('button', { name: 'Save card' }).click()
 
   await expect(firstColumn.getByTestId('card-title')).toHaveText('Visit Colosseum')
   await expect(firstColumn.getByTestId('card-time')).toHaveText('10:00 – 11:00 · 1h')
+  // The type glyph is inline in the title row — no chip, no folded corner.
   const titleRow = firstColumn.getByTestId('card-title-row')
   await expect(titleRow.getByTestId('card-title')).toHaveText('Visit Colosseum')
-  await expect(firstColumn.getByTestId('card-category-corner')).toHaveAttribute(
+  await expect(titleRow.getByTestId('card-category-icon')).toHaveAttribute(
     'data-category',
     'transit',
   )
-  await expect(firstColumn.getByTestId('card-category-icon')).toBeVisible()
+  await expect(firstColumn.getByTestId('card-category-corner')).toHaveCount(0)
+  // Transport carries no ticket marker.
+  await expect(firstColumn.getByTestId('card-ticket')).toHaveCount(0)
 
   // The free-time target after a positioned card remains directly clickable.
   await firstColumn.getByTestId('timeline-slot').last().click()
