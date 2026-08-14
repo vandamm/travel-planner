@@ -64,11 +64,18 @@ export function AccommodationLane({
 
   return (
     // No bottom margin: the stays band and the day-header row meet flush, with a
-    // hairline on each side of the band so it reads as its own row (the
-    // reference rules the top of both the lane and the header row).
-    <div className="flex border-y border-hour-rule">
+    // hairline under the band so it reads as its own row. Only under — the
+    // toolbar already draws the rule above, and doubling them reads as one
+    // 2px line.
+    <div className="flex w-max min-w-full border-b border-hour-rule">
       {gutterPx > 0 && (
-        <div aria-hidden style={{ width: gutterPx, flex: `0 0 ${gutterPx}px` }} className="sticky left-0 z-30 bg-white" />
+        <div
+          aria-hidden
+          style={{ width: gutterPx, flex: `0 0 ${gutterPx}px` }}
+          // Sticky and opaque, so it would paint over the parent's rule and stop
+          // the line dead at the hour margin; it carries its own to continue it.
+          className="sticky left-0 z-30 border-b border-hour-rule bg-white"
+        />
       )}
       <div
         data-testid="accommodation-lane"

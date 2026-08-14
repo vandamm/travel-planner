@@ -251,9 +251,14 @@ export function Board({
                   labels by sitting at the bottom of a column that is exactly
                   header + body tall, so growing the columns would slide every
                   hour label off its rail. */}
+                {/* `w-max` so the row grows to hold every column. A sticky child
+                    can only travel inside its containing block, and a row pinned
+                    to the viewport width left the hour gutter scrolling away
+                    about one screen in. `min-w-full` still lets a short trip's
+                    columns flex out to fill the board. */}
                 <div
                   data-testid="board"
-                  className="flex min-w-full"
+                  className="flex w-max min-w-full"
                   style={{ gap: COLUMN_GAP_REM }}
                 >
                   <HourGutter
