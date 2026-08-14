@@ -21,9 +21,9 @@ describe('AccommodationLane', () => {
     render(<AccommodationLane days={days} accommodations={[]} cityById={cityById} />)
 
     expect(screen.getByTestId('accommodation-lane')).toHaveStyle({
-      gridTemplateColumns: 'repeat(5, minmax(16rem, 1fr))',
+      gridTemplateColumns: 'repeat(5, minmax(20rem, 1fr))',
       // Columns are flush now, so the lane's minimum is five bare tracks.
-      minWidth: '1280px',
+      minWidth: '1600px',
     })
   })
 

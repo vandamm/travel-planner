@@ -10,6 +10,22 @@ export function formatDay(dayKey: string): string {
   return format(parseISO(dayKey), 'dd.MM')
 }
 
+/**
+ * The parts of a board day header, which sets the date as a large day-of-month
+ * flanked by a small weekday and month rather than a single 'dd.MM' string.
+ */
+export function formatWeekday(dayKey: string): string {
+  return format(parseISO(dayKey), 'EEE').toUpperCase()
+}
+
+export function formatDayOfMonth(dayKey: string): string {
+  return format(parseISO(dayKey), 'dd')
+}
+
+export function formatMonthShort(dayKey: string): string {
+  return format(parseISO(dayKey), 'MMM').toUpperCase()
+}
+
 /** As {@link formatDay} but with the year — 'dd.MM.yyyy', for standalone fields. */
 export function formatDayLong(dayKey: string): string {
   return format(parseISO(dayKey), 'dd.MM.yyyy')

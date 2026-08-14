@@ -34,7 +34,7 @@ export function CityPicker({
     <Popover
       label={label}
       triggerAriaLabel={label}
-      trigger={bareEdit ? <span aria-hidden>✎</span> : (
+      trigger={bareEdit ? <span aria-hidden>▾</span> : (
         <span className="flex items-center gap-1 font-serif text-inherit">
           <span
             className="h-2.5 w-2.5 rounded-full"
@@ -45,7 +45,7 @@ export function CityPicker({
       )}
       triggerClassName={
         bareEdit
-          ? 'inline-flex h-6 w-6 items-center justify-center text-sm text-ink-500 hover:text-ink'
+          ? 'inline-flex items-center justify-center font-sans text-[10px] font-bold leading-none text-ink-300 hover:text-ink-600'
           : 'inline-flex items-center rounded-card border border-edge-350 px-2 py-1 text-sm text-ink-600 hover:bg-surface-chip'
       }
     >

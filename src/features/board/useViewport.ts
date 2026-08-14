@@ -18,8 +18,15 @@ export function selectViewport(width: number): Viewport {
   return width < DESKTOP_BREAKPOINT ? 'mobile' : 'desktop'
 }
 
-/** Day-column geometry, shared by the board, stays lane, fit calculation, and scroll stride. */
-export const COLUMN_WIDTH_PX = 256
+/**
+ * Day-column geometry, shared by the board, stays lane, fit calculation, and
+ * scroll stride. This is a *minimum* on desktop — columns flex wider to fill the
+ * board — so it mostly sets the width on a long trip that overflows sideways.
+ *
+ * Widened alongside the drop to 40px/hour: shorter cards leave the title far
+ * more room to be read than to be stacked, so the column earns the width.
+ */
+export const COLUMN_WIDTH_PX = 320
 /**
  * Columns sit flush against each other (v4): the boundary is a full-height 1px
  * hairline, not a gap, so the hour rails read as continuous lines across the

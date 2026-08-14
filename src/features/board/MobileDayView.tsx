@@ -215,7 +215,7 @@ export function MobileDayView({
       />
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto pb-4"
+        className="min-h-0 flex-1 overflow-y-auto pb-4 pt-1.5"
         ref={scrollRef}
         data-testid="mobile-day-scroll"
         data-scrolled={hasScrolled ? '' : undefined}
@@ -248,6 +248,7 @@ export function MobileDayView({
                 onAddCard={onAddCard}
                 onEditCard={onEditCard}
                 showHeader={false}
+                fluid
                 nowOffsetPx={now?.offsetPx}
                 isToday={day.key === todayKey}
                 firstColumn={index === 0}

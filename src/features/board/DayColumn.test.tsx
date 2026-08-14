@@ -53,7 +53,7 @@ describe('DayColumn', () => {
     render(<DayColumn day={day} city={rome} cards={[]} />)
 
     const column = screen.getByTestId('day-column')
-    expect(column).toHaveStyle({ flex: '1 0 16rem', minWidth: '16rem' })
+    expect(column).toHaveStyle({ flex: '1 0 20rem', minWidth: '20rem' })
     expect(column.style.width).toBe('')
   })
 
@@ -62,9 +62,15 @@ describe('DayColumn', () => {
     expect(screen.getByTestId('city-name')).toHaveTextContent('No city')
   })
 
-  it('labels the day with the approved uppercase weekday and date', () => {
-    render(<DayColumn day={day} city={rome} cards={[]} />)
-    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT · 01.05')
+  it('sets the date as a large day-of-month between a weekday and a month', () => {
+    const { rerender } = render(<DayColumn day={day} city={rome} cards={[]} showMonth />)
+    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT01MAY')
+
+    // The month is dropped on the columns between month changes, so the row
+    // does not repeat it down a three-week trip.
+    rerender(<DayColumn day={day} city={rome} cards={[]} />)
+    expect(screen.queryByTestId('day-month')).not.toBeInTheDocument()
+    expect(screen.getByTestId('day-label')).toHaveTextContent('SAT01')
   })
 
   it('lays out cards morning→evening', () => {
@@ -268,7 +274,7 @@ describe('DayColumn', () => {
       <DayColumn day={day} city={rome} cards={[]} cities={[rome, florence]} />,
     )
     const picker = screen.getByRole('button', { name: 'Choose city' })
-    expect(picker).toHaveTextContent('✎')
+    expect(picker).toHaveTextContent('▾')
     expect(picker).not.toHaveClass('border', 'rounded-card')
     fireEvent.click(picker)
     expect(screen.getByRole('button', { name: /Auto/ })).toBeInTheDocument()
@@ -287,7 +293,7 @@ describe('DayColumn', () => {
         overrideCityId="florence"
       />,
     )
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('▾')
     expect(screen.queryByTestId('override-indicator')).not.toBeInTheDocument()
   })
 
@@ -317,7 +323,7 @@ describe('DayColumn', () => {
     render(
       <DayColumn day={day} cards={[]} cities={[rome]} overrideCityId={null} />,
     )
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('▾')
   })
 
   it('opens the day swap workflow from the header action', () => {
@@ -336,14 +342,19 @@ describe('DayColumn', () => {
   it('flags weekends with a bold-vermilion weekday label, weekdays muted, no tint', () => {
     const { rerender } = render(<DayColumn day={day} cards={[]} />)
     // 2027-05-01 is a Saturday.
+    // Weekend: both the weekday and the big day-of-month go vermilion.
     expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
-    expect(screen.getByTestId('day-label')).toHaveClass('text-city-vermilion')
+    const vermilion = () =>
+      within(screen.getByTestId('day-label'))
+        .getAllByText(/\w+/)
+        .filter((n) => n.className.includes('text-city-vermilion'))
+    expect(vermilion()).toHaveLength(2)
 
     const monday: Day = { key: '2027-05-03', index: 2 }
     rerender(<DayColumn day={monday} cards={[]} />)
     expect(screen.getByTestId('day-column')).not.toHaveClass('bg-rose-50')
-    expect(screen.getByTestId('day-label')).toHaveClass('text-ink-400')
-    expect(screen.getByTestId('day-label')).not.toHaveClass('text-city-vermilion')
+    expect(vermilion()).toHaveLength(0)
+    expect(screen.getByTestId('day-label').textContent).toContain('MON')
   })
 
   it('renders the city colour as a 4px header underline flush to the column edges', () => {

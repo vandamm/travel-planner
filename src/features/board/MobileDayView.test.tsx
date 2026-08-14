@@ -185,7 +185,7 @@ describe('MobileDayView', () => {
     const cityRow = screen.getByTestId('mobile-city-row')
     expect(cityRow).toHaveTextContent('Kyoto')
     expect(cityRow).toContainElement(screen.getByRole('button', { name: 'Choose city' }))
-    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('✎')
+    expect(screen.getByRole('button', { name: 'Choose city' })).toHaveTextContent('▾')
     expect(screen.queryByRole('button', { name: 'Add city' })).not.toBeInTheDocument()
   })
 

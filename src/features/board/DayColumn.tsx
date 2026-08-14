@@ -10,8 +10,13 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
-import { format, isWeekend, parseISO } from 'date-fns'
-import { formatDay } from '../../data/dateFormat'
+import { isWeekend, parseISO } from 'date-fns'
+import {
+  formatDay,
+  formatDayOfMonth,
+  formatMonthShort,
+  formatWeekday,
+} from '../../data/dateFormat'
 import type { Card as CardType, City, Day, DayCityOverride } from '../../data/schema'
 import { NO_CITY_COLOR } from '../cities/colors'
 import { CityPicker } from '../cities/CityPicker'
@@ -63,6 +68,14 @@ export interface DayColumnProps {
   isToday?: boolean
   /** Draw the boundary hairline on the left edge too (the board's first column). */
   firstColumn?: boolean
+  /** Show the month beside the date — the board's first column, and each 1st. */
+  showMonth?: boolean
+  /**
+   * Fill the space available instead of holding the desktop minimum width. The
+   * mobile single-day view is narrower than one board column, so it would
+   * otherwise overflow the phone sideways.
+   */
+  fluid?: boolean
 }
 
 /** The two-hourly horizontal rails that carry the scale now the word labels are gone. */
@@ -165,12 +178,14 @@ export function DayColumn({
   nowOffsetPx,
   isToday = false,
   firstColumn = false,
+  showMonth = false,
+  fluid = false,
 }: DayColumnProps) {
   const placements = layoutTimelineCards(cards, dayStart, dayEnd)
   const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd)
   const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
   const date = parseISO(day.key)
-  const weekday = format(date, 'EEE').toUpperCase()
+  const weekday = formatWeekday(day.key)
   const dateLabel = formatDay(day.key)
   const weekend = isWeekend(date)
 
@@ -194,7 +209,11 @@ export function DayColumn({
       data-today={isToday ? '' : undefined}
       data-drag-over={dragOver ? '' : undefined}
       aria-label={`${weekday} ${dateLabel}${city ? ` — ${city.name}` : ''}`}
-      style={{ flex: `1 0 ${COLUMN_WIDTH_REM}`, minWidth: COLUMN_WIDTH_REM }}
+      style={
+        fluid
+          ? { flex: '1 1 0', minWidth: 0 }
+          : { flex: `1 0 ${COLUMN_WIDTH_REM}`, minWidth: COLUMN_WIDTH_REM }
+      }
       // The boundary hairline is on the column itself, so it runs unbroken from
       // the header row down through the whole grid.
       className={`flex shrink-0 flex-col border-r border-edge-divider bg-white ${firstColumn ? 'border-l' : ''} ${dragOver ? 'ring-2 ring-inset ring-sky-300' : ''}`}
@@ -203,11 +222,27 @@ export function DayColumn({
         <header>
           <div className="flex flex-col gap-0.5 px-[13px] pb-0 pt-[11px]">
             <div className="flex items-baseline gap-[7px]">
-              <span
-                data-testid="day-label"
-                className={`text-[9.5px] font-extrabold uppercase tracking-[0.16em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
-              >
-                {weekday} · {dateLabel}
+              {/* The date is set as a large day-of-month flanked by a small
+                  weekday and month; the month shows only where it changes. */}
+              <span data-testid="day-label" className="flex items-baseline gap-[7px]">
+                <span
+                  className={`text-[9.5px] font-extrabold uppercase tracking-[0.16em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
+                >
+                  {weekday}
+                </span>
+                <span
+                  className={`font-serif text-[21px] font-bold leading-none ${weekend ? 'text-city-vermilion' : 'text-ink'}`}
+                >
+                  {formatDayOfMonth(day.key)}
+                </span>
+                {showMonth && (
+                  <span
+                    data-testid="day-month"
+                    className={`text-[9.5px] font-bold uppercase tracking-[0.06em] ${weekend ? 'text-city-vermilion' : 'text-ink-400'}`}
+                  >
+                    {formatMonthShort(day.key)}
+                  </span>
+                )}
               </span>
               {isToday && (
                 <span

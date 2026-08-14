@@ -269,6 +269,9 @@ export function Board({
                       nowOffsetPx={now?.offsetPx}
                       isToday={day.key === todayKey}
                       firstColumn={index === 0}
+                      // The month rides the first column and each month change,
+                      // so the date reads in full without repeating it 21 times.
+                      showMonth={index === 0 || day.key.endsWith('-01')}
                     />
                   )
                 })}
