@@ -18,7 +18,13 @@ import { useDocVersion } from '../../data/useDoc'
 import { firstUncoveredDay, resolveDayCity } from '../../data/cityResolution'
 import { generateDays, toDayKey } from '../../data/days'
 import { windowHours } from '../cards/cardHeight'
-import { COLUMN_STRIDE_PX, rangeSummary, showRightFade, todayIndex } from './multiWeekNav'
+import {
+  COLUMN_STRIDE_PX,
+  rangeSummary,
+  showRightFade,
+  todayIndex,
+  visibleRange,
+} from './multiWeekNav'
 import type { Accommodation, Card, City } from '../../data/schema'
 import { AccommodationEditor } from '../accommodation/AccommodationEditor'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
@@ -80,6 +86,18 @@ export function Board({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showFade, setShowFade] = useState(false)
   const [rangeText, setRangeText] = useState('')
+  // Which columns the scroller is actually showing. The now-line is gated on
+  // this, not on the whole trip: scrolled away from today, a red "now" hairline
+  // over next Tuesday would read as if that day were happening now.
+  const [shownDays, setShownDays] = useState<{ first: number; last: number } | null>(null)
+  // `visibleRange` builds a fresh object each call, so store it only when it
+  // actually moves — otherwise every render sets new state and re-renders.
+  const rememberShownDays = (next: { first: number; last: number } | null) =>
+    setShownDays((previous) =>
+      previous && next && previous.first === next.first && previous.last === next.last
+        ? previous
+        : next,
+    )
 
   // The header's ≡ menu lives above Board but the AccommodationEditor (and its
   // board-derived night defaults) stay here, so the menu drives it via the nonce.
@@ -126,6 +144,7 @@ export function Board({
     const update = () => {
       setShowFade(showRightFade(el))
       setRangeText(rangeSummary(days, el))
+      rememberShownDays(visibleRange(days.length, el))
     }
     update()
     window.addEventListener('resize', update)
@@ -133,11 +152,20 @@ export function Board({
     // Horizontal geometry + the label depend on the days, not per-card content.
   }, [viewport, days])
 
-  // The now-line and the "TODAY" pill are both derived from the client's clock
-  // against the visible days; both vanish when today is outside the trip or the
-  // current time falls outside the day window.
+  // The now-line is derived from the client's clock against the days on screen:
+  // it vanishes when today is scrolled out of view, when today is outside the
+  // trip, or when the current time falls outside the day window. Gated on the
+  // same range the footer reports, so the line and "Showing …" always agree.
   const todayKey = toDayKey(new Date())
-  const now = nowLine(days, todayKey, localClock(new Date()), trip.dayStart, trip.dayEnd, pxPerHour)
+  const onScreenDays = shownDays ? days.slice(shownDays.first, shownDays.last + 1) : days
+  const now = nowLine(
+    onScreenDays,
+    todayKey,
+    localClock(new Date()),
+    trip.dayStart,
+    trip.dayEnd,
+    pxPerHour,
+  )
   const todayIdx = todayIndex(days, todayKey)
   const jumpToToday = () =>
     scrollRef.current?.scrollTo({ left: todayIdx * COLUMN_STRIDE_PX, behavior: 'smooth' })
@@ -225,6 +253,7 @@ export function Board({
               onScroll={(e) => {
                 setShowFade(showRightFade(e.currentTarget))
                 setRangeText(rangeSummary(days, e.currentTarget))
+                rememberShownDays(visibleRange(days.length, e.currentTarget))
               }}
               className="h-full overflow-auto"
             >

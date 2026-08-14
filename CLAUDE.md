@@ -279,8 +279,11 @@ why the editor has **no day picker** (the day shows as fixed text).
 
 The **now-line** is a hairline across every visible column with a red time pill
 in the gutter and a `TODAY` badge in that day's header; all three derive from
-`src/features/board/nowLine.ts` and vanish when today is off-screen or the
-current time falls outside the window.
+`src/features/board/nowLine.ts`. `Board` feeds it only the days the scroller is
+showing (`visibleRange`, the same range the footer's "Showing …" label reports),
+so the line vanishes when today is scrolled out of view as well as when today is
+outside the trip or the clock is outside the day window — otherwise a "now"
+hairline would sit over next week.
 
 `App.tsx`'s shell is `h-dvh`, not `min-h-dvh`: the board's own regions scroll so
 the desktop day-range footer and the mobile day switcher stay pinned.
