@@ -15,8 +15,11 @@ describe('CATEGORY_STYLE', () => {
 })
 
 describe('ticketMarkerState', () => {
-  it('reads an absent state as "no ticket needed"', () => {
-    expect(ticketMarkerState(undefined, 'indoor')).toBe('none')
+  it('marks only a card that has a ticket to think about', () => {
+    // "none" is the common case and carries no information, so it gets no
+    // corner marker at all — otherwise every card wears one.
+    expect(ticketMarkerState(undefined, 'indoor')).toBeUndefined()
+    expect(ticketMarkerState('none', 'indoor')).toBeUndefined()
     expect(ticketMarkerState('required', 'food')).toBe('required')
     expect(ticketMarkerState('bought', undefined)).toBe('bought')
   })

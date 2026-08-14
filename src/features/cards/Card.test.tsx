@@ -101,11 +101,14 @@ describe('Card', () => {
     expect(screen.getByTestId('card-conflict')).toBeInTheDocument()
   })
 
-  it('marks the three ticket states and washes a required-but-unbought card', () => {
+  it('marks a ticket only when there is one, and washes a required-but-unbought card', () => {
     const { rerender } = render(<Card card={{ ...base, category: 'indoor' }} />)
-    // Absent state reads as "no ticket needed" — the outline marker.
-    expect(screen.getByTestId('card-ticket')).toHaveAttribute('data-ticket', 'none')
+    // No ticket to think about → no corner marker; the common case stays quiet.
+    expect(screen.queryByTestId('card-ticket')).not.toBeInTheDocument()
     expect(screen.getByTestId('card')).not.toHaveClass('bg-ticket-wash')
+
+    rerender(<Card card={{ ...base, category: 'indoor', ticketState: 'none' }} />)
+    expect(screen.queryByTestId('card-ticket')).not.toBeInTheDocument()
 
     rerender(<Card card={{ ...base, category: 'indoor', ticketState: 'bought' }} />)
     expect(screen.getByTestId('card-ticket')).toHaveAttribute('data-ticket', 'bought')

@@ -63,7 +63,6 @@ export default {
         // Ticket-marker states, and the warm wash a required-but-unbought card
         // takes over its category tint (reuses the header chip's colours).
         ticket: {
-          none: '#ded7c8',
           required: '#c0392b',
           bought: '#5f6f44',
           wash: '#fbeee9',

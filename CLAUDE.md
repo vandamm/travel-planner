@@ -124,7 +124,11 @@ card's next save).
 A card also carries `ticketState?: 'none' | 'required' | 'bought'` (absent reads
 as `'none'`). It drives the corner ticket marker, the warm wash over a
 required-but-unbought card, and the toolbar's "N tickets to buy" count.
-Transport cards never show a marker and never count.
+
+Only `required` and `bought` are marked. `'none'` shows **nothing** — the
+reference draws a faint outline ticket there too, but that badges every card in
+the common case, which reads as clutter rather than a signal. Transport is never
+marked either, and never counts.
 
 How a category and ticket state become pixels lives in
 `src/features/cards/cardPalette.ts` — the tint / 3px left edge / type-glyph

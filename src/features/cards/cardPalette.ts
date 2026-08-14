@@ -61,16 +61,20 @@ export const CATEGORY_GLYPH: Record<CardCategory, { d: string; width: number }> 
 }
 
 /**
- * Effective ticket state. Transport never carries a marker (a train ticket is
- * the activity, not a thing to buy alongside it — the reference says so
- * explicitly), so it always reads as no marker at all.
+ * Which ticket marker a card shows, if any.
+ *
+ * Only a card that actually has a ticket to think about is marked. The
+ * reference draws a faint outline ticket for "none" as well, but that puts a
+ * marker on *every* card — the common case, carrying no information — and the
+ * corner reads as clutter rather than a signal. Transport is likewise never
+ * marked: a train ticket is the activity, not something to buy alongside it.
  */
 export function ticketMarkerState(
   ticketState: TicketState | undefined,
   category: CardCategory | undefined,
-): TicketState | undefined {
+): Exclude<TicketState, 'none'> | undefined {
   if (category === 'transit') return undefined
-  return ticketState ?? 'none'
+  return ticketState === 'required' || ticketState === 'bought' ? ticketState : undefined
 }
 
 /**

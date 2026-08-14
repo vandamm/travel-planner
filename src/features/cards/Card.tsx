@@ -121,18 +121,19 @@ function ConflictBadge() {
   )
 }
 
-const TICKET_LABEL: Record<TicketState, string> = {
-  none: 'No ticket needed',
+type MarkedTicket = Exclude<TicketState, 'none'>
+
+const TICKET_LABEL: Record<MarkedTicket, string> = {
   required: 'Ticket still to buy',
   bought: 'Ticket bought',
 }
 
 /**
- * The corner ticket marker. Outline = nothing to buy, filled vermilion with a
- * "!" = required and unbought (the card body also washes warm), pine with a "✓"
- * = bought.
+ * The corner ticket marker, shown only when there is a ticket to think about:
+ * filled vermilion with a "!" = required and unbought (the card body also
+ * washes warm), pine with a "✓" = bought.
  */
-function TicketMarker({ state }: { state: TicketState }) {
+function TicketMarker({ state }: { state: MarkedTicket }) {
   return (
     <span
       data-testid="card-ticket"
@@ -148,7 +149,7 @@ function TicketMarker({ state }: { state: TicketState }) {
             <path d="M5 7.2v6.6" className="stroke-ticket-required" strokeWidth="2.9" strokeLinecap="round" />
             <circle cx="5" cy="18.8" r="1.7" className="fill-ticket-required" />
           </>
-        ) : state === 'bought' ? (
+        ) : (
           <>
             <rect x="15.5" y="2" width="14" height="20" rx="2.5" className="stroke-ticket-bought" strokeWidth="1.6" />
             <path d="M16.3 9h12.4" className="stroke-ticket-bought" strokeWidth="1.3" strokeDasharray="1.8 1.8" />
@@ -159,11 +160,6 @@ function TicketMarker({ state }: { state: TicketState }) {
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-          </>
-        ) : (
-          <>
-            <rect x="15.5" y="2" width="14" height="20" rx="2.5" className="stroke-ticket-none" strokeWidth="1.6" />
-            <path d="M16.3 9h12.4" className="stroke-ticket-none" strokeWidth="1.3" strokeDasharray="1.8 1.8" />
           </>
         )}
       </svg>
