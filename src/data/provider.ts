@@ -10,6 +10,7 @@
 
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
+import { workerJson } from './workerApi'
 
 /** Sync lifecycle as the UI cares about it. */
 export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error' | 'missing'
@@ -175,7 +176,9 @@ async function setupLiveblocksSync(
         throw new Error('room not found')
       }
       if (!res.ok) throw new Error(`auth failed: ${res.status}`)
-      return (await res.json()) as { token: string }
+      // A 200 carrying the SPA's index.html means the Worker isn't mounted at
+      // this origin; say so rather than letting `.json()` choke on the '<'.
+      return await workerJson<{ token: string }>(res)
     },
   })
 
