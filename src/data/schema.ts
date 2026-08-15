@@ -21,6 +21,14 @@ export interface Trip {
   dayStart: string
   /** End of each day's timeline window, 'HH:mm' (default '21:00'). */
   dayEnd: string
+  /**
+   * Draw each activity's travel lead-in as a band on the board. Absent reads as
+   * `true`. Switching it off keeps every card's `travelMinutes` — the board just
+   * shows a `+45m` badge instead of a band, and no lead-in occupies time.
+   */
+  showTravelTimes?: boolean
+  /** Minutes pre-filled when travel is switched on for an activity (default 30). */
+  defaultTravelMinutes?: number
 }
 
 /** A city with a display color; cities color-code the days they cover. */
@@ -90,6 +98,12 @@ export interface Card {
   category?: CardCategory
   /** Ticket status; absent reads as `'none'`. Transport cards carry no marker. */
   ticketState?: TicketState
+  /**
+   * Minutes it takes to get there, counted *before* `startTime` — a 09:00
+   * activity with 45 travel minutes occupies 08:15–10:00. Only meaningful on a
+   * timed card; see `travelTime.ts`.
+   */
+  travelMinutes?: number
 }
 
 /**

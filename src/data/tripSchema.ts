@@ -10,7 +10,7 @@
 
 import { isValid, parseISO } from 'date-fns'
 import { z } from 'zod'
-import { MIN_CARD_MINUTES, minutesToHours } from '../features/cards/cardHeight'
+import { MIN_CARD_MINUTES, SNAP_MINUTES, minutesToHours } from '../features/cards/cardHeight'
 
 /**
  * ISO-8601 date-only, 'YYYY-MM-DD'. The regex only checks shape, so a real
@@ -32,6 +32,15 @@ const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected a time
 const webLink = z
   .string()
   .refine((v) => v === '' || /^https?:\/\//i.test(v), 'Expected an http(s) URL')
+/**
+ * A travel lead-in, in whole minutes. Snapped to the timeline's quarter-hour so
+ * a lead-in can never land a card's occupied span between two grid positions.
+ */
+const travelMinutes = z
+  .number()
+  .int()
+  .min(0)
+  .refine((m) => m % SNAP_MINUTES === 0, `Expected a multiple of ${SNAP_MINUTES} minutes`)
 
 export const tripSettingsSchema = z
   .object({
@@ -44,6 +53,11 @@ export const tripSettingsSchema = z
     // The day's timeline window; defaults mirror DEFAULT_TRIP in doc.ts.
     dayStart: clockTime.default('06:00'),
     dayEnd: clockTime.default('21:00'),
+    // Display preferences for travel lead-ins. Both optional: absent means
+    // "shown" and DEFAULT_TRAVEL_MINUTES respectively (see travelTime.ts), so an
+    // older synced doc needs no migration and export stays byte-stable.
+    showTravelTimes: z.boolean().optional(),
+    defaultTravelMinutes: travelMinutes.optional(),
   })
   .refine((t) => !t.startDate || !t.endDate || t.endDate >= t.startDate, {
     message: 'endDate must be on or after startDate',
@@ -93,6 +107,7 @@ const cardBaseSchema = z.object({
   transport: z.boolean().optional(),
   category: z.enum(['indoor', 'outdoor', 'food', 'transit']).optional(),
   ticketState: z.enum(['none', 'required', 'bought']).optional(),
+  travelMinutes: travelMinutes.optional(),
 })
 
 export const cardSchema = z.discriminatedUnion('duration', [

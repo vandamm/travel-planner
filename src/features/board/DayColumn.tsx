@@ -28,6 +28,7 @@ import {
   resolvedDurationHours,
   windowHeightPx,
 } from '../cards/cardHeight'
+import { travelBandLabel, travelLeadMinutes } from '../cards/travelTime'
 import { useDragPreview, useIsDragOverDay } from './dragOverDayContext'
 import { dayDroppableId } from './dndHandlers'
 import { planBandHeightPx, planBandTiming, planBandTopPx, showsPlanBand } from './planBand'
@@ -58,6 +59,8 @@ export interface DayColumnProps {
   onEditCard?: (card: CardType) => void
   /** The mobile view supplies its own compact day header. */
   showHeader?: boolean
+  /** Draw travel lead-ins as bands (and count their time); off shows badges. */
+  showTravelTimes?: boolean
   /**
    * Offset (px) of the now-line within the day window; omit to hide it. The
    * line runs across every visible column, not just today's — only the pill in
@@ -96,17 +99,32 @@ function GridRails({ dayStart, dayEnd }: { dayStart: string; dayEnd: string }) {
   )
 }
 
-function overlappingCardIds(cards: CardType[], dayStart: string, dayEnd: string): Set<string> {
+/**
+ * Which timed cards collide. The travel lead-in counts: two activities can clash
+ * through the drive alone — you cannot be setting off for the second while still
+ * inside the first — and that is exactly the clash the Overlap badge is for.
+ */
+function overlappingCardIds(
+  cards: CardType[],
+  dayStart: string,
+  dayEnd: string,
+  showTravelTimes: boolean,
+): Set<string> {
   const timed = cards.filter((card) => card.startTime)
   const conflicts = new Set<string>()
+  const span = (card: CardType) => {
+    const start = clockMinutes(card.startTime!)
+    return {
+      start: start - travelLeadMinutes(card, showTravelTimes),
+      end: start + resolvedDurationHours(card, dayStart, dayEnd) * 60,
+    }
+  }
   for (let i = 0; i < timed.length; i += 1) {
     const a = timed[i]
-    const aStart = clockMinutes(a.startTime!)
-    const aEnd = aStart + resolvedDurationHours(a, dayStart, dayEnd) * 60
+    const { start: aStart, end: aEnd } = span(a)
     for (let j = i + 1; j < timed.length; j += 1) {
       const b = timed[j]
-      const bStart = clockMinutes(b.startTime!)
-      const bEnd = bStart + resolvedDurationHours(b, dayStart, dayEnd) * 60
+      const { start: bStart, end: bEnd } = span(b)
       if (aStart < bEnd && bStart < aEnd) {
         conflicts.add(a.id)
         conflicts.add(b.id)
@@ -183,6 +201,7 @@ export function DayColumn({
   onAddCard,
   onEditCard,
   showHeader = true,
+  showTravelTimes = true,
   nowOffsetPx,
   isToday = false,
   firstColumn = false,
@@ -190,9 +209,9 @@ export function DayColumn({
   fluid = false,
 }: DayColumnProps) {
   const pxPerHour = usePxPerHour()
-  const placements = layoutTimelineCards(cards, dayStart, dayEnd)
-  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd)
-  const conflicts = overlappingCardIds(cards, dayStart, dayEnd)
+  const placements = layoutTimelineCards(cards, dayStart, dayEnd, showTravelTimes)
+  const freeSlots = freeTimelineSlots(cards, dayStart, dayEnd, showTravelTimes)
+  const conflicts = overlappingCardIds(cards, dayStart, dayEnd, showTravelTimes)
   const date = parseISO(day.key)
   const weekday = formatWeekday(day.key)
   const dateLabel = formatDay(day.key)
@@ -355,6 +374,13 @@ export function DayColumn({
                 : 0
               const gap = ((placement.offsetMinutes - previousEnd) / 60) * pxPerHour
               const c = placement.card
+              // A lead-in can reach back past the window's start. The day body is
+              // exactly the window tall and the header sits directly above it, so
+              // an overflowing band would print over the date rather than scroll:
+              // clamp what is drawn to the space above the card, and let the
+              // label keep saying the true length.
+              const bandPx =
+                (Math.min(placement.leadMinutes, placement.offsetMinutes) / 60) * pxPerHour
               return (
                 <SortableCard
                   key={c.id}
@@ -363,6 +389,9 @@ export function DayColumn({
                   onEdit={onEditCard}
                   dayStart={dayStart}
                   dayEnd={dayEnd}
+                  showTravelTimes={showTravelTimes}
+                  travelBandPx={bandPx}
+                  travelBandLabel={travelBandLabel(placement.leadMinutes)}
                   layoutStyle={{
                     height: cardHeightPx(c, dayStart, dayEnd, pxPerHour),
                     marginTop: gap,

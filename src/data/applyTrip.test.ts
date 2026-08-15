@@ -72,6 +72,17 @@ describe('applyTrip', () => {
     expect(listCards(doc)[0]).toMatchObject({ category: 'indoor' })
   })
 
+  it('round-trips a travel lead-in and the trip`s travel display settings', () => {
+    const doc = new Y.Doc()
+    applyTrip(doc, {
+      ...TRIP,
+      trip: { ...TRIP.trip, showTravelTimes: false, defaultTravelMinutes: 45 },
+      cards: [{ id: 'card-1', dayKey: '2027-05-01', title: 'Uffizi', order: 0, startTime: '09:00', duration: 'custom', durationHours: 1, travelMinutes: 30 }],
+    })
+    expect(listCards(doc)[0]).toMatchObject({ travelMinutes: 30 })
+    expect(getTrip(doc)).toMatchObject({ showTravelTimes: false, defaultTravelMinutes: 45 })
+  })
+
   it('throws on invalid input rather than corrupting the doc', () => {
     const doc = new Y.Doc()
     expect(() => applyTrip(doc, { trip: { title: 'X', startDate: 'bad', endDate: '2027-05-01' } })).toThrow()

@@ -15,10 +15,14 @@ import { exportTripJSON } from '../../data/exportTrip'
 import { parseTripText } from '../../data/tripSchema'
 import { useRoom } from '../../data/RoomContext'
 import { useDocVersion } from '../../data/useDoc'
+import { defaultTravelMinutes, travelTimesShown } from '../cards/travelTime'
 
 export interface TripModalProps {
   onClose: () => void
 }
+
+/** The lengths worth one tap. Any other value still round-trips through the doc. */
+const TRAVEL_PRESETS = [15, 30, 45, 60, 90]
 
 interface VersionMeta {
   id: string
@@ -29,6 +33,7 @@ export function TripModal({ onClose }: TripModalProps) {
   const { doc, roomId, workerUrl } = useRoom()
   useDocVersion(doc)
   const trip = getTrip(doc)
+  const showTravel = travelTimesShown(trip)
 
   // `exportTrip` re-validates the live doc and throws on an inconsistent state
   // (e.g. concurrent day-window edits that merge into dayEnd <= dayStart). Guard so
@@ -267,6 +272,56 @@ export function TripModal({ onClose }: TripModalProps) {
           </label>
         </div>
         {timeError && <p role="alert" className="text-xs text-city-vermilion">{timeError}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1.5 border-t border-edge-200 pt-3.5">
+        <span className={sectionLabel}>Display</span>
+
+        <div className="flex items-center gap-3 py-1.5">
+          <div className="flex-1">
+            <div className="font-sans text-[12.5px] font-bold text-ink">Show travel times</div>
+            <div className="mt-0.5 font-sans text-[10.5px] font-medium leading-[1.45] text-ink-400">
+              Off keeps the values and shows a <b>+45m</b> badge instead. With it off there is no
+              band to drag.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showTravel}
+            aria-label="Show travel times"
+            onClick={() => setTrip(doc, { showTravelTimes: !showTravel })}
+            className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${showTravel ? 'bg-city-vermilion' : 'bg-edge-100'}`}
+          >
+            <span
+              aria-hidden
+              className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white transition-[left] ${showTravel ? 'left-[18px]' : 'left-[2px]'}`}
+            />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 py-1.5">
+          <label htmlFor="default-travel" className="flex-1">
+            <span className="font-sans text-[12.5px] font-bold text-ink">Default travel time</span>
+            <span className="mt-0.5 block font-sans text-[10.5px] font-medium text-ink-400">
+              Pre-filled when travel is switched on for an activity.
+            </span>
+          </label>
+          {/* A native select: the list is short and fixed, so the platform's own
+              menu beats a bespoke pop-over here. */}
+          <select
+            id="default-travel"
+            value={defaultTravelMinutes(trip)}
+            onChange={(e) => setTrip(doc, { defaultTravelMinutes: Number(e.target.value) })}
+            className="h-[30px] shrink-0 rounded-card border border-edge bg-white px-2 font-sans text-[12px] font-semibold text-ink"
+          >
+            {TRAVEL_PRESETS.map((minutes) => (
+              <option key={minutes} value={minutes}>
+                {minutes} min
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Low-prominence: copy the board as JSON for an AI, or paste an AI's

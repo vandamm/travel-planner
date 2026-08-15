@@ -30,6 +30,7 @@ import { AccommodationEditor } from '../accommodation/AccommodationEditor'
 import { AccommodationLane } from '../accommodation/AccommodationLane'
 import { CardEditor } from '../cards/CardEditor'
 import { cardCategory } from '../cards/cardCategory'
+import { travelTimesShown } from '../cards/travelTime'
 import { BoardDnd } from './dndContext'
 import { DayColumn } from './DayColumn'
 import { HourGutter } from './HourGutter'
@@ -109,6 +110,7 @@ export function Board({
   // One scale for the whole board, measured from the space the scroller has, so
   // a tall screen gets taller hours and the columns reach the bottom of the page.
   const pxPerHour = useFittedPxPerHour(scrollRef, windowHours(trip.dayStart, trip.dayEnd))
+  const showTravelTimes = travelTimesShown(trip)
   const days = generateDays(trip.startDate, trip.endDate)
   const accommodations = listAccommodations(doc)
   const overrides = listDayOverrides(doc)
@@ -229,6 +231,7 @@ export function Board({
                 cities={cities}
                 dayStart={trip.dayStart}
                 dayEnd={trip.dayEnd}
+                showTravelTimes={showTravelTimes}
                 columns={columns}
                 onAddCard={(dayKey, startTime, durationHours) =>
                   setEditor({ mode: 'create', dayKey, startTime, durationHours })
@@ -307,6 +310,7 @@ export function Board({
                         cards={cardsByDay.get(day.key) ?? []}
                         dayStart={trip.dayStart}
                         dayEnd={trip.dayEnd}
+                        showTravelTimes={showTravelTimes}
                         cities={cities}
                         overrideCityId={overrides[day.key]}
                         onSetCity={(dayKey, cityId) => setDayCityOverride(doc, dayKey, cityId)}

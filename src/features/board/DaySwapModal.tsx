@@ -40,7 +40,8 @@ export function DaySwapModal({
     >
       <h2 className="font-serif text-xl font-semibold text-ink">Swap day</h2>
       <p className="text-sm leading-relaxed text-ink-500">
-        Activities and displayed cities exchange dates. Stays do not move.
+        Activities and displayed cities exchange dates, travel times and tickets included. Stays
+        do not move.
       </p>
 
       <label className="flex flex-col gap-1.5 text-sm font-semibold text-ink-600">

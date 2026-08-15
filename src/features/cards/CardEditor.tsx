@@ -26,6 +26,7 @@ import {
   isValidCustomDurationHours,
   resolvedDurationHours,
 } from './cardHeight'
+import { defaultTravelMinutes, stepTravelMinutes } from './travelTime'
 
 /**
  * The four activity types, in the reference's order. The selected chip takes an
@@ -101,6 +102,13 @@ export function CardEditor({
     card?.durationHours ?? defaultDurationHours ?? 1,
   )
   const [ticketState, setTicketState] = useState<TicketState>(card?.ticketState ?? 'none')
+  // Travel is two pieces of state: whether there is a lead-in at all, and how
+  // long it is. Switching it off keeps the number in the stepper so switching
+  // back on restores what was there rather than snapping to the trip default.
+  const [travelOn, setTravelOn] = useState(Boolean(card?.travelMinutes))
+  const [travelMinutes, setTravelMinutes] = useState(
+    card?.travelMinutes || defaultTravelMinutes(trip),
+  )
 
   const allDay = duration === 'day'
   // What the card would actually occupy: 'day'/'half' resolve off the trip
@@ -115,6 +123,10 @@ export function CardEditor({
   const hoursPart = Math.floor(shownMinutes / 60)
   const minutesPart = shownMinutes % 60
   const endsAt = startTime ? clockString(clockMinutes(startTime) + shownMinutes) : null
+  // "Counted before the start", so there is nothing to count before until the
+  // card is timed: the whole control is inert (and saves nothing) without one.
+  const travelActive = travelOn && startTime !== ''
+  const leaveBy = travelActive ? clockString(clockMinutes(startTime) - travelMinutes) : null
 
   /** Any edit to the length pins the card to an explicit custom duration. */
   function setLength(hours: number, minutes: number) {
@@ -144,6 +156,7 @@ export function CardEditor({
         transport: undefined,
         category,
         ticketState,
+        travelMinutes: travelActive ? travelMinutes : undefined,
       })
     } else {
       if (!dayKey) return
@@ -157,6 +170,7 @@ export function CardEditor({
         durationHours: customHours,
         category,
         ticketState,
+        travelMinutes: travelActive ? travelMinutes : undefined,
       })
     }
     onClose()
@@ -390,6 +404,84 @@ export function CardEditor({
               </span>
             </button>
           </div>
+        </div>
+
+        {/* Travel time — the lead-in before the start. Its own panel below
+            "When" because it only means anything once there is a start time. */}
+        <div className={`${panel} bg-surface-raised pb-[17px]`}>
+          {/* Wraps so the stepper drops to its own row on a narrow phone (C2)
+              rather than squeezing the label out at 320px. `order-last` keeps
+              the toggle beside the label when it does. */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="min-w-0 flex-1">
+              <div className="font-sans text-[12.5px] font-bold text-ink">Travel time</div>
+              <div className="mt-0.5 font-sans text-[10.5px] font-medium text-ink-400">
+                {startTime ? 'Counted before the start' : 'Off until there is a start time'}
+              </div>
+            </div>
+
+            <div
+              role="group"
+              aria-label="Travel time length"
+              className="flex items-center gap-[5px] max-[420px]:order-last max-[420px]:w-full max-[420px]:justify-center"
+            >
+              <button
+                type="button"
+                aria-label="Less travel time"
+                disabled={!travelActive}
+                onClick={() => setTravelMinutes((m) => stepTravelMinutes(m, -1))}
+                className="h-[30px] w-[38px] rounded-card border border-edge bg-white font-sans text-[15px] text-ink-600 disabled:opacity-40 min-[421px]:w-7"
+              >
+                −
+              </button>
+              <output
+                data-testid="travel-minutes"
+                className={`flex h-[30px] items-center justify-center gap-1 rounded-card border bg-white max-[420px]:flex-1 min-[421px]:w-[70px] ${travelActive ? 'border-ink-frame' : 'border-edge opacity-40'}`}
+              >
+                <span className="font-sans text-[14px] font-bold text-ink">{travelMinutes}</span>
+                <span className="font-sans text-[10.5px] font-semibold text-ink-450">min</span>
+              </output>
+              <button
+                type="button"
+                aria-label="More travel time"
+                disabled={!travelActive}
+                onClick={() => setTravelMinutes((m) => stepTravelMinutes(m, 1))}
+                className="h-[30px] w-[38px] rounded-card border border-edge bg-white font-sans text-[15px] text-ink-600 disabled:opacity-40 min-[421px]:w-7"
+              >
+                +
+              </button>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={travelActive}
+              aria-label="Travel time"
+              disabled={startTime === ''}
+              onClick={() => setTravelOn((on) => !on)}
+              className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors disabled:opacity-40 ${travelActive ? 'bg-city-vermilion' : 'bg-edge-100'}`}
+            >
+              <span
+                aria-hidden
+                className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white transition-[left] ${travelActive ? 'left-[18px]' : 'left-[2px]'}`}
+              />
+            </button>
+          </div>
+
+          {leaveBy && endsAt && (
+            <div
+              data-testid="travel-summary"
+              className="mt-3 flex items-center gap-2 border-t border-edge-200 pt-3"
+            >
+              <span aria-hidden className="w-[3px] self-stretch rounded-chip bg-city-vermilion" />
+              <span className="font-sans text-[11.5px] font-bold text-ink">
+                Leave by {leaveBy}
+              </span>
+              <span className="ml-auto font-sans text-[10.5px] font-medium text-ink-400">
+                occupies {leaveBy} – {endsAt}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="-mx-6 -mb-6 mt-4 flex items-center gap-2 border-t border-edge-100 bg-surface-raised px-6 py-3.5">

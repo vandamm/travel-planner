@@ -44,6 +44,32 @@ describe('freeTimelineSlots', () => {
       { startTime: '15:00', endTime: '18:00' },
     ])
   })
+
+  it('counts a travel lead-in as occupied — free time must not offer the drive there', () => {
+    // 09:00–11:00 with 45 min travel really occupies 08:15–11:00.
+    expect(
+      freeTimelineSlots([{ ...card('09:00', 2), travelMinutes: 45 }], '06:00', '14:00'),
+    ).toEqual([
+      { startTime: '06:00', endTime: '08:15' },
+      { startTime: '11:00', endTime: '14:00' },
+    ])
+  })
+
+  it('gives the lead-in`s time back when travel times are switched off', () => {
+    expect(
+      freeTimelineSlots([{ ...card('09:00', 2), travelMinutes: 45 }], '06:00', '14:00', false),
+    ).toEqual([
+      { startTime: '06:00', endTime: '09:00' },
+      { startTime: '11:00', endTime: '14:00' },
+    ])
+  })
+
+  it('clamps a lead-in that reaches back past the day window`s start', () => {
+    // 06:30 with 60 min travel would start at 05:30; the window opens at 06:00.
+    expect(
+      freeTimelineSlots([{ ...card('06:30', 1), travelMinutes: 60 }], '06:00', '10:00'),
+    ).toEqual([{ startTime: '07:30', endTime: '10:00' }])
+  })
 })
 
 describe('layoutTimelineCards', () => {
@@ -79,5 +105,25 @@ describe('layoutTimelineCards', () => {
     // the card would contradict the hour it displays.
     const after = layoutTimelineCards([card('10:00', 3), card('12:00', 1)], '06:00', '21:00')
     expect(at('12:00', after)).toBe(360)
+  })
+
+  it('reports the travel lead-in beside the offset, leaving the offset the true clock position', () => {
+    const [placement] = layoutTimelineCards(
+      [{ ...card('09:00', 3), travelMinutes: 45 }],
+      '06:00',
+      '21:00',
+    )
+    // The card still starts where the clock says; the band is what sits above it.
+    expect(placement).toMatchObject({ offsetMinutes: 180, leadMinutes: 45 })
+  })
+
+  it('drops the lead-in when the trip is not showing travel times', () => {
+    const [placement] = layoutTimelineCards(
+      [{ ...card('09:00', 3), travelMinutes: 45 }],
+      '06:00',
+      '21:00',
+      false,
+    )
+    expect(placement).toMatchObject({ offsetMinutes: 180, leadMinutes: 0 })
   })
 })

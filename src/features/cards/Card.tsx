@@ -30,6 +30,7 @@ import {
   ticketMarkerState,
 } from './cardPalette'
 import { clockMinutes, clockString, resolvedDurationHours } from './cardHeight'
+import { leaveByTime, travelBadgeLabel } from './travelTime'
 import { usePxPerHour } from '../board/timelineScale'
 
 export interface CardProps {
@@ -52,6 +53,10 @@ export interface CardProps {
     startTime: string | null
     durationHours: number
   }
+  /** The trip's travel-time display preference; off swaps the band for a badge. */
+  showTravelTimes?: boolean
+  /** A travel band is drawn against this card's top edge, so square that corner. */
+  fusedTravelBand?: boolean
 }
 
 /** A compact, human-friendly label for a link (its host, falling back to raw). */
@@ -176,6 +181,8 @@ export function Card({
   dayStart = '06:00',
   dayEnd = '21:00',
   timingPreview,
+  showTravelTimes = true,
+  fusedTravelBand = false,
 }: CardProps) {
   const pxPerHour = usePxPerHour()
   const category = cardCategory(card)
@@ -246,6 +253,11 @@ export function Card({
   // The card's own height decides its layout: a short card collapses to one
   // line (glyph + name + time) rather than clipping its second and third rows.
   const short = isShortCard(durationHours * pxPerHour)
+  // Travel: shown, the band above carries the length and the card says when to
+  // set off; hidden, the card keeps the value as a compact "+45m" badge.
+  const leaveBy = showTravelTimes ? leaveByTime(card) : undefined
+  const travelBadge =
+    !showTravelTimes && card.travelMinutes ? travelBadgeLabel(card.travelMinutes) : undefined
   const ticket = ticketMarkerState(card.ticketState, category)
   const washed = isTicketWashed(card.ticketState, category)
   const surface = category ? CATEGORY_STYLE[category].surface : UNCATEGORISED_SURFACE
@@ -287,7 +299,9 @@ export function Card({
       data-short={short ? '' : undefined}
       aria-label={dragSurfaceProps ? `Move or edit ${card.title}` : undefined}
       onClick={editFromSurface}
-      className={`relative flex h-[calc(100%-2px)] w-full flex-col overflow-hidden rounded-card border px-[10px] py-[8px] text-sm text-ink ${short ? 'justify-center' : 'gap-[5px]'} ${bodyClass} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
+      // A fused travel band squares the top corners so the band and the card
+      // read as one block, the way the reference draws them.
+      className={`relative flex h-[calc(100%-2px)] w-full flex-col overflow-hidden border px-[10px] py-[8px] text-sm text-ink ${fusedTravelBand ? 'rounded-b-card' : 'rounded-card'} ${short ? 'justify-center' : 'gap-[5px]'} ${bodyClass} ${dragSurfaceProps ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragClassName ?? ''}`}
     >
       {card.startTime && resizeHandleProps && resizeHandle('start', resizeHandleProps.start)}
       {card.startTime && resizeHandleProps && resizeHandle('end', resizeHandleProps.end)}
@@ -313,6 +327,17 @@ export function Card({
             {displayedTime}
           </span>
         )}
+        {/* With the bands hidden the travel time still has to reach the board
+            somehow — as a badge on the title line, which every card has. */}
+        {travelBadge && (
+          <span
+            data-testid="card-travel-badge"
+            title={`${card.travelMinutes} minutes of travel before the start`}
+            className="shrink-0 rounded-chip border border-hour-rule bg-travel px-[5px] py-[2px] font-sans text-[9px] font-bold leading-none text-ink-500"
+          >
+            {travelBadge}
+          </span>
+        )}
       </div>
       {!short && (
         <span
@@ -320,6 +345,15 @@ export function Card({
           className="font-sans text-[10px] font-semibold text-ink-450"
         >
           {displayedTime}
+        </span>
+      )}
+
+      {leaveBy && !short && (
+        <span
+          data-testid="card-leave-by"
+          className="font-sans text-[10px] font-medium text-hour-text"
+        >
+          leave by {leaveBy}
         </span>
       )}
 
@@ -387,6 +421,14 @@ export interface SortableCardProps {
   dayEnd?: string
   /** Layout for the sortable list item, including its preceding drop area. */
   layoutStyle?: CSSProperties
+  showTravelTimes?: boolean
+  /**
+   * Height of the travel band fused above this card, already clamped to the
+   * space the day window has left above it (0 = no band).
+   */
+  travelBandPx?: number
+  /** The band's label, e.g. '45 min travel' — the *full* lead-in, unclamped. */
+  travelBandLabel?: string
 }
 
 /**
@@ -400,6 +442,9 @@ export function SortableCard({
   dayStart,
   dayEnd,
   layoutStyle,
+  showTravelTimes = true,
+  travelBandPx = 0,
+  travelBandLabel,
 }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: card.id })
   const pxPerHour = usePxPerHour()
@@ -524,14 +569,31 @@ export function SortableCard({
       ref={setNodeRef}
       style={style}
       data-testid="sortable-card"
-      className="pointer-events-auto"
+      className="pointer-events-auto relative"
     >
+      {/* The band hangs off the top of the item rather than sitting inside it,
+          so the card's own box — the one dnd-kit measures on drop — still starts
+          at the card's start time. It rides along with the drag/resize preview
+          because it is a child of the item being moved. */}
+      {travelBandPx > 0 && (
+        <span
+          data-testid="card-travel-band"
+          style={{ top: -travelBandPx, height: travelBandPx }}
+          className="pointer-events-none absolute inset-x-0 flex items-center overflow-hidden rounded-t-card border border-b-0 border-hour-rule bg-travel px-[9px]"
+        >
+          <span className="truncate font-sans text-[9.5px] font-bold leading-none text-ink-500">
+            {travelBandLabel}
+          </span>
+        </span>
+      )}
       {isDragging || resizePreview ? (
         <Card
           card={card}
           conflict={conflict}
           dayStart={dayStart}
           dayEnd={dayEnd}
+          showTravelTimes={showTravelTimes}
+          fusedTravelBand={travelBandPx > 0}
           timingPreview={{
             startTime: resizePreview?.startTime ?? card.startTime ?? null,
             durationHours:
@@ -546,6 +608,8 @@ export function SortableCard({
           onEdit={onEdit}
           dayStart={dayStart}
           dayEnd={dayEnd}
+          showTravelTimes={showTravelTimes}
+          fusedTravelBand={travelBandPx > 0}
           dragSurfaceProps={{ ...attributes, ...listeners }}
           resizeHandleProps={resizeHandleProps}
         />
